@@ -1,0 +1,6 @@
+** ----------------------------------------------------------------
+** IMPORT INPUT FILES FOR IMPLICIT VIBRATION OF CHIP WITH ACOUSTIC MEDIUM
+** ----------------------------------------------------------------
+*INCLUDE, INPUT=FLUID_GEOMETRY.inp
+*INCLUDE, INPUT=ASSEMBLY.inp
+*INCLUDE, INPUT=IMPLICIT_VIBRATION.inp
