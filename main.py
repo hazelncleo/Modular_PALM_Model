@@ -8,6 +8,7 @@ from shutil import rmtree
 import inquirer
 from tkinter import Tk
 from tkinter.filedialog import askdirectory
+import string
 
 # Global File Paths
 modelfile_fpath = 'Model_Files'
@@ -24,6 +25,15 @@ material_data_fpath = 'Material_Data.json'
 all_object_types = ['analysis','geometry','material']
 object_mods = ['create', 'modify', 'duplicate', 'delete', 'help', 'back']
 all_commands = ['alter_objects', 'build_model', 'save_database', 'help', 'exit', 'force_exit']
+
+# Allowed characters in names
+allowed_characters = set(string.ascii_lowercase + string.digits + '_')
+
+# Change icon to be cool
+root = Tk()
+root.withdraw()
+root.iconbitmap('cade.ico')
+
 
 def main():
 
@@ -45,6 +55,7 @@ IMPORTANT STUFF
 - add cancel option
 - run model (maybe?) will be pog
 - make way to display objects during main loop maybe?
+- bug if folder selected with no *.inp files when creating object
 
 
 NICE TO HAVE STUFF
@@ -53,8 +64,7 @@ NICE TO HAVE STUFF
 - __str__
 - main help message
 - object help message
-- check inputted strings to make sure they are lowercase, numbers and underscores
-- make tkinter dialog box open in directory with nice icon
+- make tkinter dialog box open in directory with nice icon (its done but now the cmd loses priority)
 - show objects?
 - select object message
 - run model progress?? :o
@@ -175,7 +185,7 @@ class Model:
                 if help_message == 'print':
                     self.print_database()
                 else:
-                    self.print_main_help_message(help_message)
+                    self.print_main_help_message()
 
             elif command == 'save_database':
                 self.save_database()
@@ -233,7 +243,7 @@ class Model:
                 object_name = self.new_object_name(object_type)
 
                 # Get filepath of *.inp files to add to the new object filepath
-                fpath = askdirectory(title = 'Select folder to read *.inp files: ')
+                fpath = askdirectory(title = 'Select folder to read *.inp files: ', initialdir=os.path.abspath(os.getcwd()))
 
                 self.create_object(object_type, object_name, fpath)
 
@@ -347,7 +357,6 @@ class Model:
             print('- It must only use letters, numbers and underscores.')
             print('- It must be lowercase.')
             print('- It must be unique.')
-            print('- These rules are not handled by the code and so if broken may break the program.')
             print('---------------------------------------------------')
             print('The object names currently in use for the object type: "{}", are listed below: '.format(object_type))
             print(current_objects)
@@ -355,7 +364,12 @@ class Model:
             
             new_name = input('Please enter a new name for the object to be created: ')
 
-            if new_name not in current_objects:
+            if not (set(new_name) <= allowed_characters):
+                print('---------------------------------------------------')
+                print('ERROR: The name: "{}", is not entirely lowercase, numbers or underscores.'.format(new_name))
+                print('---------------------------------------------------')
+            
+            elif new_name not in current_objects:
                 print('---------------------------------------------------')
                 print('The name: "{}", for the new object has been selected.'.format(new_name))
                 print('---------------------------------------------------')
