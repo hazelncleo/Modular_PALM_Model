@@ -17,9 +17,12 @@ analysis_fpath = os.path.join(modelfile_fpath, 'ANALYSIS')
 geometry_fpath = os.path.join(modelfile_fpath, 'GEOMETRY')
 material_fpath = os.path.join(modelfile_fpath, 'MATERIALS')
 
+simulation_fpath = 'Simulations'
+
 analysis_data_fpath = 'Analysis_Data.json'
 geometry_data_fpath = 'Geometry_Data.json'
 material_data_fpath = 'Material_Data.json'
+data_fpath = 'Data.json'
 
 # Lists for inquirer dialogs
 all_object_types = ['analysis','geometry','material']
@@ -27,7 +30,7 @@ object_mods = ['create', 'modify', 'duplicate', 'delete', 'help', 'back']
 all_commands = ['alter_objects', 'build_model', 'save_database', 'help', 'exit', 'force_exit']
 
 # Allowed characters in names
-allowed_characters = set(string.ascii_lowercase + string.digits + '_')
+allowed_characters = set(string.ascii_lowercase + string.digits + '_-,.?!')
 
 # Change icon to be cool
 root = Tk()
@@ -55,7 +58,6 @@ IMPORTANT STUFF
 - add cancel option
 - run model (maybe?) will be pog
 - make way to display objects during main loop maybe?
-- bug if folder selected with no *.inp files when creating object
 
 
 NICE TO HAVE STUFF
@@ -81,11 +83,23 @@ class Model:
         ---------------------------------------------------
         '''
         # Initialise dictionaries
+        self.data = {}
         self.materials = {}
         self.analyses  = {}
         self.geometries = {}
         
         # Load data from *.json files
+        try:
+            with open(data_fpath, 'r') as df:
+                self.analyses = json.load(df)
+                print('-----------------------------------------------')
+                print('Loading from: "{}" was successful.'.format(data_fpath))
+                print('-----------------------------------------------')
+        
+        except:
+            raise FileNotFoundError('The Data .json file: "{}" does not exist. No Analyses have been loaded.'.format(data_fpath))
+        
+
         try:
             with open(analysis_data_fpath, 'r') as af:
                 self.analyses = json.load(af)
@@ -119,47 +133,44 @@ class Model:
             raise FileNotFoundError('The Material .json file: "{}" does not exist. No Materials have been loaded.'.format(material_data_fpath))
 
 
-    def __repr__(self):
-        '''
-        **********************TODO*******************************
-        '''
-        pass
+    def save_database(self):
+            '''
+            ---------------------------------------------------
+            Saves the database to .json files
+            ---------------------------------------------------
+            '''
+
+            print('-----------------------------------------------')
+            print('Saving the Database')
+            print('-----------------------------------------------')
+            # Save data
+            with open(data_fpath, 'w') as df:
+                json.dump(self.data, df)
+                print('-----------------------------------------------')
+                print('Saving to: "{}" was successful.'.format(data_fpath))
+                print('-----------------------------------------------')
 
 
-    def __str__(self):
+            # Save analysis data
+            with open(analysis_data_fpath, 'w') as af:
+                json.dump(self.analyses, af)
+                print('-----------------------------------------------')
+                print('Saving to: "{}" was successful.'.format(analysis_data_fpath))
+                print('-----------------------------------------------')
 
-        return ':3'
+            # Save geometry data
+            with open(geometry_data_fpath, 'w') as gf:
+                json.dump(self.geometries, gf)
+                print('-----------------------------------------------')
+                print('Saving to: "{}" was successful.'.format(geometry_data_fpath))
+                print('-----------------------------------------------')
 
-    
-    def print_database(self):
-        '''
-        ---------------------------------------------------
-        Print Database in a cooler way than __str__. Hate that shit.
-        ---------------------------------------------------
-        '''
-
-        print('-----------------------------------------------')
-        print('The Analyses currently loaded are: ')
-        print('-----------------------------------------------')
-        for analysis in self.analyses.values():
-            fpath = os.path.join(analysis['File_Path'],'*.inp')
-            print('Analysis Name: "{}", Path: "{}", Input files stored: "{}".'.format(analysis['Name'],analysis['File_Path'],str(glob.glob(fpath))))
-
-        print('-----------------------------------------------')
-        print('The Geometries currently loaded are: ')
-        print('-----------------------------------------------')
-        for geometry in self.geometries.values():
-            fpath = os.path.join(geometry['File_Path'],'*.inp')
-            print('Geometry Name: "{}", Path: "{}", Input files stored: "{}".'.format(geometry['Name'],geometry['File_Path'],str(glob.glob(fpath))))
-
-        print('-----------------------------------------------')
-        print('The Materials currently loaded are: ')
-        print('-----------------------------------------------')
-        for material in self.materials.values():
-            fpath = os.path.join(material['File_Path'],'*.inp')
-            print('Material Name: "{}", Path: "{}", Input files stored: "{}".'.format(material['Name'],material['File_Path'],str(glob.glob(fpath))))
-
-        print('-----------------------------------------------')
+            # Save material data
+            with open(material_data_fpath, 'w') as mf:
+                json.dump(self.materials, mf)
+                print('-----------------------------------------------')
+                print('Saving to: "{}" was successful.'.format(geometry_data_fpath))
+                print('-----------------------------------------------')
 
 
     def main_loop(self):
@@ -245,9 +256,26 @@ class Model:
                 # Get filepath of *.inp files to add to the new object filepath
                 fpath = askdirectory(title = 'Select folder to read *.inp files: ', initialdir=os.path.abspath(os.getcwd()))
 
-                self.create_object(object_type, object_name, fpath)
+                # Check if cancel button was pushed
+                if fpath:
 
-                self.save_database()
+                    # Check if directory contains any .inp files
+                    if any(file.endswith('.inp') for file in os.listdir(fpath)):
+                        self.create_object(object_type, object_name, fpath)
+
+                        self.save_database()
+
+                    else:
+                        print('-----------------------------------------------')
+                        print('ERROR: The directory: "{}", does not contain any .inp files.'.format(fpath))
+                        print('Returning to main loop.')
+                        print('-----------------------------------------------')
+
+                else:
+                    print('-----------------------------------------------')
+                    print('ERROR: The cancel button was pushed and no directory was chosen.')
+                    print('Returning to main loop.')
+                    print('-----------------------------------------------')
 
 
             elif command == 'modify':
@@ -255,27 +283,40 @@ class Model:
                 # Select object to be modified
                 object_name, object_type = self.select_object()
                 
-                # Select new name
-                new_name = self.new_object_name(object_type)
+                # Check if object was available
+                if object_name:
+                
+                    # Select new name
+                    new_name = self.new_object_name(object_type)
 
-                # Modify the object
-                self.modify_object(object_type, object_name, new_name)
+                    # Modify the object
+                    self.modify_object(object_type, object_name, new_name)
 
-                self.save_database()
+                    self.save_database()
 
+                else: 
+                    print('Returning to main loop.')
+                    print('-----------------------------------------------')
 
             elif command == 'duplicate':
 
                 # Select object to be duplicated
                 object_name, object_type = self.select_object()
 
-                # Select new name
-                new_name = self.new_object_name(object_type)
+                # Check if object was available
+                if object_name:
+                
+                    # Select new name
+                    new_name = self.new_object_name(object_type)
 
-                # Duplicate the object to the new name
-                self.duplicate_object(object_type, object_name, new_name)
+                    # Duplicate the object to the new name
+                    self.duplicate_object(object_type, object_name, new_name)
 
-                self.save_database()
+                    self.save_database()
+
+                else: 
+                    print('Returning to main loop.')
+                    print('-----------------------------------------------')
 
 
             elif command == 'delete':
@@ -283,14 +324,52 @@ class Model:
                 # Select object to be deleted
                 object_name, object_type = self.select_object()
 
-                # Delete the object
-                self.delete_object(object_type, object_name)
+                # Check if object was available
+                if object_name:
 
-                self.save_database()
+                    # Delete the object
+                    self.delete_object(object_type, object_name)
+
+                    self.save_database()
+
+                else: 
+                    print('Returning to main loop.')
+                    print('-----------------------------------------------')
 
 
         print('-----------------------------------------------')
         print('Returning to the main loop')
+        print('-----------------------------------------------')
+
+
+    def print_database(self):
+        '''
+        ---------------------------------------------------
+        Print Database in a cooler way than __str__. Hate that shit.
+        ---------------------------------------------------
+        '''
+
+        print('-----------------------------------------------')
+        print('The Analyses currently loaded are: ')
+        print('-----------------------------------------------')
+        for analysis in self.analyses.values():
+            fpath = os.path.join(analysis['File_Path'],'*.inp')
+            print('Analysis Name: "{}", Path: "{}", Input files stored: "{}".'.format(analysis['Name'],analysis['File_Path'],str(glob.glob(fpath))))
+
+        print('-----------------------------------------------')
+        print('The Geometries currently loaded are: ')
+        print('-----------------------------------------------')
+        for geometry in self.geometries.values():
+            fpath = os.path.join(geometry['File_Path'],'*.inp')
+            print('Geometry Name: "{}", Path: "{}", Input files stored: "{}".'.format(geometry['Name'],geometry['File_Path'],str(glob.glob(fpath))))
+
+        print('-----------------------------------------------')
+        print('The Materials currently loaded are: ')
+        print('-----------------------------------------------')
+        for material in self.materials.values():
+            fpath = os.path.join(material['File_Path'],'*.inp')
+            print('Material Name: "{}", Path: "{}", Input files stored: "{}".'.format(material['Name'],material['File_Path'],str(glob.glob(fpath))))
+
         print('-----------------------------------------------')
 
 
@@ -354,7 +433,7 @@ class Model:
             print('---------------------------------------------------')
             print('Please enter a new name for the object to be created: ')
             print('Note: ')
-            print('- It must only use letters, numbers and underscores.')
+            print('- It must only use letters, numbers, underscores and hyphens.')
             print('- It must be lowercase.')
             print('- It must be unique.')
             print('---------------------------------------------------')
@@ -402,38 +481,6 @@ class Model:
         ---------------------------------------------------
         '''
 
-
-    def save_database(self):
-        '''
-        ---------------------------------------------------
-        Saves the database to .json files
-        ---------------------------------------------------
-        '''
-
-        print('-----------------------------------------------')
-        print('Saving the Database')
-        print('-----------------------------------------------')
-        # Save analysis data
-        with open(analysis_data_fpath, 'w') as af:
-            json.dump(self.analyses, af)
-            print('-----------------------------------------------')
-            print('Saving to: "{}" was successful.'.format(analysis_data_fpath))
-            print('-----------------------------------------------')
-
-        # Save geometry data
-        with open(geometry_data_fpath, 'w') as gf:
-            json.dump(self.geometries, gf)
-            print('-----------------------------------------------')
-            print('Saving to: "{}" was successful.'.format(geometry_data_fpath))
-            print('-----------------------------------------------')
-
-        # Save material data
-        with open(material_data_fpath, 'w') as mf:
-            json.dump(self.materials, mf)
-            print('-----------------------------------------------')
-            print('Saving to: "{}" was successful.'.format(geometry_data_fpath))
-            print('-----------------------------------------------')
-
         
     def select_object_type(self):
         '''
@@ -446,6 +493,7 @@ class Model:
             One of the three object types, chosen by the user.
         ---------------------------------------------------
         '''
+
         object_type = inquirer.list_input('Pick Object Type: ', choices=all_object_types)
 
         print('-----------------------------------------------')
@@ -463,21 +511,57 @@ class Model:
         RETURNS
         ---------------------------------------------------
         selected_object : str
-            The object of the specified type that was chosen by the user.
+            The object of the specified type that was chosen by the user. If no objects of a specified type are available an empty string will be returned.
         object_type : str, [analysis/geometry/material]
-            The object type of the object that was chosen by the user.
+            The object type of the object that was chosen by the user. This is always returned.
         ---------------------------------------------------
         '''
         object_type = self.select_object_type()
 
         if object_type == 'analysis':
-            selected_object = inquirer.list_input('Pick the Analysis object: ', choices=[x for x in self.analyses.keys()])
+
+            # Get available choices
+            choices = [x for x in self.analyses.keys()]
+
+            # Check there are choices available
+            if len(choices):
+                selected_object = inquirer.list_input('Pick the Analysis object: ', choices=choices)
+
+            else:
+                print('-----------------------------------------------')
+                print('ERROR: no objects of type: "{}" to select.'.format(object_type))
+                return '', object_type
+
 
         elif object_type == 'geometry':
-            selected_object = inquirer.list_input('Pick the Geometry object: ', choices=[x for x in self.geometries.keys()])
+
+            # Get available choices
+            choices = [x for x in self.geometries.keys()]
+
+            # Check there are choices available
+            if len(choices):
+                selected_object = inquirer.list_input('Pick the Geometry object: ', choices=choices)
+
+            else:
+                print('-----------------------------------------------')
+                print('ERROR: no objects of type: "{}" to select.'.format(object_type))
+                return '', object_type
+
 
         elif object_type == 'material':
-            selected_object = inquirer.list_input('Pick the Material object: ', choices=[x for x in self.materials.keys()])
+
+            # Get available choices
+            choices = [x for x in self.materials.keys()]
+
+            # Check there are choices available
+            if len(choices):
+                selected_object = inquirer.list_input('Pick the Material object: ', choices=choices)
+
+            else:
+                print('-----------------------------------------------')
+                print('ERROR: no objects of type: "{}" to select.'.format(object_type))
+                return '', object_type
+
 
         else:
             raise NameError('Object Type: "{}" is not a valid type. The valid types are: "material", "analysis" and "geometry"'.format(object_type))
@@ -926,6 +1010,19 @@ class Model:
     def build_model(self, Model_Name):
 
         pass
+
+    
+    def __repr__(self):
+        '''
+        **********************TODO*******************************
+        '''
+        pass
+
+
+    def __str__(self):
+
+        return ':3'
+
 
     # *** STILL NOT SURE IF SHOULD RUN MODEL THROUGH THIS ***
     # def run_model(self, Model_Name): 
