@@ -48,9 +48,12 @@ IMPORTANT STUFF
 - delete model
 - validate model
 - postprocess model
+- alter model loop
 - add cancel option (?)
 - select object change message displayed
 - run model
+- make all global variables stored in class so can be imported
+- make program check for .json file, if it does not exist then create it and initialise dictionary
 
 
 NICE TO HAVE STUFF
@@ -59,6 +62,7 @@ NICE TO HAVE STUFF
 - __str__
 - main help message
 - object help message
+- model help message
 - make tkinter dialog box not lose cmd priority
 - run model progress?? :o
 
@@ -172,7 +176,7 @@ class Model:
     def alter_objects(self):
         '''
         ---------------------------------------------------
-        Saves the database to .json files
+        Main loop for altering objects in the database
         ---------------------------------------------------
         '''
 
@@ -254,7 +258,8 @@ class Model:
                     # Create change dictionary
                     change_dict = {'name': {'change' : False, 'new_name' : ''},
                                    'description' : {'change' : False, 'new_description' : ''},
-                                   'requirements' : {'change' : False, 'new_requirement' : []}}
+                                   'requirements' : {'change' : False, 'new_requirement' : []},
+                                   'acoustic' : {'change' : False, 'acoustic' : False}}
                     
                     # If no changes picked return to main loop
                     if not change_list:
@@ -334,6 +339,14 @@ class Model:
         print('-----------------------------------------------')
         print('Returning to the main loop')
         print('-----------------------------------------------')
+
+
+    def alter_models(self):
+        '''
+        
+        '''
+        
+        pass
 
 
     def new_model_name(self):
