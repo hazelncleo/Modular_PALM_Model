@@ -78,7 +78,8 @@ class Model:
 
         modelfile_fpath = 'Model_Files'
 
-        self.fpaths = {'analysis' : os.path.join(modelfile_fpath, 'ANALYSIS'),
+        self.fpaths = {'model_files' : modelfile_fpath,
+                       'analysis' : os.path.join(modelfile_fpath, 'ANALYSIS'),
                        'geometry' : os.path.join(modelfile_fpath, 'GEOMETRY'),
                        'material': os.path.join(modelfile_fpath, 'MATERIALS'),
                        'simulation': 'Simulations',
@@ -467,7 +468,7 @@ class Model:
         return object_type
     
 
-    def select_object(self, object_type = ''):
+    def select_object(self, object_type = '', message = ''):
         '''
         ---------------------------------------------------
         Select an object from all the objects of a specific type currently in the database.
@@ -478,6 +479,8 @@ class Model:
             The object of the specified type that was chosen by the user. If no objects of a specified type are available an empty string will be returned.
         object_type : str, [analysis/geometry/material]
             The object type of the object that was chosen by the user. This is always returned.
+        message : str
+            An optional message to add to the inquirer list input message
         ---------------------------------------------------
         '''
         if not object_type:
@@ -488,7 +491,7 @@ class Model:
 
         # Check there are choices available
         if len(choices):
-            selected_object = inquirer.list_input('Pick the {} object: '.format(object_type), choices=choices)
+            selected_object = inquirer.list_input('Pick the {} object{}: '.format(object_type,message), choices=choices)
 
         else:
             print('-----------------------------------------------')
@@ -818,8 +821,12 @@ class Model:
         new_fpath = self.data['simulation'][model_name]['File_Path']
         os.makedirs(new_fpath, exist_ok=True)
 
+        # Copy main.inp
+        copy_input_file(os.path.join(self.fpaths['model_files'], 'MAIN.inp'), os.path.join(new_fpath, 'MAIN.inp'), follow_symlinks=True)
+
+
         # Select Analysis
-        analysis_name,_ = self.select_object('analysis')
+        analysis_name,_ = self.select_object('analysis', message=' for the model: "{}" to be built'.format(model_name))
 
         # Get old file path
         fpath = self.data['analysis'][analysis_name]['File_Path']
@@ -847,8 +854,8 @@ class Model:
 
 
 
-        # Select Solid Material
-        geometry_name,_ = self.select_object('geometry')
+        # Select Geometry
+        geometry_name,_ = self.select_object('geometry', message=' for the model: "{}" to be built'.format(model_name))
 
         # Get old file path
         fpath = self.data['geometry'][geometry_name]['File_Path']
@@ -875,12 +882,39 @@ class Model:
 
 
 
+        # Select solid material
+        material_name,_ = self.select_object('material', message=' for the model: "{}" to be built. (Note: this is the solid material)'.format(model_name))
+
+        # Get old file path
+        fpath = self.data['material'][material_name]['File_Path']
+
+        # Update local dictionary to add analysis information
+        self.data['simulation'][model_name]['Objects'].append(material_name)
+
+        # Get *.inp files as list from analysis filepath
+        files_to_copy = glob.glob(os.path.join(fpath,'*.inp'))
+
+        # Copy *.inp files to new file path
+        for file in files_to_copy:
+
+            file_name = file.split('\\')[-1]
+
+            self.data['simulation'][model_name]['Input_Files'].append(file_name[:-4].upper()+'.inp')
+
+            try:
+                copy_input_file(file, os.path.join(new_fpath, file_name[:-4].upper()+'.inp'), follow_symlinks=True)
+                print('The file: "{}" has been successfully duplicated to the filepath: "{}" from "{}".'.format(file_name[:-4].upper()+'.inp',new_fpath, fpath))
+
+            except:
+                raise FileNotFoundError('The file: "{}" was not moved to the destination filepath.'.format(file_name[:-4].upper()+'.inp'))
+
+
 
         fluid_required = True
 
-
+        # Select fluid material
         if fluid_required:
-            material_name,_ = self.select_object('material')
+            material_name,_ = self.select_object('material', message=' for the model: "{}" to be built. (Note: this is the fluid material)'.format(model_name))
 
             # Get old file path
             fpath = self.data['material'][material_name]['File_Path']
