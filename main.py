@@ -11,19 +11,7 @@ from tkinter.filedialog import askdirectory
 import string
 
 # Lists for inquirer dialogs
-all_object_types = ['analysis','geometry','material']
-object_mods = ['create', 'modify', 'duplicate', 'delete', 'help', 'back']
-all_commands = ['alter_objects', 'build_model', 'save_database', 'help', 'exit', 'force_exit']
 
-# Allowed characters in names
-allowed_characters_name = set(string.ascii_lowercase + string.digits + '_-')
-allowed_characters_model = set(string.ascii_letters + string.digits + '_-,.!()[]')
-allowed_characters_description = set(string.ascii_letters + string.digits + '_-,.?! ()[]"')
-
-# Change icon to be cool
-root = Tk()
-root.withdraw()
-root.iconbitmap('cade.ico')
 
 
 def main():
@@ -43,17 +31,18 @@ IMPORTANT STUFF
 - add more information for the objects (input files in folder, editable parameters) will need to edit create, modify, duplicate and delete at the very least
 - build model
 - set requirements (basic implementation atm, might need to be made more complex)
+- validate
 - modify model
 - duplicate model
 - delete model
-- validate model
 - postprocess model
 - alter model loop
 - add cancel option (?)
 - select object change message displayed
 - run model
-- make all global variables stored in class so can be imported
+- rename class
 - make program check for .json file, if it does not exist then create it and initialise dictionary
+- clean up main loops
 
 
 NICE TO HAVE STUFF
@@ -65,7 +54,6 @@ NICE TO HAVE STUFF
 - model help message
 - make tkinter dialog box not lose cmd priority
 - run model progress?? :o
-
 '''
 
 
@@ -80,14 +68,30 @@ class Model:
         # Initialise dictionaries
         self.data = {}
 
-        modelfile_fpath = 'Model_Files'
+        # Change icon to be cool
+        root = Tk()
+        root.withdraw()
+        root.iconbitmap('cade.ico')
 
+        # Set filepaths
+        modelfile_fpath = 'Model_Files'
         self.fpaths = {'model_files' : modelfile_fpath,
                        'analysis' : os.path.join(modelfile_fpath, 'ANALYSIS'),
                        'geometry' : os.path.join(modelfile_fpath, 'GEOMETRY'),
                        'material': os.path.join(modelfile_fpath, 'MATERIALS'),
                        'simulation': 'Simulations',
                        'data': 'Data.json'}
+        
+        # Set allowed characters
+        self.allowed_characters = {'Name' : set(string.ascii_lowercase + string.digits + '_-'),
+                                   'Model' : set(string.ascii_letters + string.digits + '_-!()[]'),
+                                   'Description' : set(string.ascii_letters + string.digits + '_-,.?! ()[]"')}
+        
+        # Set inquirer dialog lists
+        self.inquirer_dialogs = {'Object_Types' : ['analysis','geometry','material'],
+                                 'Main_Loop' : ['alter_objects', 'build_model', 'save_database', 'help', 'exit', 'force_exit'],
+                                 'Object_Loop' : ['create', 'modify', 'duplicate', 'delete', 'help', 'back'],
+                                 'Model_Loop' : ['build', 'modify', 'duplicate', 'delete', 'post_process', 'run', 'help', 'back']}
         
         # Load data from Data.json
         try:
@@ -129,7 +133,7 @@ class Model:
         while True:
             
             # Commands = ['alter_objects', 'build_model', 'save_database', 'help', 'exit', 'force_exit']
-            command = inquirer.list_input('Pick Command: ', choices=all_commands)
+            command = inquirer.list_input('Pick Command: ', choices=self.inquirer_dialogs['Main_Loop'])
 
             if command == 'exit':
                 if self.yes_no_question('Are you sure you would like to exit?'):
@@ -190,7 +194,7 @@ class Model:
         while command != 'back':
             
             # Commands = ['create', 'modify', 'duplicate', 'delete', 'help', 'back']
-            command = inquirer.list_input('Pick Object Alteration Command: ', choices=object_mods)
+            command = inquirer.list_input('Pick Object Alteration Command: ', choices=self.inquirer_dialogs['Object_Loop'])
 
 
             if command == 'help':
@@ -215,9 +219,10 @@ class Model:
 
                 # Get requirements of analysis
                 if object_type == 'analysis':
-                    requirements = self.set_requirements()
+                    fluid_required, requirements = self.set_requirements()
                 else:
                     requirements = []
+                    fluid_required = False
 
                 # Get filepath of *.inp files to add to the new object filepath
                 fpath = askdirectory(title = 'Select folder to read *.inp files: ', initialdir=os.path.abspath(os.getcwd()))
@@ -227,7 +232,7 @@ class Model:
 
                     # Check if directory contains any .inp files
                     if any(file.endswith('.inp') for file in os.listdir(fpath)):
-                        self.create_object(object_type, object_name, fpath, description, requirements)
+                        self.create_object(object_type, object_name, fpath, description, requirements, fluid_required)
 
                         self.save_database()
 
@@ -254,13 +259,13 @@ class Model:
                     
                     # Get objects to be changed
                     change_list = inquirer.checkbox('What would you like to change about the object: "{}", of type: "{}"'.format(object_name,object_type),
-                                                    choices = ['name', 'description', 'requirements'])
+                                                    choices = ['name', 'description', 'requirements', 'fluid_required'])
 
                     # Create change dictionary
                     change_dict = {'name': {'change' : False, 'new_name' : ''},
                                    'description' : {'change' : False, 'new_description' : ''},
                                    'requirements' : {'change' : False, 'new_requirement' : []},
-                                   'acoustic' : {'change' : False, 'acoustic' : False}}
+                                   'fluid_required' : {'change' : False, 'new_fluid_required' : False}}
                     
                     # If no changes picked return to main loop
                     if not change_list:
@@ -286,8 +291,13 @@ class Model:
                         
                         # Select new requirements
                         change_dict['requirements']['new_requirement'] = []
-                        change_dict['description']['change'] = True
-            
+                        change_dict['requirements']['change'] = True
+
+                    if ('fluid_required' in change_list) and (object_type == 'analysis'):
+
+                        # Select new fluid required state
+                        change_dict['fluid_required']['change'] = True
+                        change_dict['fluid_required']['new_fluid_required'] = self.yes_no_question('Should the modified object require an acoustic fluid representation?')
 
                     # Modify the object
                     self.modify_object(object_type, object_name, change_dict)
@@ -344,10 +354,21 @@ class Model:
 
     def alter_models(self):
         '''
-        
+        ---------------------------------------------------
+        Main loop for altering models in the database
+        ---------------------------------------------------
         '''
+
+        print('-----------------------------------------------')
+        print('Entering alter models interface')
+        print('-----------------------------------------------')
         
-        pass
+        command = ''
+
+        while command != 'back':
+            
+            # Commands = ['build', 'modify', 'duplicate', 'delete', 'post_process', 'run', 'help', 'back']
+            command = inquirer.list_input('Pick Model Alteration Command: ', choices=self.inquirer_dialogs['Model_Loop'])
 
 
     def new_model_name(self):
@@ -371,7 +392,7 @@ class Model:
             print('---------------------------------------------------')
             print('Please enter a new name for the model to be created: ')
             print('Note: ')
-            print('- It must only use letters, numbers and the following symbols (not including single quotes): \'_-,.!()[]\'')
+            print('- It must only use letters, numbers and the following symbols (not including single quotes): \'_-!()[]\'')
             print('- It must be unique.')
             print('---------------------------------------------------')
             print('The model names currently in use are listed below: ')
@@ -385,7 +406,7 @@ class Model:
                 print('ERROR: The name provided was an empty string')
                 print('---------------------------------------------------')
 
-            elif not (set(new_name) <= allowed_characters_model):
+            elif not (set(new_name) <= self.allowed_characters['Model']):
                 print('---------------------------------------------------')
                 print('ERROR: The name: "{}", is not entirely lowercase, numbers or underscores.'.format(new_name))
                 print('---------------------------------------------------')
@@ -443,7 +464,7 @@ class Model:
                 print('ERROR: The name provided was an empty string')
                 print('---------------------------------------------------')
 
-            elif not (set(new_name) <= allowed_characters_name):
+            elif not (set(new_name) <= self.allowed_characters['Name']):
                 print('---------------------------------------------------')
                 print('ERROR: The name: "{}", is not entirely lowercase, numbers or underscores.'.format(new_name))
                 print('---------------------------------------------------')
@@ -472,7 +493,7 @@ class Model:
         ---------------------------------------------------
         '''
 
-        object_type = inquirer.list_input('Pick Object Type: ', choices=all_object_types)
+        object_type = inquirer.list_input('Pick Object Type: ', choices=self.inquirer_dialogs['Object_Types'])
 
         print('-----------------------------------------------')
         print('Object Type: "{}" was selected.'.format(object_type))
@@ -547,7 +568,7 @@ class Model:
                 print('ERROR: The description provided was an empty string')
                 print('---------------------------------------------------')
 
-            elif not (set(description) <= allowed_characters_description):
+            elif not (set(description) <= self.allowed_characters['Description']):
                 print('---------------------------------------------------')
                 print('ERROR: The description: "{}", does not meet the requirements.'.format(description))
                 print('---------------------------------------------------')
@@ -575,10 +596,10 @@ class Model:
             requirements.append('ASSEMBLY.inp') 
 
 
-        return requirements
+        return fluid, requirements
 
 
-    def create_object(self, object_type, object_name, source_file_path, description, requirements):
+    def create_object(self, object_type, object_name, source_file_path, description, requirements, fluid_required):
         '''
         ---------------------------------------------------
         Creates a new object in the database with an object type  from a specified file path. All input files from this file path will be copied to a new destination folder
@@ -599,6 +620,9 @@ class Model:
 
         requirements : list
             A list of all the requirements/dependencies for this object to work in a model.
+
+        fluid_required : boolean
+            variable only relevant for analysis objects, True if fluid representation required else, False.
         ---------------------------------------------------
         '''
         print('-----------------------------------------------')
@@ -617,7 +641,12 @@ class Model:
             return
 
         # Create object in the database
-        self.data[object_type][object_name.lower()] = {'Name': object_name.lower(), 'File_Path': dest_file_path, 'Description': description, 'Requirements' : requirements}
+        self.data[object_type][object_name.lower()] = {'Name': object_name.lower(),
+                                                       'File_Path': dest_file_path,
+                                                       'Description': description,
+                                                       'Requirements' : requirements,
+                                                       'Fluid_Required' : fluid_required}
+        
         print('The {}: "{}" has been successfully added to the local dictionary.'.format(object_type, object_name))
         
 
@@ -703,8 +732,13 @@ class Model:
 
         # Change requirements
         if change_dict['requirements']['change']:
-            self.data[object_type][object_name]['Requirements'] = change_dict['requirement']['new_requirement']
+            self.data[object_type][object_name]['Requirements'] = change_dict['requirements']['new_requirement']
             print('Requirements change was successful.')
+
+        # Change fluid_required
+        if change_dict['fluid_required']['change']:
+            self.data[object_type][object_name]['Fluid_Required'] = change_dict['fluid_required']['new_fluid_required']
+            print('Fluid_Required change was successful.')
 
         print('-----------------------------------------------')
         print('Modify object operation successful.')
@@ -826,6 +860,7 @@ class Model:
         self.data['simulation'][model_name] = {'Name' : model_name,
                                                'File_Path' : os.path.join(self.fpaths['simulation'],model_name),
                                                'Description' : description,
+                                               'Main_File' : '',
                                                'Input_Files' : [],
                                                'Requirements' : [],
                                                'Objects' : []}
@@ -834,14 +869,21 @@ class Model:
         new_fpath = self.data['simulation'][model_name]['File_Path']
         os.makedirs(new_fpath, exist_ok=True)
 
-        # Copy main.inp
-        copy_input_file(os.path.join(self.fpaths['model_files'], 'MAIN.inp'), os.path.join(new_fpath, 'MAIN.inp'), follow_symlinks=True)
+
+        # Copy main.inp with new name
+        new_main_name = model_name.upper()+'.inp'
+        copy_input_file(os.path.join(self.fpaths['model_files'], 'MAIN.inp'), os.path.join(new_fpath, new_main_name), follow_symlinks=True)
+        self.data['simulation'][model_name]['Main_File'] = new_main_name
+        self.data['simulation'][model_name]['Input_Files'].append(new_main_name)
+        print('The file: "{}" has been successfully duplicated to the filepath: "{}" from "{}".'.format(new_main_name, new_fpath, self.fpaths['model_files']))
+        print('-----------------------------------------------')
+
 
 
         # Select Analysis
         analysis_name,_ = self.select_object('analysis', message=' for the model: "{}" to be built'.format(model_name))
 
-        # Get old file path
+        # Get old file path of analysis
         fpath = self.data['analysis'][analysis_name]['File_Path']
 
         # Update local dictionary to add analysis information
@@ -953,8 +995,6 @@ class Model:
                     raise FileNotFoundError('The file: "{}" was not moved to the destination filepath.'.format(file_name[:-4].upper()+'.inp'))
 
 
-    
-
     def modify_model(self):
         '''
         
@@ -975,13 +1015,11 @@ class Model:
         '''
         pass
 
-
-    def validate_model(self, model_name):
         '''
         
         '''
         pass
-
+    
 
     def postprocess_model(self, model_name):
         '''
@@ -1019,6 +1057,13 @@ class Model:
             return False
 
 
+    def validate(self):
+        '''
+        
+        '''
+        pass
+
+
     def __repr__(self):
         '''
         **********************TODO*******************************
@@ -1052,6 +1097,7 @@ class Model:
             print('\tDescription: "{}"'.format(analysis['Description']))
             print('\tRequirements: "{}"'.format(analysis['Requirements']))
             print('\tInput Files: "{}"'.format(input_files))
+            print('\tFluid Required: "{}"'.format(analysis['Fluid_Required']))
             print('-----------------------------------------------')
 
         print('The Geometries currently loaded are: ')
@@ -1085,6 +1131,15 @@ class Model:
             print('\tInput Files: "{}"'.format(input_files))
             print('-----------------------------------------------')
 
+        for model in self.data['simulation'].values():
+            print('Model Name: "{}'.format(model['Name']))
+            print('\tPath: "{}"'.format(model['File_Path']))
+            print('\tDescription: "{}"'.format(model['Description']))
+            print('\tMain File: "{}"'.format(model['Main_File']))
+            print('\tRequirements: "{}"'.format(model['Requirements']))
+            print('\tInput Files: "{}"'.format(model['Input_Files']))
+            print('\tObjects : "{}"'.format(model['Objects']))
+            print('-----------------------------------------------')
 
     def print_main_help_message(self):
         '''
@@ -1108,7 +1163,11 @@ class Model:
         '''
 
 
-
+    def print_model_help_message(self):
+        '''
+        
+        '''
+        pass
 
 if __name__ == '__main__':
     main()
