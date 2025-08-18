@@ -10,13 +10,10 @@ from tkinter import Tk
 from tkinter.filedialog import askdirectory
 import string
 
-# Lists for inquirer dialogs
-
-
 
 def main():
 
-    model = Model()
+    model = Modular_Abaqus_Builder()
 
     model.main_loop()
 
@@ -38,10 +35,7 @@ IMPORTANT STUFF
 - postprocess model
 - alter model loop
 - add cancel option (?)
-- select object change message displayed
 - run model
-- rename class
-- make program check for .json file, if it does not exist then create it and initialise dictionary
 - clean up main loops
 
 
@@ -57,8 +51,7 @@ NICE TO HAVE STUFF
 '''
 
 
-
-class Model:
+class Modular_Abaqus_Builder:
     def __init__(self):
         '''
         ---------------------------------------------------
@@ -101,9 +94,11 @@ class Model:
                 print('Loading from: "{}" was successful.'.format(self.fpaths['data']))
                 print('-----------------------------------------------')
         
+        # If it doesnt exist load an empty dictionary
         except:
-            raise FileNotFoundError('The Data .json file: "{}" does not exist. No Analyses have been loaded.'.format(self.fpaths['data']))
-        
+            self.data = {'analysis': {}, 'geometry': {}, 'material': {}, 'simulation': {}}
+            print('The Data .json file: "{}" does not exist. A default dictionary has been loaded.\nUpon save a .json file will be made.'.format(self.fpaths['data']))
+            
 
     def save_database(self):
             '''
