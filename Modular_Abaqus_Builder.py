@@ -50,6 +50,9 @@ NICE TO HAVE STUFF
 **************************************************************************************************
 '''
 
+
+np.zeros()
+
 class Abaqus_Object:
     def __init__(self):
         '''
@@ -674,11 +677,10 @@ class Modular_Abaqus_Builder:
         os.makedirs(dest_file_path, exist_ok=True)
         print('The Destination folder: "{}" has been successfully created.'.format(dest_file_path))
 
-        # Copy material file to new folder with new name
+        # Copy material files to new folder with new name
         for file in files_to_copy:
             file_name = file.split('\\')[-1]
 
-            # Try to copy the input file
             try:
                 copy_input_file(file, os.path.join(dest_file_path, file_name[:-4].upper()+'.inp'), follow_symlinks=True)
                 print('The file: "{}" has been successfully added to the destination filepath: "{}".'.format(file_name[:-4].upper()+'.inp',dest_file_path))
