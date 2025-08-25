@@ -18,7 +18,6 @@ import string
 IMPORTANT STUFF
 --------------------------
 - add more information for the objects (input files in folder, editable parameters) will need to edit create, modify, duplicate and delete at the very least
-- build model
 - set requirements (basic implementation atm, might need to be made more complex)
 - validate
 - modify model
@@ -50,11 +49,8 @@ NICE TO HAVE STUFF
 **************************************************************************************************
 '''
 
-
-np.zeros()
-
 class Abaqus_Object:
-    def __init__(self):
+    def __init__(self, object_name, object_type):
         '''
         ---------------------------------------------------
         Initialise the Abaqus Object class
@@ -66,7 +62,9 @@ class Abaqus_Object:
         ---------------------------------------------------
         '''
         
-        pass
+        self.name = object_name
+        self.object_type = object_type
+        self.f
 
 def get_file_path():
     root = Tk()
