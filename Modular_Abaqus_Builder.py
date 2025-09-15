@@ -1,5 +1,3 @@
-import numpy as np
-import matplotlib.pyplot as plt
 import os
 import json
 import glob
@@ -50,21 +48,89 @@ NICE TO HAVE STUFF
 '''
 
 class Abaqus_Object:
-    def __init__(self, object_name, object_type):
+    def __init__(self, object_name, object_type, source_file_path, description, requirements, fluid_required):
         '''
         ---------------------------------------------------
-        Initialise the Abaqus Object class
+        Creates a new object class from the listed variables below
         ---------------------------------------------------
         PARAMETERS
         ---------------------------------------------------
+        object_name : str
+            The name of the object to be added. This will be used in the database, and as the file path that the input files will be stored in.
+            
         object_type : str, [analysis/geometry/material]
-            The type of object to be initialised. This can be either of the three types listed above. If the string does not match exactly an error will be thrown.
+            The type of object to be created. This can be either of the three types listed above. If the string does not match exactly an error will be thrown.
+
+        source_file_path : str
+            The file path which contains the input files associated with this object. The names of these files will be used in the database, so must be set correctly.
+
+        description : str
+            A description of what the object to be created is.
+
+        requirements : list
+            A list of all the requirements/dependencies for this object to work in a model.
+
+        fluid_required : boolean
+            variable only relevant for analysis objects, True if fluid representation required, otherwise False.
         ---------------------------------------------------
         '''
         
-        self.name = object_name
+        print('-----------------------------------------------')
+        print('Create object operation started.')
+        print('-----------------------------------------------')
+        
+        self.name = object_name.lower()
         self.object_type = object_type
-        self.f
+        self.file_path = ''
+        self.description = ''
+        self.requirements = {}
+        
+
+
+        # Get destination filepath of analysis
+        dest_file_path = os.path.join(self.fpaths[object_type], object_name.upper())
+
+        # Check file path does not already exist
+        if os.path.exists(dest_file_path):
+            print('-----------------------------------------------')
+            print('ERROR: The fpath: "{}", already exists.')
+            print('Returning to main loop.')
+            print('-----------------------------------------------')
+            return
+
+        # Create object in the database
+        self.data[object_type][object_name.lower()] = {'Name': object_name.lower(),
+                                                       'File_Path': dest_file_path,
+                                                       'Description': description,
+                                                       'Requirements' : requirements,
+                                                       'Fluid_Required' : fluid_required}
+        
+        print('The {}: "{}" has been successfully added to the local dictionary.'.format(object_type, object_name))
+        
+
+        # Copy *.inp files from source file path to the destination file path
+        files_to_copy = glob.glob(os.path.join(source_file_path,'*.inp'))
+        
+        # Create destination folder
+        os.makedirs(dest_file_path, exist_ok=True)
+        print('The Destination folder: "{}" has been successfully created.'.format(dest_file_path))
+
+        # Copy material file to new folder with new name
+        for file in files_to_copy:
+            file_name = file.split('\\')[-1]
+
+            # Try to copy the input file
+            try:
+                copy_input_file(file, os.path.join(dest_file_path, file_name[:-4].upper()+'.inp'), follow_symlinks=True)
+                print('The file: "{}" has been successfully added to the destination filepath: "{}".'.format(file_name[:-4].upper()+'.inp',dest_file_path))
+            except:
+                raise FileNotFoundError('The file: "{}" was not moved to the destination filepath. The database may now be corrupted.'.format(file_name[:-4].upper()+'.inp'))
+            
+        print('-----------------------------------------------')
+        print('Create object operation successful.')
+        print('-----------------------------------------------')
+    
+        
 
 def get_file_path():
     root = Tk()
@@ -86,8 +152,6 @@ class Modular_Abaqus_Builder:
         Initialise the class and load the data from the *.json files.
         ---------------------------------------------------
         '''
-        # Initialise dictionaries
-        self.data = {}
 
         # Set filepaths
         modelfile_fpath = 'Model_Files'
@@ -120,7 +184,7 @@ class Modular_Abaqus_Builder:
         # If it doesnt exist load an empty dictionary
         except:
             self.data = {'analysis': {}, 'geometry': {}, 'material': {}, 'simulation': {}}
-            print('The Data .json file: "{}" does not exist. A default dictionary has been loaded.\nUpon save a .json file will be made.'.format(self.fpaths['data']))
+            print('The Data .json file: "{}" does not exist. A default dictionary has been loaded.\nUpon save a Data.json file will be made.'.format(self.fpaths['data']))
             
 
     def save_database(self):
