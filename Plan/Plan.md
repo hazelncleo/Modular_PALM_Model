@@ -53,27 +53,56 @@ Three Classes will be built:
 These represent the components mentioned earlier, where the Modular_Abaqus_Builder class is the controller/command line interface. A Comprehensive overview of each of the classes, their attributes and methods as well as usage is included below.
 
 ---
-## Object Class
+## Analysis_Object Class
 ### Attributes
 - object_name : str
   - The name of the object.
-- object_type : str, [analysis/geometry/material]
-  - The type of the object, constrained to either be analysis, geometry or material by the command line interface.
 - description : str
-  - A description of what the object is.
+  - A description of what the analysis object is.
 - fpath : str
   - File path to the object files.
 - files : list 
-  - A list of the names of the 
+  - A list of the names of all files
 - parameters : dict
   - A dictionary containing all the modifiable parameters for the object, including their names, their data types and their ranges.
-- object_properties : Object_Properties
-  - An object properties class that stores properties dependent on the object type
+- requirements : list of dicts
+  - A list of all the requirements for the Analysis to function
+- softwares : dict
+  - A dictionary that contains the software requirements required for this analysis (abaqus, fluent, mpcci)
+- Builder : Modular_Abaqus_Builder
+  - The Modular_Abaqus_Builder class that contains this Analysis Object.
+- Allowed_Characters : dict
+  - A dictionary containing the allowed characters for attributes
 
 ---
 ### Methods
-- init : 
-  - bruh
+- init : [Builder : Modular_Abaqus_Builder]
+  - Initialise the class and then request information from the user.
+
+Save the Builder object in self.Builder.
+
+Get the list of current Analysis_Object names.
+
+Prompt the user to enter a name for the new object.
+
+Check that the name is not currently used and that it only contains allowed characters.
+
+Prompt for a description, and check that it only contains allowed characters.
+
+Prompt the user to pick a fpath/folder that contains the files to be used in this Analysis_Object.
+
+Create a new folder in the object storage folder.
+
+Move all files from the previously specified directory to the new one.
+
+Specify parameters.
+
+Pick Requirements.
+
+Pick Softwares.
+
+- new_name
+
 ---
 ### Usage
 -
