@@ -1,1 +1,10 @@
 *.pyc
+*.env
+*.msg
+*.odb
+*.prt
+*.sim
+*.sta
+*.rpy
+*.com
+*.dat

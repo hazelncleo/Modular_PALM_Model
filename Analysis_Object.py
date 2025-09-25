@@ -1,8 +1,11 @@
 import os
-from shutil import copy2 as copy_input_file
+from shutil import copytree
 import string
 from tkinter import Tk
 from tkinter.filedialog import askdirectory
+import inquirer
+
+
 
 class Analysis_Object:
     def __init__(self, builder):
@@ -23,19 +26,28 @@ class Analysis_Object:
         # Modular_Abaqus_Builder class containing this object 
         self.builder = builder
         
-        self.allowed_characters = {'Name' : set(string.ascii_lowercase + string.digits + '_-'), 'Description' : set(string.ascii_letters + string.digits + '_-,.?! ()[]"')}
+        # Specify allowed characters for certain attributes
+        self.allowed_characters = {'Name' : set(string.ascii_lowercase + string.digits + '_-'), 'Description' : set(string.ascii_letters + string.digits + '_-,.?! ()[]"'), 'Parameter_Name' : set(string.ascii_letters + string.digits + '-_')}
         
         self.name = self.new_object_name()
-        
+
+        # Set destination fpath
+        self.fpath = os.path.join(self.builder.fpaths['analysis'],self.name)
+
         self.description = self.new_description()
         
-        fpath = self.get_file_path()
+        source_fpath = self.get_file_path()
         
         # Return error if fpath not specified
-        if not fpath:
-            return -1
-            
-        self.fpath = fpath
+        if not source_fpath:
+            raise FileNotFoundError('A file path was not selected.')
+
+        # Copy files
+        copytree(source_fpath, self.fpath, symlinks=True)
+
+
+        
+        self.choose_parameters()
         
         
         
@@ -50,8 +62,11 @@ class Analysis_Object:
         
         
         
-        
-        self.requirements = {}
+        self.requirements = {'softwares' : {'abaqus' : False, 'fluent' : False, 'mpcci' : False},
+                             'geometries' : {'abaqus_whole-chip_solid' : False, 'abaqus_whole-chip_acoustic' : False, 'abaqus_submodel_solid' : False, 'abaqus_submodel_acoustic' : False, 'fluent_whole-chip_fluid' : False, 'fluent_submodel_fluid' : False},
+                             'materials' : {'abaqus_solid' : False, 'abaqus_acoustic' : False},
+                             'analysis' : {'abaqus_global_odb' : False, 'abaqus_global_prt' : False, 'fluent_journal' : False}
+                             }
         
 
 
@@ -111,7 +126,7 @@ class Analysis_Object:
         ---------------------------------------------------
         '''
         # Get current names
-        current_names = self.Builder.data['analysis'].keys()
+        current_names = self.builder.data['analysis'].keys()
 
         name = ''
 
@@ -166,7 +181,7 @@ class Analysis_Object:
 
         description = ''
 
-        # Loop until new name is unique
+        # Loop until new description entered
         while True:
             print('---------------------------------------------------')
             print('Please enter a description for the object to be created: ')
@@ -193,7 +208,17 @@ class Analysis_Object:
                 return description
             
     
-    def get_file_path():
+    def get_file_path(self):
+        '''
+        ---------------------------------------------------
+        Prompt the user to select a filepath.
+        ---------------------------------------------------
+        RETURNS
+        ---------------------------------------------------
+        file_path : str
+            A string containing the filepath the user selected. If the user clicked cancel, an empty string will be returned
+        ---------------------------------------------------
+        '''
         # Create window and remove from view
         root = Tk()
         root.iconbitmap('cade.ico')
@@ -204,8 +229,115 @@ class Analysis_Object:
         root.attributes("-topmost", True)
         
         # Get filepath from askdirectory dialog
-        file_path = askdirectory(title = 'Select folder to read *.inp files: ', initialdir=os.path.abspath(os.getcwd()))
+        file_path = askdirectory(title = 'Select folder to read Analysis files from: ', initialdir=os.path.abspath(os.getcwd()))
 
         root.destroy()
         
         return file_path
+    
+
+    def choose_parameters(self):
+        '''
+        ---------------------------------------------------
+        
+        ---------------------------------------------------
+        '''
+        commands = ['add', 'exit']
+        
+        self.parameters = {}
+        while True:
+
+            # Get parameter type or exit choosing parameter command
+            command = inquirer.list_input('Add more parameters or exit choose parameter dialog?', choices=commands)
+
+            if command == 'exit':
+
+                print('---------------------------------------------------')
+                print('Exiting Choose parameter dialog.')
+                print('Parameters chosen for the analysis are: ')
+
+                # Print all parameters added
+                for parameter in self.parameters.keys():
+                    print('---------------------------------------------------')
+                    print('Name: {}'.format(self.parameters[parameter]['name']))
+                    print('\tDescription: {}'.format(self.parameters[parameter]['description']))
+                    print('\tData-type: {}'.format(self.parameters[parameter]['dtype']))
+                    print('\tRange: {}'.format(self.parameters[parameter]['range']))
+                    print('\tDefault Value: {}'.format(self.parameters[parameter]['default_value']))
+
+                print('---------------------------------------------------')
+                return
+            
+            if command == 'add':
+                self.add_parameter()
+
+    def add_parameter(self):
+        '''
+        ---------------------------------------------------
+
+        ---------------------------------------------------
+        RETURNS
+        ---------------------------------------------------
+
+        ---------------------------------------------------
+        '''
+
+        ranges = ['positive', 'all']
+        dtypes = ['int', 'float']
+                                                                                                            
+        questions = [inquirer.Text('name', message='Please enter a name for the parameter to be added'),
+                     inquirer.Text('description', message='Please enter a description of the parameter to be added'),
+                     inquirer.List('dtype', message='Please choose a data-type for the parameter to be added', choices=dtypes),
+                     inquirer.List('range', message='Please choose a data range for the parameter to be added', choices=ranges),
+                     inquirer.Text('default_value', 'Please enter the default value for the parameter to be added')]
+
+        # Loop until new name is unique
+        while True:
+            print('The following names are already in use: {}'.format([name for name in self.parameters.keys()]))
+            answers = inquirer.prompt(questions)
+
+            # Convert default value **************WILL NEED TO BE UPDATED*****************
+            if answers['dtype'] == 'int':
+                answers['default_value'] = int(answers['default_value'])
+                answers['dtype'] = int
+            else:
+                answers['default_value'] = float(answers['default_value'])
+                answers['dtype'] = float
+            
+
+            # Check name is not empty
+            if not answers['name']:
+                print('---------------------------------------------------')
+                print('ERROR: The name provided was an empty string')
+                print('---------------------------------------------------')
+
+            # Check name only uses allowed characters
+            elif not (set(answers['name']) <= self.allowed_characters['Parameter_Name']):
+                print('---------------------------------------------------')
+                print('ERROR: The name: "{}", is not entirely letters, numbers or underscores and hyphens.'.format(answers['name']))
+                print('---------------------------------------------------')
+            
+            # Check name is unique
+            elif answers['name'] in self.parameters.keys():
+                print('---------------------------------------------------')
+                print('ERROR: The name: "{}", already exists in the database.'.format(answers['name']))
+                print('---------------------------------------------------')
+
+            # Check description only uses allowed characters
+            elif not (set(answers['description']) <= self.allowed_characters['Description']):
+                print('---------------------------------------------------')
+                print('ERROR: The description: "{}", does not meet the requirements.'.format(answers['description']))
+                print('---------------------------------------------------')
+            
+            # Check default value is within range
+            elif (answers['range'] == 'positive') and (answers['default_value'] < 0): 
+                print('---------------------------------------------------')
+                print('The default value: "{}", is outside of the range "positive" specified.'.format(answers['default_value']))
+                print('---------------------------------------------------')
+
+            else:
+                self.parameters[answers['name']] = answers
+                break
+
+
+        
