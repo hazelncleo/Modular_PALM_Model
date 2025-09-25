@@ -156,9 +156,9 @@ class Modular_Abaqus_Builder:
         # Set filepaths
         modelfile_fpath = 'Model_Files'
         self.fpaths = {'model_files' : modelfile_fpath,
-                       'analysis' : os.path.join(modelfile_fpath, 'ANALYSIS'),
-                       'geometry' : os.path.join(modelfile_fpath, 'GEOMETRY'),
-                       'material': os.path.join(modelfile_fpath, 'MATERIALS'),
+                       'analysis' : os.path.join(modelfile_fpath, 'analysis'),
+                       'geometry' : os.path.join(modelfile_fpath, 'geometry'),
+                       'material': os.path.join(modelfile_fpath, 'materials'),
                        'simulation': 'Simulations',
                        'data': 'Data.json'}
         
