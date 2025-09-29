@@ -4,7 +4,7 @@ import string
 from tkinter import Tk
 from tkinter.filedialog import askdirectory
 import inquirer
-
+import glob
 
 
 class Analysis_Object:
@@ -49,8 +49,9 @@ class Analysis_Object:
         
         self.choose_parameters()
         
+        self.get_files_used()
         
-        
+        self.set_requirements()
         
         
         
@@ -271,6 +272,7 @@ class Analysis_Object:
             if command == 'add':
                 self.add_parameter()
 
+
     def add_parameter(self):
         '''
         ---------------------------------------------------
@@ -340,4 +342,5 @@ class Analysis_Object:
                 break
 
 
-        
+    def get_files_used(self):
+            print(glob.glob(os.path.join(self.fpath,'*.*')))
