@@ -6,7 +6,6 @@ from tkinter.filedialog import askdirectory
 import inquirer
 
 
-
 class Analysis_Object:
     def __init__(self, builder):
         '''
@@ -29,12 +28,12 @@ class Analysis_Object:
         # Specify allowed characters for certain attributes
         self.allowed_characters = {'Name' : set(string.ascii_lowercase + string.digits + '_-'), 'Description' : set(string.ascii_letters + string.digits + '_-,.?! ()[]"'), 'Parameter_Name' : set(string.ascii_letters + string.digits + '-_')}
         
-        self.name = self.new_object_name()
+        self.new_object_name()
 
         # Set destination fpath
         self.fpath = os.path.join(self.builder.fpaths['analysis'],self.name)
 
-        self.description = self.new_description()
+        self.new_description()
         
         source_fpath = self.get_file_path()
         
@@ -42,77 +41,21 @@ class Analysis_Object:
         if not source_fpath:
             raise FileNotFoundError('A file path was not selected.')
 
-        # Copy files
-        copytree(source_fpath, self.fpath, symlinks=True)
+        self.move_folder(source_fpath, self.fpath)
 
-
-        
+        self.parameters = {}
         self.choose_parameters()
         
+        self.set_requirements()
         
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        self.requirements = {'softwares' : {'abaqus' : False, 'fluent' : False, 'mpcci' : False},
-                             'geometries' : {'abaqus_whole-chip_solid' : False, 'abaqus_whole-chip_acoustic' : False, 'abaqus_submodel_solid' : False, 'abaqus_submodel_acoustic' : False, 'fluent_whole-chip_fluid' : False, 'fluent_submodel_fluid' : False},
-                             'materials' : {'abaqus_solid' : False, 'abaqus_acoustic' : False},
-                             'analysis' : {'abaqus_global_odb' : False, 'abaqus_global_prt' : False, 'fluent_journal' : False}
-                             }
-        
-
-
-        # Get destination filepath of analysis
-        dest_file_path = os.path.join(self.fpaths[object_type], object_name.upper())
-
-        # Check file path does not already exist
-        if os.path.exists(dest_file_path):
-            print('-----------------------------------------------')
-            print('ERROR: The fpath: "{}", already exists.')
-            print('Returning to main loop.')
-            print('-----------------------------------------------')
-            return
-
-        # Create object in the database
-        self.data[object_type][object_name.lower()] = {'Name': object_name.lower(),
-                                                       'File_Path': dest_file_path,
-                                                       'Description': description,
-                                                       'Requirements' : requirements,
-                                                       'Fluid_Required' : fluid_required}
-        
-        print('The {}: "{}" has been successfully added to the local dictionary.'.format(object_type, object_name))
-        
-
-        # Copy *.inp files from source file path to the destination file path
-        files_to_copy = glob.glob(os.path.join(source_file_path,'*.inp'))
-        
-        # Create destination folder
-        os.makedirs(dest_file_path, exist_ok=True)
-        print('The Destination folder: "{}" has been successfully created.'.format(dest_file_path))
-
-        # Copy material file to new folder with new name
-        for file in files_to_copy:
-            file_name = file.split('\\')[-1]
-
-            # Try to copy the input file
-            try:
-                copy_input_file(file, os.path.join(dest_file_path, file_name[:-4].upper()+'.inp'), follow_symlinks=True)
-                print('The file: "{}" has been successfully added to the destination filepath: "{}".'.format(file_name[:-4].upper()+'.inp',dest_file_path))
-            except:
-                raise FileNotFoundError('The file: "{}" was not moved to the destination filepath. The database may now be corrupted.'.format(file_name[:-4].upper()+'.inp'))
-            
         print('-----------------------------------------------')
-        print('Create object operation successful.')
+        print('Create Analysis object operation successful.')
         print('-----------------------------------------------')
     
+
+    def move_folder(self, source_fpath, destination_fpath):
+        copytree(source_fpath, destination_fpath, symlinks=True)
+
     
     def new_object_name(self):
         '''
@@ -126,7 +69,7 @@ class Analysis_Object:
         ---------------------------------------------------
         '''
         # Get current names
-        current_names = self.builder.data['analysis'].keys()
+        current_names = [name for name in self.builder.data['analysis'].keys()]
 
         name = ''
 
@@ -164,7 +107,8 @@ class Analysis_Object:
                 print('---------------------------------------------------')
                 print('The name: "{}", for the new object has been selected.'.format(name))
                 print('---------------------------------------------------')
-                return name
+                self.name = name
+                return
                 
                 
     def new_description(self):
@@ -191,12 +135,7 @@ class Analysis_Object:
             
             description = input('Please enter a description for the Analysis Object to be created: ')
 
-            if not description:
-                print('---------------------------------------------------')
-                print('ERROR: The description provided was an empty string')
-                print('---------------------------------------------------')
-
-            elif not (set(description) <= self.allowed_characters['Description']):
+            if not (set(description) <= self.allowed_characters['Description']):
                 print('---------------------------------------------------')
                 print('ERROR: The description: "{}", does not meet the requirements.'.format(description))
                 print('---------------------------------------------------')
@@ -205,7 +144,8 @@ class Analysis_Object:
                 print('---------------------------------------------------')
                 print('The description: "{}", for the new object has been selected.'.format(description))
                 print('---------------------------------------------------')
-                return description
+                self.description = description
+                return
             
     
     def get_file_path(self):
@@ -242,13 +182,12 @@ class Analysis_Object:
         
         ---------------------------------------------------
         '''
-        commands = ['add', 'exit']
-        
-        self.parameters = {}
+        commands = ['add', 'modify', 'delete', 'exit']
+
         while True:
 
             # Get parameter type or exit choosing parameter command
-            command = inquirer.list_input('Add more parameters or exit choose parameter dialog?', choices=commands)
+            command = inquirer.list_input('Add more parameters or exit choose parameter dialog?', choices=commands, carousel = True)
 
             if command == 'exit':
 
@@ -268,10 +207,21 @@ class Analysis_Object:
                 print('---------------------------------------------------')
                 return
             
-            if command == 'add':
+            elif command == 'add':
                 self.add_parameter()
 
-    def add_parameter(self):
+            elif command == 'modify':
+                parameter_to_modify = self.choose_parameter('modify')
+
+                if parameter_to_modify: self.modify_parameter(parameter_to_modify)
+
+            elif command == 'delete':
+                parameter_to_delete = self.choose_parameter('delete')
+
+                if parameter_to_delete: self.delete_parameter(parameter_to_delete)
+
+
+    def add_parameter(self, parameter_name = ''):
         '''
         ---------------------------------------------------
 
@@ -284,12 +234,19 @@ class Analysis_Object:
 
         ranges = ['positive', 'all']
         dtypes = ['int', 'float']
-                                                                                                            
-        questions = [inquirer.Text('name', message='Please enter a name for the parameter to be added'),
-                     inquirer.Text('description', message='Please enter a description of the parameter to be added'),
-                     inquirer.List('dtype', message='Please choose a data-type for the parameter to be added', choices=dtypes),
-                     inquirer.List('range', message='Please choose a data range for the parameter to be added', choices=ranges),
-                     inquirer.Text('default_value', 'Please enter the default value for the parameter to be added')]
+
+        if parameter_name:                                                                                            
+            questions = [inquirer.Text('name', message='Please enter a name for the parameter to be added', default=parameter_name),
+                        inquirer.Text('description', message='Please enter a description of the parameter to be added', default=self.parameters[parameter_name]['description']),
+                        inquirer.List('dtype', message='Please choose a data-type for the parameter to be added', choices=dtypes, default=[self.parameters[parameter_name]['dtype']], carousel = True),
+                        inquirer.List('range', message='Please choose a data range for the parameter to be added', choices=ranges, default=[self.parameters[parameter_name]['range']], carousel = True),
+                        inquirer.Text('default_value', 'Please enter the default value for the parameter to be added', default=self.parameters[parameter_name]['default_value'])]
+        else:
+            questions = [inquirer.Text('name', message='Please enter a name for the parameter to be added'),
+                        inquirer.Text('description', message='Please enter a description of the parameter to be added'),
+                        inquirer.List('dtype', message='Please choose a data-type for the parameter to be added', choices=dtypes, carousel = True),
+                        inquirer.List('range', message='Please choose a data range for the parameter to be added', choices=ranges, carousel = True),
+                        inquirer.Text('default_value', 'Please enter the default value for the parameter to be added')]
 
         # Loop until new name is unique
         while True:
@@ -336,8 +293,69 @@ class Analysis_Object:
                 print('---------------------------------------------------')
 
             else:
+                if parameter_name and (parameter_name is not answers['name']):
+                    self.delete_parameter(parameter_name)
+
                 self.parameters[answers['name']] = answers
+
                 break
 
 
+    def choose_parameter(self, command):
+
+        # Get parameter names
+        parameters = [params for params in self.parameters.keys()]
+
+        # Check if empty
+        if parameters:
+
+            while True:
+
+                parameters.append('cancel')
+
+                # Ask user which parameter to select
+                chosen_parameter = inquirer.list_input('Choose parameter to {}'.format(command), choices=parameters, carousel = True)
+
+                if chosen_parameter == 'cancel':
+                    print('-----------------------------------------------')
+                    print('Parameter {} command cancelled, returning to loop.'.format(command))
+                    print('-----------------------------------------------')
+                    return ''
+                
+                else:
+                    print('-----------------------------------------------')
+                    print('Parameter "{}" chosen for {} command, returning to loop.'.format(chosen_parameter, command))
+                    print('-----------------------------------------------')
+                    return chosen_parameter
+                    
+        else:
+            print('-----------------------------------------------')
+            print('No parameters to pick, returning to loop.')
+            print('-----------------------------------------------')
+            return ''
+
+
+    def modify_parameter(self, parameter_to_modify):
         
+        self.add_parameter(parameter_to_modify)
+
+
+    def delete_parameter(self, parameter_to_delete):
+        _ = self.parameters.pop(parameter_to_delete)
+
+
+    def set_requirements(self):
+        self.requirements = {'softwares' : {'abaqus' : False,
+                                            'fluent' : False,
+                                            'mpcci' : False},
+                             'geometries' : {'abaqus_whole-chip_solid' : False,
+                                             'abaqus_whole-chip_acoustic' : False,
+                                             'abaqus_submodel_solid' : False,
+                                             'abaqus_submodel_acoustic' : False,
+                                             'fluent_whole-chip_fluid' : False,
+                                             'fluent_submodel_fluid' : False},
+                             'materials' : {'abaqus_solid' : False,
+                                            'abaqus_acoustic' : False},
+                             'analysis' : {'abaqus_global_odb' : False,
+                                           'abaqus_global_prt' : False,
+                                           'fluent_journal' : False}}
