@@ -4,7 +4,7 @@ import string
 from tkinter import Tk
 from tkinter.filedialog import askdirectory
 import inquirer
-
+import json
 
 class Analysis_Object:
     def __init__(self, builder):
@@ -44,9 +44,9 @@ class Analysis_Object:
         self.move_folder(source_fpath, self.fpath)
 
         self.parameters = {}
-        self.choose_parameters()
+        self.define_parameters()
         
-        self.set_requirements()
+        self.load_requirements()
         
         print('-----------------------------------------------')
         print('Create Analysis object operation successful.')
@@ -176,7 +176,7 @@ class Analysis_Object:
         return file_path
     
 
-    def choose_parameters(self):
+    def define_parameters(self):
         '''
         ---------------------------------------------------
         
@@ -236,11 +236,11 @@ class Analysis_Object:
         dtypes = ['int', 'float']
 
         if parameter_name:                                                                                            
-            questions = [inquirer.Text('name', message='Please enter a name for the parameter to be added', default=parameter_name),
-                        inquirer.Text('description', message='Please enter a description of the parameter to be added', default=self.parameters[parameter_name]['description']),
-                        inquirer.List('dtype', message='Please choose a data-type for the parameter to be added', choices=dtypes, default=[self.parameters[parameter_name]['dtype']], carousel = True),
-                        inquirer.List('range', message='Please choose a data range for the parameter to be added', choices=ranges, default=[self.parameters[parameter_name]['range']], carousel = True),
-                        inquirer.Text('default_value', 'Please enter the default value for the parameter to be added', default=self.parameters[parameter_name]['default_value'])]
+            questions = [inquirer.Text('name', message='Please enter a name for the parameter to be modified', default=parameter_name),
+                        inquirer.Text('description', message='Please enter a description of the parameter to be modified', default=self.parameters[parameter_name]['description']),
+                        inquirer.List('dtype', message='Please choose a data-type for the parameter to be modified', choices=dtypes, default=[self.parameters[parameter_name]['dtype']], carousel = True),
+                        inquirer.List('range', message='Please choose a data range for the parameter to be modified', choices=ranges, default=[self.parameters[parameter_name]['range']], carousel = True),
+                        inquirer.Text('default_value', 'Please enter the default value for the parameter to be modified', default=self.parameters[parameter_name]['default_value'])]
         else:
             questions = [inquirer.Text('name', message='Please enter a name for the parameter to be added'),
                         inquirer.Text('description', message='Please enter a description of the parameter to be added'),
@@ -344,18 +344,31 @@ class Analysis_Object:
         _ = self.parameters.pop(parameter_to_delete)
 
 
+    def load_requirements(self):
+        
+        try:
+            
+            # Read requirements
+            with open(os.path.join(self.fpath,'requirements.json'),'r') as f:
+                self.requirements = json.load(f)
+                
+        except:
+            
+            # If no file to read have the user set the requirements
+            self.set_requirements()
+        
+        
     def set_requirements(self):
-        self.requirements = {'softwares' : {'abaqus' : False,
-                                            'fluent' : False,
-                                            'mpcci' : False},
-                             'geometries' : {'abaqus_whole-chip_solid' : False,
-                                             'abaqus_whole-chip_acoustic' : False,
-                                             'abaqus_submodel_solid' : False,
-                                             'abaqus_submodel_acoustic' : False,
-                                             'fluent_whole-chip_fluid' : False,
-                                             'fluent_submodel_fluid' : False},
-                             'materials' : {'abaqus_solid' : False,
-                                            'abaqus_acoustic' : False},
-                             'analysis' : {'abaqus_global_odb' : False,
-                                           'abaqus_global_prt' : False,
-                                           'fluent_journal' : False}}
+        softwares = ['abaqus','fluent','mpcci']
+        geometries = ["abaqus_whole-chip_solid", "abaqus_whole-chip_acoustic", "abaqus_submodel_solid", "abaqus_submodel_acoustic", "fluent_whole-chip_fluid", "fluent_submodel_fluid"]
+        materials = ['abaqus_solid', 'abaqus_acoustic']
+        analysis = ['abaqus_global_odb', 'abaqus_global_prt','fluent_journal']
+        
+        questions = [inquirer.Checkbox('softwares', message='Please choose the softwares required for this analysis', choices = softwares, carousel = True),
+                     inquirer.Checkbox('geometries', message='Please enter the geometries required for this analysis', choices = geometries, carousel = True),
+                     inquirer.Checkbox('materials', message='Please choose the materials required for this analysis', choices=materials, carousel = True),
+                     inquirer.Checkbox('analysis', message='Please choose the additional components required for this analysis', choices=analysis, carousel = True)]
+        
+        # Loop until new name is unique
+        while True:
+            answers = inquirer.prompt(questions)

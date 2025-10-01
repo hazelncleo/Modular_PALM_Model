@@ -5,7 +5,6 @@ def main():
     
     # Instantiate class
     model = Modular_Abaqus_Builder()
-    
     model.main_loop()
 
 
