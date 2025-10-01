@@ -57,16 +57,23 @@ class Modular_Abaqus_Builder:
         '''
 
         # Set filepaths
-        modelfile_fpath = 'model_files'
-        self.fpaths = {'model_files' : modelfile_fpath,
-                    'analysis' : os.path.join(modelfile_fpath, 'analysis'),
-                    'geometry' : os.path.join(modelfile_fpath, 'geometry'),
-                    'material': os.path.join(modelfile_fpath, 'materials'),
-                    'model': 'model',
+        objectfiles_fpath = 'object_files'
+        self.fpaths = {'object_files' : objectfiles_fpath,
+                    'analysis' : os.path.join(objectfiles_fpath, 'analysis'),
+                    'geometry' : os.path.join(objectfiles_fpath, 'geometry'),
+                    'material': os.path.join(objectfiles_fpath, 'materials'),
+                    'model_files': 'model_files',
                     'data': 'data.pickle'}
 
         # Load data from data.pickle
         try:
+            
+            # Make storage folders if they dont exist
+            os.makedirs(self.fpaths['analysis'], exist_ok=True)
+            os.makedirs(self.fpaths['geometry'], exist_ok=True)
+            os.makedirs(self.fpaths['material'], exist_ok=True)
+            os.makedirs(self.fpaths['model_files'], exist_ok=True)
+            
             self.load_database()
         
         # If it doesnt exist load an empty Modular_Abaqus_Builder
@@ -82,7 +89,11 @@ class Modular_Abaqus_Builder:
             
 
     def load_database(self):
-
+        '''
+        ---------------------------------------------------
+        Load the database from the .pkl file
+        ---------------------------------------------------
+        '''
         with open(self.fpaths['data'], 'rb') as df:
 
             self.__dict__ = pkl.load(df).__dict__
@@ -92,6 +103,11 @@ class Modular_Abaqus_Builder:
 
 
     def instantiate_database(self):
+        '''
+        ---------------------------------------------------
+        Instantiate an empty database
+        ---------------------------------------------------
+        '''
 
         # Set allowed characters
         self.allowed_characters = {'Name' : set(string.ascii_lowercase + string.digits + '_-'),
@@ -100,7 +116,7 @@ class Modular_Abaqus_Builder:
         
         # Set inquirer dialog lists
         self.inquirer_dialogs = {'Object_Types' : ['analysis','geometry','material'],
-                                'Main_Loop' : ['alter_objects', 'build_model', 'save_database', 'help', 'exit', 'force_exit'],
+                                'Main_Loop' : ['edit_objects', 'edit_models', 'save_database', 'help', 'exit', 'force_exit'],
                                 'Object_Loop' : ['create', 'modify', 'duplicate', 'delete', 'help', 'back'],
                                 'Model_Loop' : ['build', 'modify', 'duplicate', 'delete', 'post_process', 'run', 'help', 'back']}
     
@@ -110,7 +126,7 @@ class Modular_Abaqus_Builder:
     def save_database(self):
             '''
             ---------------------------------------------------
-            Saves the database to .pkl file
+            Saves the database to a .pkl file
             ---------------------------------------------------
             '''
 
@@ -134,7 +150,7 @@ class Modular_Abaqus_Builder:
 
         while True:
             
-            # Commands = ['alter_objects', 'build_model', 'save_database', 'help', 'exit', 'force_exit']
+            # Commands = ['edit_objects', 'edit_models', 'save_database', 'help', 'exit', 'force_exit']
             command = inquirer.list_input('Pick Command: ', choices=self.inquirer_dialogs['Main_Loop'], carousel = True)
 
             if command == 'exit':
@@ -153,22 +169,13 @@ class Modular_Abaqus_Builder:
             elif command == 'save_database':
                 self.save_database()
 
-            elif command == 'build_model':
-
-                # Get new model name
-                model_name = self.new_model_name()
-
-                # Get model description
-                description = self.provide_description()
-
-                # Build model
-                self.build_model(model_name, description)
-
-                self.save_database()
+            elif command == 'edit_models':
+                print('bruh')
+                pass
                 
 
-            elif command == 'alter_objects':
-                self.alter_objects()
+            elif command == 'edit_objects':
+                self.edit_objects()
 
             elif command == 'force_exit':
                 if self.yes_no_question('Are you sure you would like to force exit without saving?'):
@@ -180,15 +187,15 @@ class Modular_Abaqus_Builder:
         print('-----------------------------------------------')
 
 
-    def alter_objects(self):
+    def edit_objects(self):
         '''
         ---------------------------------------------------
-        Main loop for altering objects in the database
+        Main loop for editing objects in the database
         ---------------------------------------------------
         '''
 
         print('-----------------------------------------------')
-        print('Entering alter objects interface')
+        print('Entering Edit Objects interface')
         print('-----------------------------------------------')
 
         command = ''
@@ -196,7 +203,7 @@ class Modular_Abaqus_Builder:
         while command != 'back':
             
             # Commands = ['create', 'modify', 'duplicate', 'delete', 'help', 'back']
-            command = inquirer.list_input('Pick Object Alteration Command: ', choices=self.inquirer_dialogs['Object_Loop'], carousel = True)
+            command = inquirer.list_input('Pick Edit Object Command', choices=self.inquirer_dialogs['Object_Loop'], carousel = True)
 
 
             if command == 'help':
@@ -228,7 +235,7 @@ class Modular_Abaqus_Builder:
                     self.save_database()
 
                 else: 
-                    print('Returning to main loop.')
+                    print('Returning to object loop.')
                     print('-----------------------------------------------')
 
             elif command == 'duplicate':
@@ -245,7 +252,7 @@ class Modular_Abaqus_Builder:
                     self.save_database()
 
                 else: 
-                    print('Returning to main loop.')
+                    print('Returning to object loop.')
                     print('-----------------------------------------------')
 
 
@@ -263,7 +270,7 @@ class Modular_Abaqus_Builder:
                     self.save_database()
 
                 else: 
-                    print('Returning to main loop.')
+                    print('Returning to object loop.')
                     print('-----------------------------------------------')
 
 
@@ -272,7 +279,7 @@ class Modular_Abaqus_Builder:
         print('-----------------------------------------------')
 
 
-    def alter_models(self):
+    def edit_models(self):
         '''
         ---------------------------------------------------
         Main loop for altering models in the database
@@ -288,7 +295,7 @@ class Modular_Abaqus_Builder:
         while command != 'back':
             
             # Commands = ['build', 'modify', 'duplicate', 'delete', 'post_process', 'run', 'help', 'back']
-            command = inquirer.list_input('Pick Model Alteration Command: ', choices=self.inquirer_dialogs['Model_Loop'], carousel = True)
+            command = inquirer.list_input('Pick Model Edit Command: ', choices=self.inquirer_dialogs['Model_Loop'], carousel = True)
 
         
     def select_object_type(self):
@@ -490,8 +497,11 @@ class Modular_Abaqus_Builder:
 
         # Change parameters
         if object_modifications['parameters']:
-            self.data[object_type][object_name].choose_parameters()
+            self.data[object_type][object_name].define_parameters()
             print('Parameters modification was successful.')
+            
+        if object_modifications['requirements']:
+            pass
 
 
         print('-----------------------------------------------')
@@ -519,7 +529,9 @@ class Modular_Abaqus_Builder:
 
         # Copy object and change its name
         duplicated_object = deepcopy(self.data[object_type][object_name])
+        duplicated_object.builder = self
         duplicated_object.new_object_name()
+        
         new_name = duplicated_object.name
 
         # Get new fpath
@@ -587,143 +599,7 @@ class Modular_Abaqus_Builder:
         Build model
         '''
         
-        # Add to local dictionary
-        self.data['model'][model_name] = {'Name' : model_name,
-                                               'File_Path' : os.path.join(self.fpaths['model'],model_name),
-                                               'Description' : description,
-                                               'Main_File' : '',
-                                               'Input_Files' : [],
-                                               'Requirements' : [],
-                                               'Objects' : []}
-
-        # Make folder
-        new_fpath = self.data['model'][model_name]['File_Path']
-        os.makedirs(new_fpath, exist_ok=True)
-
-
-        # Copy main.inp with new name
-        new_main_name = model_name.upper()+'.inp'
-        copy_input_file(os.path.join(self.fpaths['model_files'], 'MAIN.inp'), os.path.join(new_fpath, new_main_name), follow_symlinks=True)
-        self.data['model'][model_name]['Main_File'] = new_main_name
-        self.data['model'][model_name]['Input_Files'].append(new_main_name)
-        print('The file: "{}" has been successfully duplicated to the filepath: "{}" from "{}".'.format(new_main_name, new_fpath, self.fpaths['model_files']))
-        print('-----------------------------------------------')
-
-
-
-        # Select Analysis
-        analysis_name,_ = self.select_object('analysis', message=' for the model: "{}" to be built'.format(model_name))
-
-        # Get old file path of analysis
-        fpath = self.data['analysis'][analysis_name]['File_Path']
-
-        # Update local dictionary to add analysis information
-        self.data['model'][model_name]['Objects'].append(analysis_name)
-        self.data['model'][model_name]['Requirements'] = self.data['analysis'][analysis_name]['Requirements']
-
-        # Get *.inp files as list from analysis filepath
-        files_to_copy = glob.glob(os.path.join(fpath,'*.inp'))
-
-        # Copy *.inp files to new file path
-        for file in files_to_copy:
-
-            file_name = file.split('\\')[-1]
-
-            self.data['model'][model_name]['Input_Files'].append(file_name[:-4].upper()+'.inp')
-
-            try:
-                copy_input_file(file, os.path.join(new_fpath, file_name[:-4].upper()+'.inp'), follow_symlinks=True)
-                print('The file: "{}" has been successfully duplicated to the filepath: "{}" from "{}".'.format(file_name[:-4].upper()+'.inp',new_fpath, fpath))
-
-            except:
-                raise FileNotFoundError('The file: "{}" was not moved to the destination filepath.'.format(file_name[:-4].upper()+'.inp'))
-
-
-
-        # Select Geometry
-        geometry_name,_ = self.select_object('geometry', message=' for the model: "{}" to be built'.format(model_name))
-
-        # Get old file path
-        fpath = self.data['geometry'][geometry_name]['File_Path']
-
-        # Update local dictionary to add analysis information
-        self.data['model'][model_name]['Objects'].append(geometry_name)
-
-        # Get *.inp files as list from analysis filepath
-        files_to_copy = glob.glob(os.path.join(fpath,'*.inp'))
-
-        # Copy *.inp files to new file path
-        for file in files_to_copy:
-
-            file_name = file.split('\\')[-1]
-
-            self.data['model'][model_name]['Input_Files'].append(file_name[:-4].upper()+'.inp')
-
-            try:
-                copy_input_file(file, os.path.join(new_fpath, file_name[:-4].upper()+'.inp'), follow_symlinks=True)
-                print('The file: "{}" has been successfully duplicated to the filepath: "{}" from "{}".'.format(file_name[:-4].upper()+'.inp',new_fpath, fpath))
-
-            except:
-                raise FileNotFoundError('The file: "{}" was not moved to the destination filepath.'.format(file_name[:-4].upper()+'.inp'))
-
-
-
-        # Select solid material
-        material_name,_ = self.select_object('material', message=' for the model: "{}" to be built. (Note: this is the solid material)'.format(model_name))
-
-        # Get old file path
-        fpath = self.data['material'][material_name]['File_Path']
-
-        # Update local dictionary to add analysis information
-        self.data['model'][model_name]['Objects'].append(material_name)
-
-        # Get *.inp files as list from analysis filepath
-        files_to_copy = glob.glob(os.path.join(fpath,'*.inp'))
-
-        # Copy *.inp files to new file path
-        for file in files_to_copy:
-
-            file_name = file.split('\\')[-1]
-
-            self.data['model'][model_name]['Input_Files'].append(file_name[:-4].upper()+'.inp')
-
-            try:
-                copy_input_file(file, os.path.join(new_fpath, file_name[:-4].upper()+'.inp'), follow_symlinks=True)
-                print('The file: "{}" has been successfully duplicated to the filepath: "{}" from "{}".'.format(file_name[:-4].upper()+'.inp',new_fpath, fpath))
-
-            except:
-                raise FileNotFoundError('The file: "{}" was not moved to the destination filepath.'.format(file_name[:-4].upper()+'.inp'))
-
-
-
-        fluid_required = True
-
-        # Select fluid material
-        if fluid_required:
-            material_name,_ = self.select_object('material', message=' for the model: "{}" to be built. (Note: this is the fluid material)'.format(model_name))
-
-            # Get old file path
-            fpath = self.data['material'][material_name]['File_Path']
-
-            # Update local dictionary to add analysis information
-            self.data['model'][model_name]['Objects'].append(material_name)
-
-            # Get *.inp files as list from analysis filepath
-            files_to_copy = glob.glob(os.path.join(fpath,'*.inp'))
-
-            # Copy *.inp files to new file path
-            for file in files_to_copy:
-
-                file_name = file.split('\\')[-1]
-
-                self.data['model'][model_name]['Input_Files'].append(file_name[:-4].upper()+'.inp')
-
-                try:
-                    copy_input_file(file, os.path.join(new_fpath, file_name[:-4].upper()+'.inp'), follow_symlinks=True)
-                    print('The file: "{}" has been successfully duplicated to the filepath: "{}" from "{}".'.format(file_name[:-4].upper()+'.inp',new_fpath, fpath))
-
-                except:
-                    raise FileNotFoundError('The file: "{}" was not moved to the destination filepath.'.format(file_name[:-4].upper()+'.inp'))
+        pass
 
 
     def modify_model(self):
@@ -892,7 +768,7 @@ class Modular_Abaqus_Builder:
     def print_object_help_message(self):
         '''
         ---------------------------------------------------
-        Prints a help message for using the alter object text interface
+        Prints a help message for using the Edit Object text interface
 
         **********************************TODO***********************************
         ---------------------------------------------------
