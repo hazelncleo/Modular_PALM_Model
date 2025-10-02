@@ -1,20 +1,20 @@
 {
     "softwares": {
-        "abaqus": false,
+        "abaqus": true,
         "fluent": false,
         "mpcci": false
     },
     "geometries": {
-        "abaqus_whole-chip_solid": false,
-        "abaqus_whole-chip_acoustic": false,
+        "abaqus_whole-chip_solid": true,
+        "abaqus_whole-chip_acoustic": true,
         "abaqus_submodel_solid": false,
         "abaqus_submodel_acoustic": false,
         "fluent_whole-chip_fluid": false,
         "fluent_submodel_fluid": false
     },
     "materials": {
-        "abaqus_solid": false,
-        "abaqus_acoustic": false
+        "abaqus_solid": true,
+        "abaqus_acoustic": true
     },
     "analysis": {
         "abaqus_global_odb": false,

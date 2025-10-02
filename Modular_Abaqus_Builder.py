@@ -5,51 +5,14 @@ import inquirer
 from shutil import rmtree
 import pickle as pkl
 from copy import deepcopy
+from sys import exit
 from Analysis_Object import Analysis_Object
 from Geometry_Object import Geometry_Object
 from Material_Object import Material_Object
-  
-'''
-*****************************************************************************************************************************
-****************************************************TODO*********************************************************************
-*****************************************************************************************************************************
-
-IMPORTANT STUFF
---------------------------
-- add more information for the objects (input files in folder, editable parameters) will need to edit create, modify, duplicate and delete at the very least
-- set requirements (basic implementation atm, might need to be made more complex)
-- validate
-- modify model
-- duplicate model
-- delete model
-- postprocess model
-- alter model loop
-- add cancel option (?)
-- run model
-- clean up main loops
-
-
-NICE TO HAVE STUFF
--------------------------------
-- __repr__
-- __str__
-- main help message
-- object help message
-- model help message
-- run model progress?? :o
-'''
-
-
-
-'''
-**************************************************************************************************
-*************************CLASSIFYING OBJECTS AND MODELS AND MORE FUNCTIONS YIPPEE*****************
-**************************************************************************************************
-'''
 
 
 class Modular_Abaqus_Builder:
-    def __init__(self):
+    def __init__(self, overwrite=False):
         '''
         ---------------------------------------------------
         Initialise the class and load the data from the .pkl file.
@@ -64,6 +27,30 @@ class Modular_Abaqus_Builder:
                     'material': os.path.join(objectfiles_fpath, 'materials'),
                     'model_files': 'model_files',
                     'data': 'data.pickle'}
+        
+        if overwrite:
+            
+            print('-----------------------------------------------')
+            print('OVERWRITE FLAG SET TO TRUE')
+            print('-----------------------------------------------')
+
+            if self.yes_no_question('Are you sure you would like to overwrite the database? (This will delete all object, model and .pkl files)'):
+                
+                self.overwrite_database()
+
+                self.instantiate_database()
+
+                self.save_database()
+
+                return
+
+            else:
+
+                print('-----------------------------------------------')
+                print('The overwrite flag was set to true, but the overwrite was denied. Closing the database.')
+                print('-----------------------------------------------')
+
+                exit(0)
 
         # Load data from data.pickle
         try:
@@ -87,6 +74,30 @@ class Modular_Abaqus_Builder:
 
             self.save_database()
             
+
+    def overwrite_database(self):
+        '''
+        ---------------------------------------------------
+        Delete all objects and models in the relevant filepaths
+        ---------------------------------------------------
+        '''
+        
+        for analysis in glob.glob(os.path.join(self.fpaths['analysis'], '*', ''), recursive=False):
+            rmtree(analysis)
+            print('Deleted: "{}"'.format(analysis))
+
+        for geometry in glob.glob(os.path.join(self.fpaths['geometry'], '*', ''), recursive=False):
+            rmtree(geometry)
+            print('Deleted: "{}"'.format(geometry))
+
+        for material in glob.glob(os.path.join(self.fpaths['material'], '*', ''), recursive=False):
+            rmtree(material)
+            print('Deleted: "{}"'.format(material))
+
+        for model in glob.glob(os.path.join(self.fpaths['model_files'], '*', ''), recursive=False):
+            rmtree(model)
+            print('Deleted: "{}"'.format(model))
+
 
     def load_database(self):
         '''
@@ -124,27 +135,27 @@ class Modular_Abaqus_Builder:
 
 
     def save_database(self):
-            '''
-            ---------------------------------------------------
-            Saves the database to a .pkl file
-            ---------------------------------------------------
-            '''
+        '''
+        ---------------------------------------------------
+        Saves the database to a .pkl file
+        ---------------------------------------------------
+        '''
 
+        print('-----------------------------------------------')
+        print('Saving the Database')
+        print('-----------------------------------------------')
+        # Save data
+        with open(self.fpaths['data'], 'wb') as df:
+            pkl.dump(self, df)
             print('-----------------------------------------------')
-            print('Saving the Database')
+            print('Save to: "{}" was successful.'.format(self.fpaths['data']))
             print('-----------------------------------------------')
-            # Save data
-            with open(self.fpaths['data'], 'wb') as df:
-                pkl.dump(self, df)
-                print('-----------------------------------------------')
-                print('Save to: "{}" was successful.'.format(self.fpaths['data']))
-                print('-----------------------------------------------')
 
 
     def main_loop(self):
         '''
         ---------------------------------------------------
-        The main functioning loop
+        Main loop that controls the tui of the database
         ---------------------------------------------------
         '''
 
@@ -221,6 +232,8 @@ class Modular_Abaqus_Builder:
 
                 self.create_object(object_type)
 
+                self.save_database()
+
 
             elif command == 'modify':
                 
@@ -282,12 +295,12 @@ class Modular_Abaqus_Builder:
     def edit_models(self):
         '''
         ---------------------------------------------------
-        Main loop for altering models in the database
+        Main loop for editing models in the database
         ---------------------------------------------------
         '''
 
         print('-----------------------------------------------')
-        print('Entering alter models interface')
+        print('Entering edit models interface')
         print('-----------------------------------------------')
         
         command = ''
@@ -370,7 +383,7 @@ class Modular_Abaqus_Builder:
             
         ---------------------------------------------------
         '''
-        possible_changes = ['name', 'description', 'parameters', 'cancel']
+        possible_changes = ['name', 'description', 'parameters', 'requirements', 'cancel']
         
         # Get objects to be changed
         modifications = inquirer.checkbox('What would you like to change about the object: "{}", of type: "{}"'.format(object_name,object_type),
@@ -379,9 +392,10 @@ class Modular_Abaqus_Builder:
         # Create change dictionary
         object_modifications = {'name': False,
                        'description' : False,
-                       'parameters' : False}
+                       'parameters' : False,
+                       'requirements' : False}
         
-        # If no changes picked return to main loop
+        # If no changes picked or cancelled return to main loop
         if (not modifications) or ('cancel' in modifications):
             print('-----------------------------------------------')
             print('No changes picked or cancel command picked')
@@ -389,14 +403,8 @@ class Modular_Abaqus_Builder:
             print('-----------------------------------------------')
             return object_modifications
 
-        if 'name' in modifications:
-            object_modifications['name'] = True
-
-        if 'description' in modifications:
-            object_modifications['description'] = True
-
-        if 'parameters' in modifications:
-            object_modifications['parameters'] = True
+        for modification_key in object_modifications.keys():
+            object_modifications[modification_key] = modification_key in modifications
 
         return object_modifications
         
@@ -501,7 +509,7 @@ class Modular_Abaqus_Builder:
             print('Parameters modification was successful.')
             
         if object_modifications['requirements']:
-            pass
+            self.data[object_type][object_name].set_requirements()
 
 
         print('-----------------------------------------------')
@@ -695,35 +703,75 @@ class Modular_Abaqus_Builder:
         print('-----------------------------------------------')
         for analysis in self.data['analysis'].values():
 
-            print('Analysis Name: "{}"\n'.format(analysis.name))
+            print('Analysis Name: "{}"'.format(analysis.name))
             print('\tPath: "{}"'.format(analysis.fpath))
             print('\tDescription: "{}"'.format(analysis.description))
-            print('\tInput Files: "{}"'.format('files'))
+            print('\tFiles: ')
+
+            for file in analysis.files:
+                print('\t\t"{}"'.format(file))
+
             print('\tParameters: ')
 
             for parameter in analysis.parameters.keys():
-                print('')
-                print('\t\tName: {}'.format(analysis.parameters[parameter]['name']))
-                print('\t\tDescription: {}'.format(analysis.parameters[parameter]['description']))
-                print('\t\tData-type: {}'.format(analysis.parameters[parameter]['dtype']))
-                print('\t\tRange: {}'.format(analysis.parameters[parameter]['range']))
-                print('\t\tDefault Value: {}'.format(analysis.parameters[parameter]['default_value']))
+
+                print('\t\tName: "{}"'.format(analysis.parameters[parameter]['name']))
+                print('\t\t\tDescription: "{}"'.format(analysis.parameters[parameter]['description']))
+                print('\t\t\tData-type: "{}"'.format(analysis.parameters[parameter]['dtype']))
+                print('\t\t\tDefault Value: "{}"'.format(analysis.parameters[parameter]['default_value']))
+
+                print('\t\t\tFiles parameter modifies: ')
+                for file in analysis.parameters[parameter]['files']:
+                        print('\t\t\t\t"{}"'.format(file))
+
+
+            print('\tRequirements: ')
+
+            for requirement_type in analysis.requirements.keys():
+                
+                print('\t\t"{}"'.format(requirement_type))
+
+                for requirement,requirement_value in analysis.requirements[requirement_type].items():
+                    print('\t\t\t"{}": "{}"'.format(requirement,requirement_value))
 
             print('-----------------------------------------------')
 
+        
         print('The Geometries currently loaded are: ')
         print('-----------------------------------------------')
         for geometry in self.data['geometry'].values():
 
-            # Get input files
-            fpath = os.path.join(geometry['File_Path'],'*.inp')
-            input_files = [x.split('\\')[-1] for x in glob.glob(fpath)]
+            print('Geometry Name: "{}"'.format(geometry.name))
+            print('\tPath: "{}"'.format(geometry.fpath))
+            print('\tDescription: "{}"'.format(geometry.description))
+            print('\tFiles: ')
 
-            print('Geometry Name: "{}'.format(geometry['Name']))
-            print('\tPath: "{}"'.format(geometry['File_Path']))
-            print('\tDescription: "{}"'.format(geometry['Description']))
-            print('\tRequirements: "{}"'.format(geometry['Requirements']))
-            print('\tInput Files: "{}"'.format(input_files))
+            for file in geometry.files:
+                print('\t\t"{}"'.format(file))
+
+            print('\tParameters: ')
+
+            for parameter in geometry.parameters.keys():
+
+                print('\t\tName: "{}"'.format(geometry.parameters[parameter]['name']))
+                print('\t\t\tDescription: "{}"'.format(geometry.parameters[parameter]['description']))
+                print('\t\t\tData-type: "{}"'.format(geometry.parameters[parameter]['dtype']))
+                print('\t\t\tDefault Value: "{}"'.format(geometry.parameters[parameter]['default_value']))
+
+                print('\t\t\tFiles parameter modifies: ')
+                for file in geometry.parameters[parameter]['files']:
+                        print('\t\t\t\t"{}"'.format(file))
+
+
+            print('\tRequirements: ')
+
+            for requirement_type in geometry.requirements.keys():
+                
+                print('\t\t"{}"'.format(requirement_type))
+
+                for requirement,requirement_value in geometry.requirements[requirement_type].items():
+                    print('\t\t\t"{}": "{}"'.format(requirement,requirement_value))
+
             print('-----------------------------------------------')
 
 
@@ -731,25 +779,54 @@ class Modular_Abaqus_Builder:
         print('-----------------------------------------------')
         for material in self.data['material'].values():
 
-            # Get input files
-            fpath = os.path.join(material['File_Path'],'*.inp')
-            input_files = [x.split('\\')[-1] for x in glob.glob(fpath)]
+            print('Material Name: "{}"'.format(material.name))
+            print('\tPath: "{}"'.format(material.fpath))
+            print('\tDescription: "{}"'.format(material.description))
+            print('\tFiles: ')
 
-            print('Material Name: "{}'.format(material['Name']))
-            print('\tPath: "{}"'.format(material['File_Path']))
-            print('\tDescription: "{}"'.format(material['Description']))
-            print('\tRequirements: "{}"'.format(material['Requirements']))
-            print('\tInput Files: "{}"'.format(input_files))
+            for file in material.files:
+                print('\t\t"{}"'.format(file))
+
+            print('\tParameters: ')
+
+            for parameter in material.parameters.keys():
+
+                print('\t\tName: "{}"'.format(material.parameters[parameter]['name']))
+                print('\t\t\tDescription: "{}"'.format(material.parameters[parameter]['description']))
+                print('\t\t\tData-type: "{}"'.format(material.parameters[parameter]['dtype']))
+                print('\t\t\tDefault Value: "{}"'.format(material.parameters[parameter]['default_value']))
+
+                print('\t\t\tFiles parameter modifies: ')
+                for file in material.parameters[parameter]['files']:
+                        print('\t\t\t\t"{}"'.format(file))
+
+
+            print('\tRequirements: ')
+
+            for requirement_type in material.requirements.keys():
+                
+                print('\t\t"{}"'.format(requirement_type))
+
+                for requirement,requirement_value in material.requirements[requirement_type].items():
+                    print('\t\t\t"{}": "{}"'.format(requirement,requirement_value))
+
             print('-----------------------------------------------')
 
+
+        # ******************* WILL NEED TO BE UPDATED UPON ADDING MODEL CLASS *************************
+
+        print('The Models currently loaded are: ')
+        print('-----------------------------------------------')
         for model in self.data['model'].values():
-            print('Model Name: "{}'.format(model['Name']))
-            print('\tPath: "{}"'.format(model['File_Path']))
-            print('\tDescription: "{}"'.format(model['Description']))
-            print('\tMain File: "{}"'.format(model['Main_File']))
-            print('\tRequirements: "{}"'.format(model['Requirements']))
-            print('\tInput Files: "{}"'.format(model['Input_Files']))
-            print('\tObjects : "{}"'.format(model['Objects']))
+
+            print('Model Name: "{}"'.format(model.name))
+            print('\tPath: "{}"'.format(model.fpath))
+            print('\tDescription: "{}"'.format(model.description))
+            print('\tFiles: ')
+
+            for file in glob.glob(os.path.join(model.fpath,'*.*')):
+                print('\t\t"{}"'.format(file))
+
             print('-----------------------------------------------')
 
 

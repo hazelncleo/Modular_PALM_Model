@@ -4,10 +4,23 @@ import string
 from tkinter import Tk
 from tkinter.filedialog import askdirectory
 import inquirer
-
-
+import json
+from glob import glob
 
 class Material_Object:
+    '''
+    ---------------------------------------------------
+    Contains all the relevant information for a Material Object
+    ---------------------------------------------------
+    Attributes
+    ---------------------------------------------------
+
+    ---------------------------------------------------
+    Methods
+    ---------------------------------------------------
+
+    ---------------------------------------------------
+    '''
     def __init__(self, builder):
         '''
         ---------------------------------------------------
@@ -20,7 +33,7 @@ class Material_Object:
         '''
         
         print('-----------------------------------------------')
-        print('Create Analysis Object operation started.')
+        print('Create Material Object operation started.')
         print('-----------------------------------------------')
         
         # Modular_Abaqus_Builder class containing this object 
@@ -29,12 +42,12 @@ class Material_Object:
         # Specify allowed characters for certain attributes
         self.allowed_characters = {'Name' : set(string.ascii_lowercase + string.digits + '_-'), 'Description' : set(string.ascii_letters + string.digits + '_-,.?! ()[]"'), 'Parameter_Name' : set(string.ascii_letters + string.digits + '-_')}
         
-        self.name = self.new_object_name()
+        self.new_object_name()
 
         # Set destination fpath
-        self.fpath = os.path.join(self.builder.fpaths['analysis'],self.name)
+        self.fpath = os.path.join(self.builder.fpaths['material'],self.name)
 
-        self.description = self.new_description()
+        self.new_description()
         
         source_fpath = self.get_file_path()
         
@@ -42,49 +55,47 @@ class Material_Object:
         if not source_fpath:
             raise FileNotFoundError('A file path was not selected.')
 
-        copytree(source_fpath, self.fpath, symlinks=True)
+        self.move_folder(source_fpath, self.fpath)
 
-        self.choose_parameters()
+        self.get_all_files()
+
+        self.parameters = {}
+        self.load_parameters()
         
-        self.requirements = {'softwares' : {'abaqus' : False, 'fluent' : False, 'mpcci' : False},
-                             'geometries' : {'abaqus_whole-chip_solid' : False, 'abaqus_whole-chip_acoustic' : False, 'abaqus_submodel_solid' : False, 'abaqus_submodel_acoustic' : False, 'fluent_whole-chip_fluid' : False, 'fluent_submodel_fluid' : False},
-                             'materials' : {'abaqus_solid' : False, 'abaqus_acoustic' : False},
-                             'analysis' : {'abaqus_global_odb' : False, 'abaqus_global_prt' : False, 'fluent_journal' : False}
-                             }
-        
-        self.set_requirements()
+        self.load_requirements()
+
+
         
         print('-----------------------------------------------')
-        print('Create Analysis object operation successful.')
+        print('Create Material object operation successful.')
         print('-----------------------------------------------')
     
+
+    def move_folder(self, source_fpath, destination_fpath):
+        copytree(source_fpath, destination_fpath, symlinks=True)
+
     
     def new_object_name(self):
         '''
         ---------------------------------------------------
-        Gets a new Analysis Object name, ensures that no object already exists of that type
-        ---------------------------------------------------
-        RETURNS
-        ---------------------------------------------------
-        name : str
-            The name for the new Analyis Object
+        Gets a new Material Object name, ensures that no object already exists of that type
         ---------------------------------------------------
         '''
         # Get current names
-        current_names = self.builder.data['analysis'].keys()
+        current_names = [name for name in self.builder.data['material'].keys()]
 
         name = ''
 
         # Loop until new name is unique
         while True:
             print('---------------------------------------------------')
-            print('Please enter a new name for the Analysis Object to be created: ')
+            print('Please enter a new name for the Material Object to be created: ')
             print('Note: ')
             print('- It must only use letters, numbers, underscores and hyphens.')
             print('- It must be lowercase.')
             print('- It must be unique.')
             print('---------------------------------------------------')
-            print('The Analysis names currently in use are listed below: ')
+            print('The Material names currently in use are listed below: ')
             print(current_names)
             print('---------------------------------------------------')
             
@@ -109,18 +120,14 @@ class Material_Object:
                 print('---------------------------------------------------')
                 print('The name: "{}", for the new object has been selected.'.format(name))
                 print('---------------------------------------------------')
-                return name
+                self.name = name
+                return
                 
                 
     def new_description(self):
         '''
         ---------------------------------------------------
-        Provide a description for the Analysis Object added to the database.
-        ---------------------------------------------------
-        RETURNS
-        ---------------------------------------------------
-        description : str
-            A string typed by the user that describes the new object that only has characters from "allowed_characters_description".
+        Provide a description for the Material Object added to the database.
         ---------------------------------------------------
         '''
 
@@ -134,14 +141,9 @@ class Material_Object:
             print('- It must only use letters, numbers, or the following symbols (not including single quotes): \'_-,.?! ()[]"\'')
             print('---------------------------------------------------')
             
-            description = input('Please enter a description for the Analysis Object to be created: ')
+            description = input('Please enter a description for the Material Object to be created: ')
 
-            if not description:
-                print('---------------------------------------------------')
-                print('ERROR: The description provided was an empty string')
-                print('---------------------------------------------------')
-
-            elif not (set(description) <= self.allowed_characters['Description']):
+            if not (set(description) <= self.allowed_characters['Description']):
                 print('---------------------------------------------------')
                 print('ERROR: The description: "{}", does not meet the requirements.'.format(description))
                 print('---------------------------------------------------')
@@ -150,7 +152,8 @@ class Material_Object:
                 print('---------------------------------------------------')
                 print('The description: "{}", for the new object has been selected.'.format(description))
                 print('---------------------------------------------------')
-                return description
+                self.description = description
+                return
             
     
     def get_file_path(self):
@@ -174,32 +177,31 @@ class Material_Object:
         root.attributes("-topmost", True)
         
         # Get filepath from askdirectory dialog
-        file_path = askdirectory(title = 'Select folder to read Analysis files from: ', initialdir=os.path.abspath(os.getcwd()))
+        file_path = askdirectory(title = 'Select folder to read Material files from: ', initialdir=os.path.abspath(os.getcwd()))
 
         root.destroy()
         
         return file_path
     
 
-    def choose_parameters(self):
+    def define_parameters(self):
         '''
         ---------------------------------------------------
         
         ---------------------------------------------------
         '''
-        commands = ['add', 'exit']
-        
-        self.parameters = {}
+        commands = ['add', 'modify', 'delete', 'exit']
+
         while True:
 
             # Get parameter type or exit choosing parameter command
-            command = inquirer.list_input('Add more parameters or exit choose parameter dialog?', choices=commands)
+            command = inquirer.list_input('Add more parameters or exit choose parameter dialog?', choices=commands, carousel = True)
 
             if command == 'exit':
 
                 print('---------------------------------------------------')
                 print('Exiting Choose parameter dialog.')
-                print('Parameters chosen for the analysis are: ')
+                print('Parameters chosen for the Material are: ')
 
                 # Print all parameters added
                 for parameter in self.parameters.keys():
@@ -207,14 +209,34 @@ class Material_Object:
                     print('Name: {}'.format(self.parameters[parameter]['name']))
                     print('\tDescription: {}'.format(self.parameters[parameter]['description']))
                     print('\tData-type: {}'.format(self.parameters[parameter]['dtype']))
-                    print('\tRange: {}'.format(self.parameters[parameter]['range']))
                     print('\tDefault Value: {}'.format(self.parameters[parameter]['default_value']))
+                    print('\tFiles: ')
+                    for file in self.parameters[parameter]['files']:
+                        print('\t\t"{}"'.format(file))
 
                 print('---------------------------------------------------')
+                
+                # Save parameter json
+                with open(os.path.join(self.fpath,'parameters.json'),'w') as f:
+                    json.dump(self.parameters, f, indent=4)
+                
+                print('Parameter .json saved to "{}"'.format(os.path.join(self.fpath,'parameters.json')))
+                print('---------------------------------------------------')
+
                 return
             
-            if command == 'add':
+            elif command == 'add':
                 self.add_parameter()
+
+            elif command == 'modify':
+                parameter_to_modify = self.choose_parameter('modify')
+
+                if parameter_to_modify: self.modify_parameter(parameter_to_modify)
+
+            elif command == 'delete':
+                parameter_to_delete = self.choose_parameter('delete')
+
+                if parameter_to_delete: self.delete_parameter(parameter_to_delete)
 
 
     def add_parameter(self):
@@ -228,14 +250,14 @@ class Material_Object:
         ---------------------------------------------------
         '''
 
-        ranges = ['positive', 'all']
         dtypes = ['int', 'float']
-                                                                                                            
+
+
         questions = [inquirer.Text('name', message='Please enter a name for the parameter to be added'),
-                     inquirer.Text('description', message='Please enter a description of the parameter to be added'),
-                     inquirer.List('dtype', message='Please choose a data-type for the parameter to be added', choices=dtypes),
-                     inquirer.List('range', message='Please choose a data range for the parameter to be added', choices=ranges),
-                     inquirer.Text('default_value', 'Please enter the default value for the parameter to be added')]
+                    inquirer.Text('description', message='Please enter a description of the parameter to be added'),
+                    inquirer.List('dtype', message='Please choose a data-type for the parameter to be added', choices=dtypes, carousel = True),
+                    inquirer.Text('default_value', 'Please enter the default value for the parameter to be added'),
+                    inquirer.Checkbox('files', message='Please choose the files this parameter controls', choices = self.files, carousel=True)]
 
         # Loop until new name is unique
         while True:
@@ -245,10 +267,8 @@ class Material_Object:
             # Convert default value **************WILL NEED TO BE UPDATED*****************
             if answers['dtype'] == 'int':
                 answers['default_value'] = int(answers['default_value'])
-                answers['dtype'] = int
             else:
                 answers['default_value'] = float(answers['default_value'])
-                answers['dtype'] = float
             
 
             # Check name is not empty
@@ -274,11 +294,11 @@ class Material_Object:
                 print('---------------------------------------------------')
                 print('ERROR: The description: "{}", does not meet the requirements.'.format(answers['description']))
                 print('---------------------------------------------------')
-            
-            # Check default value is within range
-            elif (answers['range'] == 'positive') and (answers['default_value'] < 0): 
+
+            # Check at least one file has been chosen
+            elif not answers['files']:
                 print('---------------------------------------------------')
-                print('The default value: "{}", is outside of the range "positive" specified.'.format(answers['default_value']))
+                print('ERROR: No File chosen')
                 print('---------------------------------------------------')
 
             else:
@@ -286,5 +306,196 @@ class Material_Object:
                 break
 
 
+    def choose_parameter(self, command):
+
+        # Get parameter names
+        parameters = [params for params in self.parameters.keys()]
+
+        # Check if empty
+        if parameters:
+
+            while True:
+
+                parameters.append('cancel')
+
+                # Ask user which parameter to select
+                chosen_parameter = inquirer.list_input('Choose parameter to {}'.format(command), choices=parameters, carousel = True)
+
+                if chosen_parameter == 'cancel':
+                    print('-----------------------------------------------')
+                    print('Parameter {} command cancelled, returning to loop.'.format(command))
+                    print('-----------------------------------------------')
+                    return ''
+                
+                else:
+                    print('-----------------------------------------------')
+                    print('Parameter "{}" chosen for {} command, returning to loop.'.format(chosen_parameter, command))
+                    print('-----------------------------------------------')
+                    return chosen_parameter
+                    
+        else:
+            print('-----------------------------------------------')
+            print('No parameters to pick, returning to loop.')
+            print('-----------------------------------------------')
+            return ''
+
+
+    def modify_parameter(self, parameter_to_modify):
+
+        '''
+        ---------------------------------------------------
+
+        ---------------------------------------------------
+        RETURNS
+        ---------------------------------------------------
+
+        ---------------------------------------------------
+        '''
+
+        dtypes = ['int', 'float']
+
+                                                                                            
+        questions = [inquirer.Text('name', message='Please enter a new name for the parameter to be modified', default=parameter_to_modify),
+                    inquirer.Text('description', message='Please enter a description of the parameter to be modified', default=self.parameters[parameter_to_modify]['description']),
+                    inquirer.List('dtype', message='Please choose a data-type for the parameter to be modified', choices=dtypes, default=[self.parameters[parameter_to_modify]['dtype']], carousel = True),
+                    inquirer.Text('default_value', 'Please enter the default value for the parameter to be modified', default=self.parameters[parameter_to_modify]['default_value']),
+                    inquirer.Checkbox('files', message='Please choose the files this parameter controls', choices = self.files, carousel=True,default=self.parameters[parameter_to_modify]['files'])]
+
+        # Loop until new name is unique
+        while True:
+            print('The following names are already in use: {}'.format([name for name in self.parameters.keys() if name is not parameter_to_modify]))
+            answers = inquirer.prompt(questions)
+
+            # Convert default value **************WILL NEED TO BE UPDATED*****************
+            if answers['dtype'] == 'int':
+                answers['default_value'] = int(answers['default_value'])
+            else:
+                answers['default_value'] = float(answers['default_value'])
+            
+
+            # Check name is not empty
+            if not answers['name']:
+                print('---------------------------------------------------')
+                print('ERROR: The name provided was an empty string')
+                print('---------------------------------------------------')
+
+            # Check name only uses allowed characters
+            elif not (set(answers['name']) <= self.allowed_characters['Parameter_Name']):
+                print('---------------------------------------------------')
+                print('ERROR: The name: "{}", is not entirely letters, numbers or underscores and hyphens.'.format(answers['name']))
+                print('---------------------------------------------------')
+            
+            # Check name is unique
+            elif answers['name'] in [name for name in self.parameters.keys() if name is not parameter_to_modify]:
+                print('---------------------------------------------------')
+                print('ERROR: The name: "{}", already exists in the database.'.format(answers['name']))
+                print('---------------------------------------------------')
+
+            # Check description only uses allowed characters
+            elif not (set(answers['description']) <= self.allowed_characters['Description']):
+                print('---------------------------------------------------')
+                print('ERROR: The description: "{}", does not meet the requirements.'.format(answers['description']))
+                print('---------------------------------------------------')
+
+            # Check at least one file has been chosen
+            elif not answers['files']:
+                print('---------------------------------------------------')
+                print('ERROR: No File chosen')
+                print('---------------------------------------------------')
+
+            else:
+                
+                self.delete_parameter(parameter_to_modify)
+
+                self.parameters[answers['name']] = answers
+
+                break
+        
+
+    def delete_parameter(self, parameter_to_delete):
+        '''
+        Delete a parameter from the parameter dictionary
+        '''
+        _ = self.parameters.pop(parameter_to_delete)
+
+
+    def load_parameters(self):
+        '''
+        Try to load the parameters for the material from a file, if it does not exist prompt the user to specify the parameters
+        '''
+        try:
+            # Read requirements
+            with open(os.path.join(self.fpath,'parameters.json'),'r') as f:
+                self.parameters = json.load(f)
+                
+        except:
+            # If no file to read have the user set the parameters
+            self.define_parameters()
+
+
+    def load_requirements(self):
+        '''
+        Try to load the requirements for the Material from a file, if it does not exist prompt the user to specify the requirements
+        '''
+        try:
+            # Read requirements
+            with open(os.path.join(self.fpath,'requirements.json'),'r') as f:
+                self.requirements = json.load(f)
+                
+        except:
+            # If no file to read have the user set the requirements
+            self.set_requirements()
+        
+        
     def set_requirements(self):
-        pass    
+        '''
+        
+        '''
+        # Set the default requirement dict if it does not exist
+        if not hasattr(self, 'requirements'):
+            self.requirements = {"materials": {
+                                    "abaqus_solid": False,
+                                    "abaqus_acoustic": False
+                                }}
+        
+
+        # Build questions object
+        questions = [inquirer.List('materials',
+                                       message = 'Please choose the valid material type',
+                                       choices = ['abaqus_solid', 'abaqus_acoustic'],
+                                       carousel = True,
+                                       default = [key for key in self.requirements['materials'].keys() if self.requirements['materials'][key]])]
+        
+
+        # Get answers to questions
+        answers = inquirer.prompt(questions)
+
+
+        # Set requirements according to answers
+        for requirement_type in self.requirements.keys():
+
+            for requirement in self.requirements[requirement_type].keys():
+
+                self.requirements[requirement_type][requirement] = requirement in answers[requirement_type]
+
+
+        # Save json file containing requirements
+        try:
+            with open(os.path.join(self.fpath,'requirements.json'),'w') as f:
+                json.dump(self.requirements, f, indent=4)
+
+        except:
+            print('-----------------------------------------------')
+            print('ERROR: requirements json could not be saved')
+            print('-----------------------------------------------')
+
+
+    def get_all_files(self):
+        '''
+        Get all files in the filepath
+        '''
+        self.files = glob(os.path.join(self.fpath,'*.*'))
+
+        if os.path.join(self.fpath,'requirements.json') not in self.files: self.files.append(os.path.join(self.fpath,'requirements.json'))
+
+        if os.path.join(self.fpath,'parameters.json') not in self.files: self.files.append(os.path.join(self.fpath,'parameters.json'))
