@@ -5,16 +5,31 @@ from tkinter import Tk
 from tkinter.filedialog import askdirectory
 import inquirer
 import json
+from glob import glob
 
 class Analysis_Object:
+    '''
+    ---------------------------------------------------
+    Contains all the relevant information for an Analysis Object
+    ---------------------------------------------------
+    Attributes
+    ---------------------------------------------------
+
+    ---------------------------------------------------
+    Methods
+    ---------------------------------------------------
+
+    ---------------------------------------------------
+    '''
     def __init__(self, builder):
         '''
         ---------------------------------------------------
-        
+        Initialise the Analysis Object class
         ---------------------------------------------------
         PARAMETERS
         ---------------------------------------------------
-        
+        builder : Modular_Abaqus_Builder
+            The Modular_Abaqus_Builder class used to create this class.
         ---------------------------------------------------
         '''
         
@@ -43,10 +58,14 @@ class Analysis_Object:
 
         self.move_folder(source_fpath, self.fpath)
 
+        self.get_all_files()
+
         self.parameters = {}
-        self.define_parameters()
+        self.load_parameters()
         
         self.load_requirements()
+
+        
         
         print('-----------------------------------------------')
         print('Create Analysis object operation successful.')
@@ -54,6 +73,11 @@ class Analysis_Object:
     
 
     def move_folder(self, source_fpath, destination_fpath):
+        '''
+        ---------------------------------------------------
+        Moves a folder from a source path to a destination path
+        ---------------------------------------------------
+        '''
         copytree(source_fpath, destination_fpath, symlinks=True)
 
     
@@ -61,11 +85,6 @@ class Analysis_Object:
         '''
         ---------------------------------------------------
         Gets a new Analysis Object name, ensures that no object already exists of that type
-        ---------------------------------------------------
-        RETURNS
-        ---------------------------------------------------
-        name : str
-            The name for the new Analyis Object
         ---------------------------------------------------
         '''
         # Get current names
@@ -115,11 +134,6 @@ class Analysis_Object:
         '''
         ---------------------------------------------------
         Provide a description for the Analysis Object added to the database.
-        ---------------------------------------------------
-        RETURNS
-        ---------------------------------------------------
-        description : str
-            A string typed by the user that describes the new object that only has characters from "allowed_characters_description".
         ---------------------------------------------------
         '''
 
@@ -179,7 +193,7 @@ class Analysis_Object:
     def define_parameters(self):
         '''
         ---------------------------------------------------
-        
+        Used to add, modify and delete parameters from the object
         ---------------------------------------------------
         '''
         commands = ['add', 'modify', 'delete', 'exit']
@@ -201,10 +215,20 @@ class Analysis_Object:
                     print('Name: {}'.format(self.parameters[parameter]['name']))
                     print('\tDescription: {}'.format(self.parameters[parameter]['description']))
                     print('\tData-type: {}'.format(self.parameters[parameter]['dtype']))
-                    print('\tRange: {}'.format(self.parameters[parameter]['range']))
                     print('\tDefault Value: {}'.format(self.parameters[parameter]['default_value']))
+                    print('\tFiles: ')
+                    for file in self.parameters[parameter]['files']:
+                        print('\t\t"{}"'.format(file))
 
                 print('---------------------------------------------------')
+
+                # Save parameter json
+                with open(os.path.join(self.fpath,'parameters.json'),'w') as f:
+                    json.dump(self.parameters, f, indent=4)
+                
+                print('Parameter .json saved to "{}"'.format(os.path.join(self.fpath,'parameters.json')))
+                print('---------------------------------------------------')
+
                 return
             
             elif command == 'add':
@@ -221,32 +245,21 @@ class Analysis_Object:
                 if parameter_to_delete: self.delete_parameter(parameter_to_delete)
 
 
-    def add_parameter(self, parameter_name = ''):
+    def add_parameter(self):
         '''
         ---------------------------------------------------
-
-        ---------------------------------------------------
-        RETURNS
-        ---------------------------------------------------
-
+        Prompts the user to add a parameter to the object
         ---------------------------------------------------
         '''
 
-        ranges = ['positive', 'all']
         dtypes = ['int', 'float']
 
-        if parameter_name:                                                                                            
-            questions = [inquirer.Text('name', message='Please enter a name for the parameter to be modified', default=parameter_name),
-                        inquirer.Text('description', message='Please enter a description of the parameter to be modified', default=self.parameters[parameter_name]['description']),
-                        inquirer.List('dtype', message='Please choose a data-type for the parameter to be modified', choices=dtypes, default=[self.parameters[parameter_name]['dtype']], carousel = True),
-                        inquirer.List('range', message='Please choose a data range for the parameter to be modified', choices=ranges, default=[self.parameters[parameter_name]['range']], carousel = True),
-                        inquirer.Text('default_value', 'Please enter the default value for the parameter to be modified', default=self.parameters[parameter_name]['default_value'])]
-        else:
-            questions = [inquirer.Text('name', message='Please enter a name for the parameter to be added'),
-                        inquirer.Text('description', message='Please enter a description of the parameter to be added'),
-                        inquirer.List('dtype', message='Please choose a data-type for the parameter to be added', choices=dtypes, carousel = True),
-                        inquirer.List('range', message='Please choose a data range for the parameter to be added', choices=ranges, carousel = True),
-                        inquirer.Text('default_value', 'Please enter the default value for the parameter to be added')]
+
+        questions = [inquirer.Text('name', message='Please enter a name for the parameter to be added'),
+                    inquirer.Text('description', message='Please enter a description of the parameter to be added'),
+                    inquirer.List('dtype', message='Please choose a data-type for the parameter to be added', choices=dtypes, carousel = True),
+                    inquirer.Text('default_value', 'Please enter the default value for the parameter to be added'),
+                    inquirer.Checkbox('files', message='Please choose the files this parameter controls', choices = self.files, carousel=True)]
 
         # Loop until new name is unique
         while True:
@@ -256,10 +269,8 @@ class Analysis_Object:
             # Convert default value **************WILL NEED TO BE UPDATED*****************
             if answers['dtype'] == 'int':
                 answers['default_value'] = int(answers['default_value'])
-                answers['dtype'] = int
             else:
                 answers['default_value'] = float(answers['default_value'])
-                answers['dtype'] = float
             
 
             # Check name is not empty
@@ -285,24 +296,29 @@ class Analysis_Object:
                 print('---------------------------------------------------')
                 print('ERROR: The description: "{}", does not meet the requirements.'.format(answers['description']))
                 print('---------------------------------------------------')
-            
-            # Check default value is within range
-            elif (answers['range'] == 'positive') and (answers['default_value'] < 0): 
+
+            # Check at least one file has been chosen
+            elif not answers['files']:
                 print('---------------------------------------------------')
-                print('The default value: "{}", is outside of the range "positive" specified.'.format(answers['default_value']))
+                print('ERROR: No File chosen')
                 print('---------------------------------------------------')
 
             else:
-                if parameter_name and (parameter_name is not answers['name']):
-                    self.delete_parameter(parameter_name)
-
                 self.parameters[answers['name']] = answers
-
                 break
 
 
     def choose_parameter(self, command):
-
+        '''
+        ---------------------------------------------------
+        Prompts the user to choose a parameter currently stored in the analysis object.
+        ---------------------------------------------------
+        Variables
+        ---------------------------------------------------
+        command : str
+            Used to alter the string shown to the user when choosing a parameter
+        ---------------------------------------------------
+        '''
         # Get parameter names
         parameters = [params for params in self.parameters.keys()]
 
@@ -336,39 +352,204 @@ class Analysis_Object:
 
 
     def modify_parameter(self, parameter_to_modify):
-        
-        self.add_parameter(parameter_to_modify)
 
+        '''
+        ---------------------------------------------------
+        Prompts the user to modify a parameter 
+        ---------------------------------------------------
+        Variables
+        ---------------------------------------------------
+        parameter_to_modify : str
+            The name of the parameter to modify
+        ---------------------------------------------------
+        '''
+
+        dtypes = ['int', 'float']
+                                                                     
+        questions = [inquirer.Text('name', message='Please enter a new name for the parameter to be modified', default=parameter_to_modify),
+                    inquirer.Text('description', message='Please enter a description of the parameter to be modified', default=self.parameters[parameter_to_modify]['description']),
+                    inquirer.List('dtype', message='Please choose a data-type for the parameter to be modified', choices=dtypes, default=[self.parameters[parameter_to_modify]['dtype']], carousel = True),
+                    inquirer.Text('default_value', 'Please enter the default value for the parameter to be modified', default=self.parameters[parameter_to_modify]['default_value']),
+                    inquirer.Checkbox('files', message='Please choose the files this parameter controls', choices = self.files, carousel=True, default=self.parameters[parameter_to_modify]['files'])]
+
+        # Loop until new name is unique
+        while True:
+            print('The following names are already in use: {}'.format([name for name in self.parameters.keys() if name is not parameter_to_modify]))
+            answers = inquirer.prompt(questions)
+
+            # Convert default value **************WILL NEED TO BE UPDATED*****************
+            if answers['dtype'] == 'int':
+                answers['default_value'] = int(answers['default_value'])
+            else:
+                answers['default_value'] = float(answers['default_value'])
+            
+
+            # Check name is not empty
+            if not answers['name']:
+                print('---------------------------------------------------')
+                print('ERROR: The name provided was an empty string')
+                print('---------------------------------------------------')
+
+            # Check name only uses allowed characters
+            elif not (set(answers['name']) <= self.allowed_characters['Parameter_Name']):
+                print('---------------------------------------------------')
+                print('ERROR: The name: "{}", is not entirely letters, numbers or underscores and hyphens.'.format(answers['name']))
+                print('---------------------------------------------------')
+            
+            # Check name is unique
+            elif answers['name'] in [name for name in self.parameters.keys() if name is not parameter_to_modify]:
+                print('---------------------------------------------------')
+                print('ERROR: The name: "{}", already exists in the database.'.format(answers['name']))
+                print('---------------------------------------------------')
+
+            # Check description only uses allowed characters
+            elif not (set(answers['description']) <= self.allowed_characters['Description']):
+                print('---------------------------------------------------')
+                print('ERROR: The description: "{}", does not meet the requirements.'.format(answers['description']))
+                print('---------------------------------------------------')
+
+            # Check at least one file has been chosen
+            elif not answers['files']:
+                print('---------------------------------------------------')
+                print('ERROR: No File chosen')
+                print('---------------------------------------------------')
+
+            else:
+                
+                self.delete_parameter(parameter_to_modify)
+
+                self.parameters[answers['name']] = answers
+
+                break
+        
 
     def delete_parameter(self, parameter_to_delete):
+        '''
+        ---------------------------------------------------
+        Delete a parameter from the parameter dictionary
+        ---------------------------------------------------
+        '''
         _ = self.parameters.pop(parameter_to_delete)
 
 
-    def load_requirements(self):
-        
+    def load_parameters(self):
+        '''
+        ---------------------------------------------------
+        Try to load the parameters for the analysis from a file, if it does not exist prompt the user to specify the parameters.
+        ---------------------------------------------------
+        '''
         try:
-            
+            # Read parameters
+            with open(os.path.join(self.fpath,'parameters.json'),'r') as f:
+                self.parameters = json.load(f)
+                
+        except:
+            # If no file to read have the user set the parameters
+            self.define_parameters()
+
+
+    def load_requirements(self):
+        '''
+        ---------------------------------------------------
+        Try to load the requirements for the analysis from a file, if it does not exist prompt the user to specify the requirements.
+        ---------------------------------------------------
+        '''
+        try:
             # Read requirements
             with open(os.path.join(self.fpath,'requirements.json'),'r') as f:
                 self.requirements = json.load(f)
                 
         except:
-            
             # If no file to read have the user set the requirements
             self.set_requirements()
         
         
     def set_requirements(self):
-        softwares = ['abaqus','fluent','mpcci']
-        geometries = ["abaqus_whole-chip_solid", "abaqus_whole-chip_acoustic", "abaqus_submodel_solid", "abaqus_submodel_acoustic", "fluent_whole-chip_fluid", "fluent_submodel_fluid"]
-        materials = ['abaqus_solid', 'abaqus_acoustic']
-        analysis = ['abaqus_global_odb', 'abaqus_global_prt','fluent_journal']
+        '''
+        ---------------------------------------------------
+        Prompts the user to set the requirements for this Analysis object
+        ---------------------------------------------------
+        '''
+        # Set the default requirement dict if it does not exist
+        if not hasattr(self, 'requirements'):
+            self.requirements = {"softwares": {
+                                    "abaqus": False,
+                                    "fluent": False,
+                                    "mpcci": False
+                                },
+                                "geometries": {
+                                    "abaqus_whole-chip_solid": False,
+                                    "abaqus_whole-chip_acoustic": False,
+                                    "abaqus_submodel_solid": False,
+                                    "abaqus_submodel_acoustic": False,
+                                    "fluent_whole-chip_fluid": False,
+                                    "fluent_submodel_fluid": False
+                                },
+                                "materials": {
+                                    "abaqus_solid": False,
+                                    "abaqus_acoustic": False
+                                },
+                                "analysis": {
+                                    "abaqus_global_odb": False,
+                                    "abaqus_global_prt": False,
+                                    "fluent_journal": False
+                                }}
         
-        questions = [inquirer.Checkbox('softwares', message='Please choose the softwares required for this analysis', choices = softwares, carousel = True),
-                     inquirer.Checkbox('geometries', message='Please enter the geometries required for this analysis', choices = geometries, carousel = True),
-                     inquirer.Checkbox('materials', message='Please choose the materials required for this analysis', choices=materials, carousel = True),
-                     inquirer.Checkbox('analysis', message='Please choose the additional components required for this analysis', choices=analysis, carousel = True)]
+
+        # Build questions object
+        questions = [inquirer.Checkbox('softwares',
+                                       message = 'Please choose the softwares required for this analysis',
+                                       choices = ['abaqus','fluent','mpcci'],
+                                       carousel = True,
+                                       default = [key for key in self.requirements['softwares'].keys() if self.requirements['softwares'][key]]),
+                     inquirer.Checkbox('geometries',
+                                       message = 'Please enter the geometries required for this analysis',
+                                       choices = ["abaqus_whole-chip_solid", "abaqus_whole-chip_acoustic", "abaqus_submodel_solid", "abaqus_submodel_acoustic", "fluent_whole-chip_fluid", "fluent_submodel_fluid"],
+                                       carousel = True,
+                                       default = [key for key in self.requirements['geometries'].keys() if self.requirements['geometries'][key]]),
+                     inquirer.Checkbox('materials',
+                                       message = 'Please choose the materials required for this analysis',
+                                       choices = ['abaqus_solid', 'abaqus_acoustic'],
+                                       carousel = True,
+                                       default = [key for key in self.requirements['materials'].keys() if self.requirements['materials'][key]]),
+                     inquirer.Checkbox('analysis',
+                                       message = 'Please choose the additional components required for this analysis',
+                                       choices = ['abaqus_global_odb', 'abaqus_global_prt','fluent_journal'],
+                                       carousel = True,
+                                       default = [key for key in self.requirements['analysis'].keys() if self.requirements['analysis'][key]])]
         
-        # Loop until new name is unique
-        while True:
-            answers = inquirer.prompt(questions)
+
+        # Get answers to questions
+        answers = inquirer.prompt(questions)
+
+
+        # Set requirements according to answers
+        for requirement_type in self.requirements.keys():
+
+            for requirement in self.requirements[requirement_type].keys():
+
+                self.requirements[requirement_type][requirement] = requirement in answers[requirement_type]
+
+
+        # Save json file containing requirements
+        try:
+            with open(os.path.join(self.fpath,'requirements.json'),'w') as f:
+                json.dump(self.requirements, f, indent=4)
+
+        except:
+            print('-----------------------------------------------')
+            print('ERROR: requirements json could not be saved')
+            print('-----------------------------------------------')
+
+
+    def get_all_files(self):
+        '''
+        ---------------------------------------------------
+        Get all files in the filepath
+        ---------------------------------------------------
+        '''
+        self.files = glob(os.path.join(self.fpath,'*.*'))
+
+        if os.path.join(self.fpath,'requirements.json') not in self.files: self.files.append(os.path.join(self.fpath,'requirements.json'))
+
+        if os.path.join(self.fpath,'parameters.json') not in self.files: self.files.append(os.path.join(self.fpath,'parameters.json'))

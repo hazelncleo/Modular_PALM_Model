@@ -1,0 +1,20 @@
+{
+    "<float_parameter_name>": {
+        "name": "",
+        "description": "",
+        "dtype": "float",
+        "default_value": 1.57,
+        "files": [
+            "PATH\\TO\\FILE"
+        ]
+    },
+    "<int_parameter_name>": {
+        "name": "",
+        "description": "",
+        "dtype": "int",
+        "default_value": 2,
+        "files": [
+            "PATH\\TO\\FILE"
+        ]
+    }
+}
