@@ -9,10 +9,11 @@ from sys import exit
 from Analysis_Object import Analysis_Object
 from Geometry_Object import Geometry_Object
 from Material_Object import Material_Object
+from Model import Model
 
 
 class Modular_Abaqus_Builder:
-    def __init__(self, overwrite=False):
+    def __init__(self, overwrite=False, overwrite_models=False):
         '''
         ---------------------------------------------------
         Initialise the class and load the data from the .pkl file.
@@ -29,28 +30,21 @@ class Modular_Abaqus_Builder:
                     'data': 'data.pickle'}
         
         if overwrite:
-            
             print('-----------------------------------------------')
             print('OVERWRITE FLAG SET TO TRUE')
             print('-----------------------------------------------')
 
             if self.yes_no_question('Are you sure you would like to overwrite the database? (This will delete all object, model and .pkl files)'):
-                
                 self.overwrite_database()
-
-                self.instantiate_database()
-
-                self.save_database()
-
                 return
 
             else:
-
                 print('-----------------------------------------------')
                 print('The overwrite flag was set to true, but the overwrite was denied. Closing the database.')
                 print('-----------------------------------------------')
 
                 exit(0)
+
 
         # Load data from data.pickle
         try:
@@ -62,6 +56,22 @@ class Modular_Abaqus_Builder:
             os.makedirs(self.fpaths['model_files'], exist_ok=True)
             
             self.load_database()
+
+            # If overwrite_models flag set to true, delete all model files and their database entries
+            if overwrite_models:
+                print('-----------------------------------------------')
+                print('OVERWRITE MODELS FLAG SET TO TRUE')
+                print('-----------------------------------------------')
+
+                if self.yes_no_question('Are you sure you would like to overwrite the models of the database? (This will delete all model files and their database entries)'):
+                    self.overwrite_models()
+                
+                else:
+                    print('-----------------------------------------------')
+                    print('The overwrite models flag was set to true, but the overwrite was denied. Closing the database.')
+                    print('-----------------------------------------------')
+
+                    exit(0)
         
         # If it doesnt exist load an empty Modular_Abaqus_Builder
         except:
@@ -73,7 +83,7 @@ class Modular_Abaqus_Builder:
             print('-----------------------------------------------')
 
             self.save_database()
-            
+        
 
     def overwrite_database(self):
         '''
@@ -97,6 +107,26 @@ class Modular_Abaqus_Builder:
         for model in glob.glob(os.path.join(self.fpaths['model_files'], '*', ''), recursive=False):
             rmtree(model)
             print('Deleted: "{}"'.format(model))
+
+        self.instantiate_database()
+
+        self.save_database()
+
+
+    def overwrite_models(self):
+        '''
+        ---------------------------------------------------
+        Delete all models in the relevant filepaths and removes their entries from the database
+        ---------------------------------------------------
+        '''
+
+        for model in glob.glob(os.path.join(self.fpaths['model_files'], '*', ''), recursive=False):
+            rmtree(model)
+            print('Deleted: "{}"'.format(model))
+
+        self.data['model'] = {}
+
+        self.save_database()
 
 
     def load_database(self):
@@ -129,7 +159,7 @@ class Modular_Abaqus_Builder:
         self.inquirer_dialogs = {'Object_Types' : ['analysis','geometry','material'],
                                 'Main_Loop' : ['edit_objects', 'edit_models', 'save_database', 'help', 'exit', 'force_exit'],
                                 'Object_Loop' : ['create', 'modify', 'duplicate', 'delete', 'help', 'back'],
-                                'Model_Loop' : ['build', 'modify', 'duplicate', 'delete', 'post_process', 'run', 'help', 'back']}
+                                'Model_Loop' : ['create', 'modify', 'duplicate', 'delete', 'post_process', 'run', 'help', 'back']}
     
         self.data = {'analysis': {}, 'geometry': {}, 'material': {}, 'model': {}}
 
@@ -158,11 +188,12 @@ class Modular_Abaqus_Builder:
         Main loop that controls the tui of the database
         ---------------------------------------------------
         '''
+        command = 'edit_objects'
 
         while True:
             
             # Commands = ['edit_objects', 'edit_models', 'save_database', 'help', 'exit', 'force_exit']
-            command = inquirer.list_input('Pick Command: ', choices=self.inquirer_dialogs['Main_Loop'], carousel = True)
+            command = inquirer.list_input('Pick Command: ', choices=self.inquirer_dialogs['Main_Loop'], carousel = True, default = command)
 
             if command == 'exit':
                 if self.yes_no_question('Are you sure you would like to exit?'):
@@ -181,10 +212,8 @@ class Modular_Abaqus_Builder:
                 self.save_database()
 
             elif command == 'edit_models':
-                print('bruh')
-                pass
+                self.edit_models()
                 
-
             elif command == 'edit_objects':
                 self.edit_objects()
 
@@ -209,12 +238,12 @@ class Modular_Abaqus_Builder:
         print('Entering Edit Objects interface')
         print('-----------------------------------------------')
 
-        command = ''
+        command = 'create'
 
         while command != 'back':
             
             # Commands = ['create', 'modify', 'duplicate', 'delete', 'help', 'back']
-            command = inquirer.list_input('Pick Edit Object Command', choices=self.inquirer_dialogs['Object_Loop'], carousel = True)
+            command = inquirer.list_input('Pick Edit Object Command', choices=self.inquirer_dialogs['Object_Loop'], carousel = True, default = command)
 
 
             if command == 'help':
@@ -303,12 +332,39 @@ class Modular_Abaqus_Builder:
         print('Entering edit models interface')
         print('-----------------------------------------------')
         
-        command = ''
+        command = 'create'
 
         while command != 'back':
             
-            # Commands = ['build', 'modify', 'duplicate', 'delete', 'post_process', 'run', 'help', 'back']
-            command = inquirer.list_input('Pick Model Edit Command: ', choices=self.inquirer_dialogs['Model_Loop'], carousel = True)
+            # Commands = ['create', 'modify', 'duplicate', 'delete', 'post_process', 'run', 'help', 'back']
+            command = inquirer.list_input('Pick Model Edit Command: ', choices=self.inquirer_dialogs['Model_Loop'], carousel = True, default = command)
+
+            if command == 'help':
+                help_message = inquirer.list_input('Print database structure or Help menu? ', choices=['print','help'], carousel = True)
+
+                if help_message == 'print':
+                    self.print_database()
+                else:
+                    self.print_model_help_message()
+
+            # WILL BE FIXED ON NEXT RESET
+            elif command == 'create' or command == 'build':
+                self.create_model()
+
+            elif command == 'modify':
+                self.modify_model()
+
+            elif command == 'duplicate':
+                self.duplicate_model()
+
+            elif command == 'delete':
+                self.delete_model()
+
+            elif command == 'post_process':
+                self.postprocess_model()
+
+            elif command == 'run':
+                self.run_model()
 
         
     def select_object_type(self):
@@ -602,95 +658,6 @@ class Modular_Abaqus_Builder:
         print('-----------------------------------------------')
         
 
-    def build_model(self, model_name, description): # update
-        '''
-        Build model
-        '''
-        
-        pass
-
-
-    def modify_model(self):
-        '''
-        
-        '''
-        pass
-    
-
-    def duplicate_model(self):
-        '''
-        
-        '''
-        pass
-    
-
-    def delete_model(self):
-        '''
-        
-        '''
-        pass
-
-        '''
-        
-        '''
-        pass
-    
-
-    def postprocess_model(self, model_name):
-        '''
-        
-        '''
-        pass
-
-
-    def run_model(self, model_name):
-        '''
-        
-        '''
-        pass 
-
-
-    def yes_no_question(self, message):
-        '''
-        -----------------------------------------------
-        Ask a yes/no question, "yes" returns True and "no" returns False
-        -----------------------------------------------
-        '''
-        # Splits the message into lines
-        strings = message.split('\n')
-
-        # prints all except the final line
-        for smaller_string in strings[:-1]:
-            print(smaller_string)
-
-        # Enquire the yes and no question using the final line as the message
-        command = inquirer.list_input(strings[-1], choices=['yes','no'], carousel = True)
-
-        if command == 'yes':
-            return True 
-        elif command == 'no':
-            return False
-
-
-    def validate(self):
-        '''
-        
-        '''
-        pass
-
-
-    def __repr__(self):
-        '''
-        **********************TODO*******************************
-        '''
-        pass
-
-
-    def __str__(self):
-
-        return ':3'
-
-
     def print_database(self):
         '''
         ---------------------------------------------------
@@ -828,6 +795,104 @@ class Modular_Abaqus_Builder:
                 print('\t\t"{}"'.format(file))
 
             print('-----------------------------------------------')
+
+
+    def yes_no_question(self, message):
+        '''
+        -----------------------------------------------
+        Ask a yes/no question, "yes" returns True and "no" returns False
+        -----------------------------------------------
+        '''
+        # Splits the message into lines
+        strings = message.split('\n')
+
+        # prints all except the final line
+        for smaller_string in strings[:-1]:
+            print(smaller_string)
+
+        # Enquire the yes and no question using the final line as the message
+        command = inquirer.list_input(strings[-1], choices=['yes','no'], carousel = True)
+
+        if command == 'yes':
+            return True 
+        elif command == 'no':
+            return False
+
+
+
+
+
+
+
+    def create_model(self): # update
+        '''
+        Build model
+        '''
+        try:
+            model = Model(self)
+        except:
+            print('-----------------------------------------------')
+            print('build model failed')
+            print('-----------------------------------------------')
+
+
+    def modify_model(self):
+        '''
+        
+        '''
+        pass
+    
+
+    def duplicate_model(self):
+        '''
+        
+        '''
+        pass
+    
+
+    def delete_model(self):
+        '''
+        
+        '''
+        pass
+
+        '''
+        
+        '''
+        pass
+    
+
+    def postprocess_model(self):
+        '''
+        
+        '''
+        pass
+
+
+    def run_model(self):
+        '''
+        
+        '''
+        pass 
+
+
+    def validate(self):
+        '''
+        
+        '''
+        pass
+
+
+    def __repr__(self):
+        '''
+        **********************TODO*******************************
+        '''
+        pass
+
+
+    def __str__(self):
+
+        return ':3'
 
 
     def print_main_help_message(self):
