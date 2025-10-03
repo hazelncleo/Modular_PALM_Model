@@ -4,7 +4,7 @@ from Analysis_Object import Analysis_Object
 def main():
     
     # Instantiate class
-    model = Modular_Abaqus_Builder(True)
+    model = Modular_Abaqus_Builder(overwrite=True, overwrite_models=False)
     
     model.main_loop()
 
