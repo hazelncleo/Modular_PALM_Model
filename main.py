@@ -4,7 +4,7 @@ from Analysis_Object import Analysis_Object
 def main():
     
     # Instantiate class
-    model = Modular_Abaqus_Builder(overwrite=True, overwrite_models=False)
+    model = Modular_Abaqus_Builder(overwrite=False, overwrite_models=False)
     
     model.main_loop()
 
@@ -15,6 +15,9 @@ def main():
 
 IMPORTANT STUFF
 --------------------------
+- startup error
+- finish add material to model
+
 - validate database
 - geometry object class
 - model class

@@ -4,6 +4,7 @@ import string
 from tkinter import Tk
 from tkinter.filedialog import askdirectory
 import inquirer
+from copy import deepcopy
 
 
 class Model:
@@ -276,6 +277,8 @@ class Model:
         if not potential_materials:
             raise FileExistsError('No Material objects that meet the requirements available in the database')
 
+        requirements_to_be_fulfilled = {}
+        
         print('---------------------------------------------------')
         print('The Chosen Analysis: "{}".'.format(self.analysis.name))
         print('Description: "{}"'.format(self.analysis.description))
@@ -283,6 +286,8 @@ class Model:
         for requirement, is_required in self.requirements['materials'].items():
             if is_required:
                 print('\t{}'.format(requirement))
+                requirements_to_be_fulfilled[requirement] = is_required
+
 
         print('---------------------------------------------------')
         print('The following Materials meet at least one of the requirements: ')
@@ -297,9 +302,13 @@ class Model:
         potential_materials.append('cancel')
         self.materials = {}
 
-        return
-        # GET MATERIAL REQUIREMENTS, LOOP UNTIL ALL REQUIREMENTS MET
-        while True:
+        # Loop until all requirements have been met
+        while len(requirements_to_be_fulfilled):
+            print('Requirements still to be fulfilled: ')
+            for requirement, is_required in requirements_to_be_fulfilled.items():
+                print('\t{}'.format(requirement))
+            print('---------------------------------------------------')
+            
             # Prompt user to pick a Material
             material_name = inquirer.list_input('Pick a Material to use', choices=potential_materials, carousel = True)
 
@@ -307,8 +316,24 @@ class Model:
             if (not material_name) or (material_name == 'cancel'):
                 raise NameError('Select Material cancelled')
 
-            # Set as model geometry
+
+            requirement_fulfilled = [fulfilled[0] for fulfilled in self.builder.data['material'][material_name].requirements['materials'].items() if fulfilled[1]][0]
+            print(requirement_fulfilled)
+            
+            
+            try:
+                requirements_to_be_fulfilled.pop(requirement_fulfilled)
+            except:
+                print('---------------------------------------------------')
+                print('The Material: "{}", fulfills a requirement that has already been fulfilled by a previously chosen material.'.format(material_name))
+                print('---------------------------------------------------')
+                continue
+            
+            potential_materials.remove(material_name)
+            
+            # Append to Materials
             self.materials[material_name] = self.builder.data['material'][material_name]
+            
 
 
     def create_parameters(self):

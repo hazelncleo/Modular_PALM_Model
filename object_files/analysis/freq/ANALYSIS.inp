@@ -1,0 +1,6 @@
+** ----------------------------------------------------------------
+** IMPORT INPUT FILES FOR FREQUENCY EXTRACTION
+** ----------------------------------------------------------------
+*INCLUDE, INPUT=FLUID_GEOMETRY.inp
+*INCLUDE, INPUT=ASSEMBLY.inp
+*INCLUDE, INPUT=FREQUENCY.inp
