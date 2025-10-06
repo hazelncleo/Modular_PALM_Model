@@ -46,33 +46,16 @@ class Modular_Abaqus_Builder:
                 exit(0)
 
 
+        # Make storage folders if they dont exist
+        os.makedirs(self.fpaths['analysis'], exist_ok=True)
+        os.makedirs(self.fpaths['geometry'], exist_ok=True)
+        os.makedirs(self.fpaths['material'], exist_ok=True)
+        os.makedirs(self.fpaths['model_files'], exist_ok=True)
+
         # Load data from data.pickle
         try:
-            
-            # Make storage folders if they dont exist
-            os.makedirs(self.fpaths['analysis'], exist_ok=True)
-            os.makedirs(self.fpaths['geometry'], exist_ok=True)
-            os.makedirs(self.fpaths['material'], exist_ok=True)
-            os.makedirs(self.fpaths['model_files'], exist_ok=True)
-            
             self.load_database()
 
-            # If overwrite_models flag set to true, delete all model files and their database entries
-            if overwrite_models:
-                print('-----------------------------------------------')
-                print('OVERWRITE MODELS FLAG SET TO TRUE')
-                print('-----------------------------------------------')
-
-                if self.yes_no_question('Are you sure you would like to overwrite the models of the database? (This will delete all model files and their database entries)'):
-                    self.overwrite_models()
-                
-                else:
-                    print('-----------------------------------------------')
-                    print('The overwrite models flag was set to true, but the overwrite was denied. Closing the database.')
-                    print('-----------------------------------------------')
-
-                    exit(0)
-        
         # If it doesnt exist load an empty Modular_Abaqus_Builder
         except:
 
@@ -83,6 +66,22 @@ class Modular_Abaqus_Builder:
             print('-----------------------------------------------')
 
             self.save_database()
+            
+        # If overwrite_models flag set to true, delete all model files and their database entries
+        if overwrite_models:
+            print('-----------------------------------------------')
+            print('OVERWRITE MODELS FLAG SET TO TRUE')
+            print('-----------------------------------------------')
+
+            if self.yes_no_question('Are you sure you would like to overwrite the models of the database? (This will delete all model files and their database entries)'):
+                self.overwrite_models()
+            
+            else:
+                print('-----------------------------------------------')
+                print('The overwrite models flag was set to true, but the overwrite was denied. Closing the database.')
+                print('-----------------------------------------------')
+
+                exit(0)
         
 
     def overwrite_database(self):
@@ -110,8 +109,6 @@ class Modular_Abaqus_Builder:
 
         self.instantiate_database()
 
-        self.save_database()
-
 
     def overwrite_models(self):
         '''
@@ -126,8 +123,6 @@ class Modular_Abaqus_Builder:
 
         self.data['model'] = {}
 
-        self.save_database()
-
 
     def load_database(self):
         '''
@@ -141,6 +136,8 @@ class Modular_Abaqus_Builder:
             print('-----------------------------------------------')
             print('Loading from: "{}" was successful.'.format(self.fpaths['data']))
             print('-----------------------------------------------')
+            
+        self.save_database()
 
 
     def instantiate_database(self):
@@ -180,6 +177,8 @@ class Modular_Abaqus_Builder:
             print('-----------------------------------------------')
             print('Save to: "{}" was successful.'.format(self.fpaths['data']))
             print('-----------------------------------------------')
+            
+        return
 
 
     def main_loop(self):
@@ -347,8 +346,7 @@ class Modular_Abaqus_Builder:
                 else:
                     self.print_model_help_message()
 
-            # WILL BE FIXED ON NEXT RESET
-            elif command == 'create' or command == 'build':
+            elif command == 'create':
                 self.create_model()
 
             elif command == 'modify':
@@ -477,27 +475,28 @@ class Modular_Abaqus_Builder:
         ---------------------------------------------------
         '''
 
-        if object_type == 'analysis':
-            
-            temp_object = Analysis_Object(self)
+        try:
+            if object_type == 'analysis':
+                
+                temp_object = Analysis_Object(self)
 
-            self.data['analysis'][temp_object.name] = temp_object
+                self.data['analysis'][temp_object.name] = temp_object
 
-        elif object_type == 'geometry':
+            elif object_type == 'geometry':
 
-            temp_object = Geometry_Object(self)
+                temp_object = Geometry_Object(self)
 
-            self.data['geometry'][temp_object.name] = temp_object
+                self.data['geometry'][temp_object.name] = temp_object
 
-        elif object_type == 'material':
+            elif object_type == 'material':
 
-            temp_object = Material_Object(self)
+                temp_object = Material_Object(self)
 
-            self.data['material'][temp_object.name] = temp_object
+                self.data['material'][temp_object.name] = temp_object
 
-        else:
+        except:
             print('-----------------------------------------------')
-            print('ERROR: The object type "{}" specified was not a valid object type.'.format(object_type))
+            print('An error occurred while adding the object to the Database.')
             print('-----------------------------------------------')
             
     
@@ -819,7 +818,25 @@ class Modular_Abaqus_Builder:
             return False
 
 
+    def get_relative_fpath(self, full_fpath, relative_to_fpath):
+        '''
+        
+        '''
+        if relative_to_fpath and full_fpath:
 
+            full_fpath_list = os.path.normpath(full_fpath).split(os.path.sep)
+            relative_to_fpath_list = os.path.normpath(relative_to_fpath).split(os.path.sep)
+            
+            for dir in relative_to_fpath_list:
+                full_fpath_list.remove(dir)
+                
+            return os.path.join(*full_fpath_list)
+        
+        return full_fpath
+        
+        
+        
+        
 
 
 
@@ -830,10 +847,19 @@ class Modular_Abaqus_Builder:
         '''
         try:
             model = Model(self)
+            
+            self.data['model'][model.name] = model
         except:
             print('-----------------------------------------------')
-            print('build model failed')
+            print('Create Model Failed, returning to Model loop.')
             print('-----------------------------------------------')
+            return
+        
+
+        
+        
+        
+        
 
 
     def modify_model(self):

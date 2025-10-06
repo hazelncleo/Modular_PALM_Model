@@ -4,9 +4,9 @@ from Analysis_Object import Analysis_Object
 def main():
     
     # Instantiate class
-    model = Modular_Abaqus_Builder(overwrite=False, overwrite_models=False)
+    builder = Modular_Abaqus_Builder(overwrite=True, overwrite_models=False)
     
-    model.main_loop()
+    builder.main_loop()
 
 '''
 *****************************************************************************************************************************
@@ -15,7 +15,7 @@ def main():
 
 IMPORTANT STUFF
 --------------------------
-- startup error
+- startup error/ cant reproduce, may have been because of crash or something??
 - finish add material to model
 
 - validate database

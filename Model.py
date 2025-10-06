@@ -44,9 +44,15 @@ class Model:
 
         # Add Materials
         self.select_materials()
-
-        # Create parameters for the model
-        self.create_parameters()
+        
+        # Get solver fpaths
+        self.set_fpaths()
+            
+        # Create model parameters and link to object parameters
+        self.create_and_link_parameters()
+        
+        # Move files from object fpaths to the solver fpaths
+        self.move_files_from_objects()
         
         print('-----------------------------------------------')
         print('Create Model operation successful.')
@@ -318,7 +324,6 @@ class Model:
 
 
             requirement_fulfilled = [fulfilled[0] for fulfilled in self.builder.data['material'][material_name].requirements['materials'].items() if fulfilled[1]][0]
-            print(requirement_fulfilled)
             
             
             try:
@@ -335,6 +340,111 @@ class Model:
             self.materials[material_name] = self.builder.data['material'][material_name]
             
 
+    def set_fpaths(self):
+        '''
+        
+        '''
+        
+        # If all softwares required set solver fpaths accordingly.
+        if all(self.requirements['softwares'].values()):
+            self.solver_fpaths = {'abaqus' : os.path.join(self.fpath,'abaqus'),
+                                  'fluent' : os.path.join(self.fpath,'fluent'),
+                                  'mpcci' : os.path.join(self.fpath,'mpcci')}
+            return
+            
+        # If only abaqus
+        elif self.requirements['softwares']['abaqus']:
+            self.solver_fpaths = {'abaqus' : self.fpath,
+                                  'fluent' : None,
+                                  'mpcci' : None}
+            return
+        
+        # If only fluent
+        elif self.requirements['softwares']['fluent']:
+            self.solver_fpaths = {'abaqus' : None,
+                                  'fluent' : self.fpath,
+                                  'mpcci' : None}
+            return
+        
+        else:
+            print('---------------------------------------------------')
+            print('Software Requirements are not valid.')
+            print('---------------------------------------------------')
+            raise ValueError('Software Requirements are not valid.')
+        
+    
+    def create_and_link_parameters(self):
+        '''
+        
+        '''
+        
+        self.parameters = {}
 
-    def create_parameters(self):
-        pass        
+        # Print parameters of the analysis object
+        print('---------------------------------------------------')
+        print('The Chosen Analysis: "{}".'.format(self.analysis.name))
+        print('Has the following Parameters that can be used: ')
+        for parameter_name,parameter in self.analysis.parameters.items():
+                    print('---------------------------------------------------')
+                    print('Name: {}'.format(parameter_name))
+                    print('\tDescription: {}'.format(parameter['description']))
+                    print('\tData-type: {}'.format(parameter['dtype']))
+                    print('\tDefault Value: {}'.format(parameter['default_value']))
+                    print('\tFiles: ')
+                    for file in parameter['files']:
+                        print('\t\t"{}"'.format(file))
+                        
+        self.parameters.update(self.analysis.parameters)
+        
+        # Print parameters of the geometry object
+        print('---------------------------------------------------')
+        print('The Chosen Geometry: "{}".'.format(self.geometry.name))
+        print('Has the following Parameters that can be used: ')
+        for parameter_name,parameter in self.geometry.parameters.items():
+                    print('---------------------------------------------------')
+                    print('Name: {}'.format(parameter_name))
+                    print('\tDescription: {}'.format(parameter['description']))
+                    print('\tData-type: {}'.format(parameter['dtype']))
+                    print('\tDefault Value: {}'.format(parameter['default_value']))
+                    print('\tFiles: ')
+                    for file in parameter['files']:
+                        print('\t\t"{}"'.format(file))
+        
+        self.parameters.update(self.geometry.parameters)
+        
+        
+        # Print parameters for all of the materials
+        for material_name in self.materials.keys():
+            print('---------------------------------------------------')
+            print('The Chosen Material: "{}".'.format(material_name))
+            requirement_fulfilled = [requirement[0] for requirement in self.materials[material_name].requirements['materials'].items() if requirement[1]][0]
+            print('Material Type: "{}"'.format(requirement_fulfilled))
+            print('Has the following Parameters that can be used: ')
+            for parameter_name,parameter in self.materials[material_name].parameters.items():
+                        print('---------------------------------------------------')
+                        print('Name: {}'.format(parameter_name))
+                        print('\tDescription: {}'.format(parameter['description']))
+                        print('\tData-type: {}'.format(parameter['dtype']))
+                        print('\tDefault Value: {}'.format(parameter['default_value']))
+                        print('\tFiles: ')
+                        for file in parameter['files']:
+                            print('\t\t"{}"'.format(file))
+            
+            self.parameters.update(self.materials[material_name].parameters)
+            
+        questions = [inquirer.Checkbox('chosen_parameters', 'Pick the parameters to be used in this model', choices = list(self.parameters.keys()), carousel = True)]
+        
+        answers = inquirer.prompt(questions)
+        
+        print(answers)
+                            
+        
+                            
+                            
+        
+    
+    
+    def move_files_from_objects(self):
+        pass
+        
+
