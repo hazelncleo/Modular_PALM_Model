@@ -1,7 +1,0 @@
-** Material Definition for Anisotropic Silicon SI(mm)
-*Material, name=SOLID_MATERIAL
-*Density
- 2.33e-09,
-*Elastic, type=ENGINEERING CONSTANTS
- 130000.,130000.,130000., 0.2783, 0.2783, 0.2783, 79600., 79600.
- 79600.,

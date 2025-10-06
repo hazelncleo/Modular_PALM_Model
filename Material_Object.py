@@ -215,13 +215,6 @@ class Material_Object:
                         print('\t\t"{}"'.format(file))
 
                 print('---------------------------------------------------')
-                
-                # Save parameter json
-                with open(os.path.join(self.fpath,'parameters.json'),'w') as f:
-                    json.dump(self.parameters, f, indent=4)
-                
-                print('Parameter .json saved to "{}"'.format(os.path.join(self.fpath,'parameters.json')))
-                print('---------------------------------------------------')
 
                 return
             
@@ -428,6 +421,9 @@ class Material_Object:
             with open(os.path.join(self.fpath,'parameters.json'),'r') as f:
                 self.parameters = json.load(f)
                 
+            # Delete file from directory
+            os.remove(os.path.join(self.fpath,'parameters.json'))
+                
         except:
             # If no file to read have the user set the parameters
             self.define_parameters()
@@ -441,6 +437,9 @@ class Material_Object:
             # Read requirements
             with open(os.path.join(self.fpath,'requirements.json'),'r') as f:
                 self.requirements = json.load(f)
+                
+            # Delete file from directory
+            os.remove(os.path.join(self.fpath,'requirements.json'))
                 
         except:
             # If no file to read have the user set the requirements
@@ -479,23 +478,13 @@ class Material_Object:
                 self.requirements[requirement_type][requirement] = requirement in answers[requirement_type]
 
 
-        # Save json file containing requirements
-        try:
-            with open(os.path.join(self.fpath,'requirements.json'),'w') as f:
-                json.dump(self.requirements, f, indent=4)
-
-        except:
-            print('-----------------------------------------------')
-            print('ERROR: requirements json could not be saved')
-            print('-----------------------------------------------')
-
-
     def get_all_files(self):
         '''
+        ---------------------------------------------------
         Get all files in the filepath
+        ---------------------------------------------------
         '''
-        self.files = glob(os.path.join(self.fpath,'*.*'))
 
-        if os.path.join(self.fpath,'requirements.json') not in self.files: self.files.append(os.path.join(self.fpath,'requirements.json'))
-
-        if os.path.join(self.fpath,'parameters.json') not in self.files: self.files.append(os.path.join(self.fpath,'parameters.json'))
+        object_files = glob(os.path.join(self.fpath,'**','*.*'), recursive=True)
+        
+        self.files = [self.builder.get_relative_fpath(file,self.fpath) for file in object_files]
