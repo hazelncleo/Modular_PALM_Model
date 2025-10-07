@@ -19,6 +19,72 @@ class Modular_Abaqus_Builder:
         Initialise the class and load the data from the .pkl file.
         ---------------------------------------------------
         '''
+        
+        # Create base database
+        self.instantiate_database()
+        
+        # If overwrite flag set to true, delete all files
+        if overwrite:
+            print('-----------------------------------------------')
+            print('OVERWRITE FLAG SET TO TRUE')
+            print('-----------------------------------------------')
+
+            if self.yes_no_question('Are you sure you would like to overwrite the database? (This will delete all object, model and .pkl files)'):
+                self.overwrite_database()
+
+            else:
+                print('-----------------------------------------------')
+                print('The overwrite flag was set to true, but the overwrite was denied. Closing the database.')
+                print('-----------------------------------------------')
+
+                exit(0)
+
+        # If overwrite models flag set to true, delete all model files
+        elif overwrite_models:
+            print('-----------------------------------------------')
+            print('OVERWRITE MODELS FLAG SET TO TRUE')
+            print('-----------------------------------------------')
+
+            if self.yes_no_question('Are you sure you would like to overwrite the models of the database? (This will delete all model files and their database entries)'):
+
+                try:
+                    self.load_database()
+                except:
+                    print('-----------------------------------------------')
+                    print('The data.pkl file: "{}" does not exist. An empty Modular_Abaqus_Builder has been loaded.'.format(self.fpaths['data']))
+                    print('-----------------------------------------------')
+
+                self.overwrite_models()
+            
+            else:
+                print('-----------------------------------------------')
+                print('The overwrite models flag was set to true, but the overwrite was denied. Closing the database.')
+                print('-----------------------------------------------')
+
+                exit(0)
+
+        else:
+
+            # Load data from data.pickle
+            try:
+                self.load_database()
+
+            # If it doesnt exist load an empty Modular_Abaqus_Builder
+            except:
+                
+                print('-----------------------------------------------')
+                print('The data.pkl file: "{}" does not exist. An empty Modular_Abaqus_Builder has been loaded.'.format(self.fpaths['data']))
+                print('-----------------------------------------------')        
+
+        self.save_database()
+    
+
+    def instantiate_database(self):
+        '''
+        ---------------------------------------------------
+        Instantiate an empty database
+        ---------------------------------------------------
+        '''
 
         # Set filepaths
         objectfiles_fpath = 'object_files'
@@ -28,124 +94,6 @@ class Modular_Abaqus_Builder:
                     'material': os.path.join(objectfiles_fpath, 'materials'),
                     'model_files': 'model_files',
                     'data': 'data.pickle'}
-        
-        if overwrite:
-            print('-----------------------------------------------')
-            print('OVERWRITE FLAG SET TO TRUE')
-            print('-----------------------------------------------')
-
-            if self.yes_no_question('Are you sure you would like to overwrite the database? (This will delete all object, model and .pkl files)'):
-                self.overwrite_database()
-                return
-
-            else:
-                print('-----------------------------------------------')
-                print('The overwrite flag was set to true, but the overwrite was denied. Closing the database.')
-                print('-----------------------------------------------')
-
-                exit(0)
-
-
-        # Make storage folders if they dont exist
-        os.makedirs(self.fpaths['analysis'], exist_ok=True)
-        os.makedirs(self.fpaths['geometry'], exist_ok=True)
-        os.makedirs(self.fpaths['material'], exist_ok=True)
-        os.makedirs(self.fpaths['model_files'], exist_ok=True)
-
-        # Load data from data.pickle
-        try:
-            self.load_database()
-
-        # If it doesnt exist load an empty Modular_Abaqus_Builder
-        except:
-
-            self.instantiate_database()
-            
-            print('-----------------------------------------------')
-            print('The data.pkl file: "{}" does not exist. An empty Modular_Abaqus_Builder has been loaded.'.format(self.fpaths['data']))
-            print('-----------------------------------------------')
-
-            self.save_database()
-            
-        # If overwrite_models flag set to true, delete all model files and their database entries
-        if overwrite_models:
-            print('-----------------------------------------------')
-            print('OVERWRITE MODELS FLAG SET TO TRUE')
-            print('-----------------------------------------------')
-
-            if self.yes_no_question('Are you sure you would like to overwrite the models of the database? (This will delete all model files and their database entries)'):
-                self.overwrite_models()
-            
-            else:
-                print('-----------------------------------------------')
-                print('The overwrite models flag was set to true, but the overwrite was denied. Closing the database.')
-                print('-----------------------------------------------')
-
-                exit(0)
-        
-
-    def overwrite_database(self):
-        '''
-        ---------------------------------------------------
-        Delete all objects and models in the relevant filepaths
-        ---------------------------------------------------
-        '''
-        
-        for analysis in glob.glob(os.path.join(self.fpaths['analysis'], '*', ''), recursive=False):
-            rmtree(analysis)
-            print('Deleted: "{}"'.format(analysis))
-
-        for geometry in glob.glob(os.path.join(self.fpaths['geometry'], '*', ''), recursive=False):
-            rmtree(geometry)
-            print('Deleted: "{}"'.format(geometry))
-
-        for material in glob.glob(os.path.join(self.fpaths['material'], '*', ''), recursive=False):
-            rmtree(material)
-            print('Deleted: "{}"'.format(material))
-
-        for model in glob.glob(os.path.join(self.fpaths['model_files'], '*', ''), recursive=False):
-            rmtree(model)
-            print('Deleted: "{}"'.format(model))
-
-        self.instantiate_database()
-
-
-    def overwrite_models(self):
-        '''
-        ---------------------------------------------------
-        Delete all models in the relevant filepaths and removes their entries from the database
-        ---------------------------------------------------
-        '''
-
-        for model in glob.glob(os.path.join(self.fpaths['model_files'], '*', ''), recursive=False):
-            rmtree(model)
-            print('Deleted: "{}"'.format(model))
-
-        self.data['model'] = {}
-
-
-    def load_database(self):
-        '''
-        ---------------------------------------------------
-        Load the database from the .pkl file
-        ---------------------------------------------------
-        '''
-        with open(self.fpaths['data'], 'rb') as df:
-
-            self.__dict__ = pkl.load(df).__dict__
-            print('-----------------------------------------------')
-            print('Loading from: "{}" was successful.'.format(self.fpaths['data']))
-            print('-----------------------------------------------')
-            
-        self.save_database()
-
-
-    def instantiate_database(self):
-        '''
-        ---------------------------------------------------
-        Instantiate an empty database
-        ---------------------------------------------------
-        '''
 
         # Set allowed characters
         self.allowed_characters = {'Name' : set(string.ascii_lowercase + string.digits + '_-'),
@@ -159,6 +107,79 @@ class Modular_Abaqus_Builder:
                                 'Model_Loop' : ['create', 'modify', 'duplicate', 'delete', 'post_process', 'run', 'help', 'back']}
     
         self.data = {'analysis': {}, 'geometry': {}, 'material': {}, 'model': {}}
+
+        # Make storage folders if they dont exist
+        os.makedirs(self.fpaths['analysis'], exist_ok=True)
+        os.makedirs(self.fpaths['geometry'], exist_ok=True)
+        os.makedirs(self.fpaths['material'], exist_ok=True)
+        os.makedirs(self.fpaths['model_files'], exist_ok=True)
+
+
+    def overwrite_database(self):
+        '''
+        ---------------------------------------------------
+        Delete all objects and models in the relevant filepaths
+        ---------------------------------------------------
+        '''
+        
+        # Delete all analysis object files
+        for analysis in glob.glob(os.path.join(self.fpaths['analysis'], '*', ''), recursive=False):
+            rmtree(analysis)
+            print('Deleted: "{}"'.format(analysis))
+
+        # Delete all geometry object files
+        for geometry in glob.glob(os.path.join(self.fpaths['geometry'], '*', ''), recursive=False):
+            rmtree(geometry)
+            print('Deleted: "{}"'.format(geometry))
+
+        # Delete all material object files
+        for material in glob.glob(os.path.join(self.fpaths['material'], '*', ''), recursive=False):
+            rmtree(material)
+            print('Deleted: "{}"'.format(material))
+
+        # Delete all model files
+        for model in glob.glob(os.path.join(self.fpaths['model_files'], '*', ''), recursive=False):
+            rmtree(model)
+            print('Deleted: "{}"'.format(model))
+
+        if os.path.exists(self.fpaths['data']):
+            # Delete pickle storage file
+            os.remove(self.fpaths['data'])
+
+
+    def overwrite_models(self):
+        '''
+        ---------------------------------------------------
+        Delete all models in the relevant filepaths and removes their entries from the database
+        ---------------------------------------------------
+        '''
+
+        for model in glob.glob(os.path.join(self.fpaths['model_files'], '*', ''), recursive=False):
+            rmtree(model)
+            print('Deleted Directory: "{}"'.format(model))
+
+        for model in self.data['model'].keys():
+            print('Deleted Model: "{}", from the database.'.format(model))
+
+        self.data['model'] = {}
+
+
+    def load_database(self):
+        '''
+        ---------------------------------------------------
+        Load the database from the .pkl file
+        ---------------------------------------------------
+        '''
+        with open(self.fpaths['data'], 'rb') as df:
+
+            self.data = pkl.load(df).data
+
+            print('-----------------------------------------------')
+            print('Loading from: "{}" was successful.'.format(self.fpaths['data']))
+            print('The following data was imported into the database: ')
+            print('-----------------------------------------------')
+
+        self.print_database()
 
 
     def save_database(self):
@@ -177,8 +198,6 @@ class Modular_Abaqus_Builder:
             print('-----------------------------------------------')
             print('Save to: "{}" was successful.'.format(self.fpaths['data']))
             print('-----------------------------------------------')
-            
-        return
 
 
     def main_loop(self):
@@ -686,9 +705,9 @@ class Modular_Abaqus_Builder:
                 print('\t\t\tData-type: "{}"'.format(analysis.parameters[parameter]['dtype']))
                 print('\t\t\tDefault Value: "{}"'.format(analysis.parameters[parameter]['default_value']))
 
-                print('\t\t\tFiles parameter modifies: ')
-                for file in analysis.parameters[parameter]['files']:
-                        print('\t\t\t\t"{}"'.format(file))
+                print('\t\t\tSolvers parameter modifies: ')
+                for solver in analysis.parameters[parameter]['solvers']:
+                        print('\t\t\t\t"{}"'.format(solver))
 
 
             print('\tRequirements: ')
@@ -724,9 +743,9 @@ class Modular_Abaqus_Builder:
                 print('\t\t\tData-type: "{}"'.format(geometry.parameters[parameter]['dtype']))
                 print('\t\t\tDefault Value: "{}"'.format(geometry.parameters[parameter]['default_value']))
 
-                print('\t\t\tFiles parameter modifies: ')
-                for file in geometry.parameters[parameter]['files']:
-                        print('\t\t\t\t"{}"'.format(file))
+                print('\t\t\tSolvers parameter modifies: ')
+                for solver in geometry.parameters[parameter]['solvers']:
+                        print('\t\t\t\t"{}"'.format(solver))
 
 
             print('\tRequirements: ')
@@ -762,9 +781,9 @@ class Modular_Abaqus_Builder:
                 print('\t\t\tData-type: "{}"'.format(material.parameters[parameter]['dtype']))
                 print('\t\t\tDefault Value: "{}"'.format(material.parameters[parameter]['default_value']))
 
-                print('\t\t\tFiles parameter modifies: ')
-                for file in material.parameters[parameter]['files']:
-                        print('\t\t\t\t"{}"'.format(file))
+                print('\t\t\tSolvers parameter modifies: ')
+                for solver in material.parameters[parameter]['solvers']:
+                        print('\t\t\t\t"{}"'.format(solver))
 
 
             print('\tRequirements: ')
@@ -786,12 +805,43 @@ class Modular_Abaqus_Builder:
         for model in self.data['model'].values():
 
             print('Model Name: "{}"'.format(model.name))
-            print('\tPath: "{}"'.format(model.fpath))
             print('\tDescription: "{}"'.format(model.description))
-            print('\tFiles: ')
+            print('\tPath: "{}"'.format(model.fpath))
+            print('\tSolver Fpaths: ')
 
-            for file in glob.glob(os.path.join(model.fpath,'*.*')):
-                print('\t\t"{}"'.format(file))
+            for solver,fpath in model.solver_fpaths.items():
+                if fpath is not None:
+                    print('\t\t "{}": "{}"'.format(solver,fpath))
+
+            print('\tAnalysis used: "{}"'.format(model.analysis.name))
+            print('\tWhich has requirements: ')
+
+            for requirement_type in model.requirements.keys():
+                
+                print('\t\t"{}"'.format(requirement_type))
+
+                for requirement,requirement_value in model.requirements[requirement_type].items():
+                    print('\t\t\t"{}": "{}"'.format(requirement,requirement_value))
+
+            print('\tGeometry used: "{}"'.format(model.geometry.name))
+            print('\tMaterials used: ')
+
+            for material in model.materials.keys():
+                print('\t\t"{}"'.format(model.materials[material].name))
+
+            print('\tParameters: ')
+
+            for parameter in model.parameters.keys():
+
+                print('\t\tName: "{}"'.format(model.parameters[parameter]['name']))
+                print('\t\t\tDescription: "{}"'.format(model.parameters[parameter]['description']))
+                print('\t\t\tData-type: "{}"'.format(model.parameters[parameter]['dtype']))
+                print('\t\t\tDefault Value: "{}"'.format(model.parameters[parameter]['default_value']))
+
+                print('\t\t\tSolvers parameter modifies: ')
+                for solver in model.parameters[parameter]['solvers']:
+                        print('\t\t\t\t"{}"'.format(solver))
+
 
             print('-----------------------------------------------')
 

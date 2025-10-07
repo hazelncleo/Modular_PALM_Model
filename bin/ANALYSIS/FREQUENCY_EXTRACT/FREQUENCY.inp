@@ -1,7 +1,16 @@
 ** ----------------------------------------------------------------
-** FREQUENCY EXTRACTION FOR 970KHZ, 1700KHZ AND 2500KHZ
+** FREQUENCY EXTRACTION FOR Three frequencies
 ** ----------------------------------------------------------------
-
+*Parameter
+freq_1_lower = freq_1 - range
+freq_1_upper = freq_1 + range
+name_1 = 'freq_extract_' + str(int(freq_1))
+freq_2_lower = freq_2 - range
+freq_2_upper = freq_2 + range
+name_2 = 'freq_extract_' + str(int(freq_2))
+freq_3_lower = freq_3 - range
+freq_3_upper = freq_3 + range
+name_3 = 'freq_extract_' + str(int(freq_3))
 ** FIX THE BASE OF THE CHIP FOR FREQUENCY EXTRACTION
 *BOUNDARY
   SOLID_GEOMETRY_1.FIXED, 1, 1
@@ -9,11 +18,9 @@
   SOLID_GEOMETRY_1.FIXED, 3, 3
 ** ----------------------------------------------------------------
 ** 
-** STEP: FREQUENCY_EXTRACT_970KHZ
-** 
-*STEP, NAME=FREQUENCY_EXTRACT_970KHZ, NLGEOM=NO, PERTURBATION
+*STEP, NAME=<name_1>, NLGEOM=NO, PERTURBATION
 *FREQUENCY, EIGENSOLVER=LANCZOS, SIM, ACOUSTIC COUPLING=ON, NORMALIZATION=MASS
-  , 960000., 980000., , , 
+  , <freq_1_lower>, <freq_1_upper>, , , 
 ** 
 ** OUTPUT REQUESTS
 ** 
@@ -29,13 +36,10 @@
 *OUTPUT, HISTORY
 *ENERGY OUTPUT, VARIABLE=ALL
 *END STEP
-** ----------------------------------------------------------------
 ** 
-** STEP: FREQUENCY_EXTRACT_1700KHZ
-** 
-*STEP, NAME=FREQUENCY_EXTRACT_1700KHZ, NLGEOM=NO, PERTURBATION
+*STEP, NAME=<name_2>, NLGEOM=NO, PERTURBATION
 *FREQUENCY, EIGENSOLVER=LANCZOS, SIM, ACOUSTIC COUPLING=ON, NORMALIZATION=MASS
-  , 1.69E+06, 1.71E+06, , , 
+  , <freq_2_lower>, <freq_2_upper>, , , 
 ** 
 ** OUTPUT REQUESTS
 ** 
@@ -51,13 +55,10 @@
 *OUTPUT, HISTORY
 *ENERGY OUTPUT, VARIABLE=ALL
 *END STEP
-** ----------------------------------------------------------------
 ** 
-** STEP: FREQUENCY_EXTRACT_2500KHZ
-** 
-*STEP, NAME=FREQUENCY_EXTRACT_2500KHZ, NLGEOM=NO, PERTURBATION
+*STEP, NAME=<name_3>, NLGEOM=NO, PERTURBATION
 *FREQUENCY, EIGENSOLVER=LANCZOS, SIM, ACOUSTIC COUPLING=ON, NORMALIZATION=MASS
-  , 2.49E+06, 2.51E+06, , , 
+  , <freq_3_lower>, <freq_3_upper>, , , 
 ** 
 ** OUTPUT REQUESTS
 ** 

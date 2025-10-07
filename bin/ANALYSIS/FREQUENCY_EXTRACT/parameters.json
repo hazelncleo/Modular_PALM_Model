@@ -1,0 +1,39 @@
+{
+    "freq_1": {
+        "name": "freq_1",
+        "description": "First frequency to extract",
+        "dtype": "float",
+        "default_value": 0.97e6,
+        "solvers": [
+            "abaqus"
+        ]
+    },
+    "freq_2": {
+        "name": "freq_2",
+        "description": "Second frequency to extract",
+        "dtype": "float",
+        "default_value": 1.63e6,
+        "solvers": [
+            "abaqus"
+        ]
+    },
+    "freq_3": {
+        "name": "freq_3",
+        "description": "Third frequency to extract",
+        "dtype": "float",
+        "default_value": 2.52e6,
+        "solvers": [
+            "abaqus"
+        ]
+    },
+    "range": {
+        "name": "range",
+        "description": "range around frequencies to extract",
+        "dtype": "float",
+        "default_value": 5e4,
+        "solvers": [
+            "abaqus"
+        ]
+    }
+
+}

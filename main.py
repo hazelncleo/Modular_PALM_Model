@@ -1,22 +1,23 @@
 from Modular_Abaqus_Builder import Modular_Abaqus_Builder
-from Analysis_Object import Analysis_Object
+from importlib import import_module
 
 def main():
     
     # Instantiate class
-    builder = Modular_Abaqus_Builder(overwrite=True, overwrite_models=False)
+    builder = Modular_Abaqus_Builder(overwrite=False, overwrite_models=True)
     
     builder.main_loop()
 
-'''
+
+
+
+''' 
 *****************************************************************************************************************************
 ****************************************************TODO*********************************************************************
 *****************************************************************************************************************************
 
 IMPORTANT STUFF
 --------------------------
-- startup error/ cant reproduce, may have been because of crash or something??
-- finish add material to model
 
 - validate database
 - geometry object class

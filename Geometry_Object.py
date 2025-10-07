@@ -57,15 +57,12 @@ class Geometry_Object:
 
         self.move_folder(source_fpath, self.fpath)
 
-        self.get_all_files()
+        self.load_requirements()
 
         self.parameters = {}
         self.load_parameters()
-        
-        self.load_requirements()
 
 
-        
         print('-----------------------------------------------')
         print('Create Geometry object operation successful.')
         print('-----------------------------------------------')
@@ -210,9 +207,9 @@ class Geometry_Object:
                     print('\tDescription: {}'.format(self.parameters[parameter]['description']))
                     print('\tData-type: {}'.format(self.parameters[parameter]['dtype']))
                     print('\tDefault Value: {}'.format(self.parameters[parameter]['default_value']))
-                    print('\tFiles: ')
-                    for file in self.parameters[parameter]['files']:
-                        print('\t\t"{}"'.format(file))
+                    print('\tSolvers: ')
+                    for solver in self.parameters[parameter]['solvers']:
+                        print('\t\t"{}"'.format(solver))
 
                 print('---------------------------------------------------')
 
@@ -250,7 +247,7 @@ class Geometry_Object:
                     inquirer.Text('description', message='Please enter a description of the parameter to be added'),
                     inquirer.List('dtype', message='Please choose a data-type for the parameter to be added', choices=dtypes, carousel = True),
                     inquirer.Text('default_value', 'Please enter the default value for the parameter to be added'),
-                    inquirer.Checkbox('files', message='Please choose the files this parameter controls', choices = self.files, carousel=True)]
+                    inquirer.Checkbox('solvers', message='Please choose the solvers this parameter controls', choices = ['abaqus','fluent','mpcci'], carousel=True)]
 
         # Loop until new name is unique
         while True:
@@ -289,9 +286,9 @@ class Geometry_Object:
                 print('---------------------------------------------------')
 
             # Check at least one file has been chosen
-            elif not answers['files']:
+            elif not answers['solvers']:
                 print('---------------------------------------------------')
-                print('ERROR: No File chosen')
+                print('ERROR: No Solver chosen')
                 print('---------------------------------------------------')
 
             else:
@@ -352,7 +349,7 @@ class Geometry_Object:
                     inquirer.Text('description', message='Please enter a description of the parameter to be modified', default=self.parameters[parameter_to_modify]['description']),
                     inquirer.List('dtype', message='Please choose a data-type for the parameter to be modified', choices=dtypes, default=[self.parameters[parameter_to_modify]['dtype']], carousel = True),
                     inquirer.Text('default_value', 'Please enter the default value for the parameter to be modified', default=self.parameters[parameter_to_modify]['default_value']),
-                    inquirer.Checkbox('files', message='Please choose the files this parameter controls', choices = self.files, carousel=True,default=self.parameters[parameter_to_modify]['files'])]
+                    inquirer.Checkbox('solvers', message='Please choose the solvers this parameter controls', choices = ['abaqus','fluent','mpcci'], carousel=True,default=self.parameters[parameter_to_modify]['solvers'])]
 
         # Loop until new name is unique
         while True:
@@ -391,9 +388,9 @@ class Geometry_Object:
                 print('---------------------------------------------------')
 
             # Check at least one file has been chosen
-            elif not answers['files']:
+            elif not answers['solvers']:
                 print('---------------------------------------------------')
-                print('ERROR: No File chosen')
+                print('ERROR: No Solver chosen')
                 print('---------------------------------------------------')
 
             else:
@@ -414,18 +411,25 @@ class Geometry_Object:
 
     def load_parameters(self):
         '''
+        ---------------------------------------------------
         Try to load the parameters for the geometry from a file, if it does not exist prompt the user to specify the parameters
+        ---------------------------------------------------
         '''
         try:
-            # Read requirements
+            # Read parameters
             with open(os.path.join(self.fpath,'parameters.json'),'r') as f:
                 self.parameters = json.load(f)
                 
             # Delete file from directory
             os.remove(os.path.join(self.fpath,'parameters.json'))
+
+            self.get_all_files()
+            
                 
         except:
             # If no file to read have the user set the parameters
+            self.get_all_files()
+
             self.define_parameters()
 
 
@@ -460,31 +464,44 @@ class Geometry_Object:
                                     "fluent_whole-chip_fluid": False,
                                     "fluent_submodel_fluid": False
                                 }}
+            
+        # Check if files exist in directory
+        change_made = False
+        for requirement_name in self.requirements['geometries'].keys():
+            if 'abaqus' in requirement_name:
+                if os.path.exists(os.path.join(self.fpath,requirement_name+'.inp')):
+                    self.requirements['geometries'][requirement_name] = True
+                    change_made = True
+            else:
+                if os.path.exists(os.path.join(self.fpath,requirement_name+'.msh')):
+                    self.requirements['geometries'][requirement_name] = True
+                    change_made = True
         
+        # If file names dont match then prompt user
+        if not change_made:
+            # Build questions object
+            questions = [inquirer.Checkbox('geometries',
+                                        message = 'Please choose the Geometries included in this object',
+                                        choices = ["abaqus_whole-chip_solid", 
+                                                    "abaqus_whole-chip_acoustic", 
+                                                    "abaqus_submodel_solid", 
+                                                    "abaqus_submodel_acoustic",
+                                                    "fluent_whole-chip_fluid",
+                                                    "fluent_submodel_fluid"],
+                                        carousel = True,
+                                        default = [key for key in self.requirements['geometries'].keys() if self.requirements['geometries'][key]])]
+            
 
-        # Build questions object
-        questions = [inquirer.Checkbox('geometries',
-                                       message = 'Please choose the Geometries included in this object',
-                                       choices = ["abaqus_whole-chip_solid", 
-                                                  "abaqus_whole-chip_acoustic", 
-                                                  "abaqus_submodel_solid", 
-                                                  "abaqus_submodel_acoustic",
-                                                  "fluent_whole-chip_fluid",
-                                                  "fluent_submodel_fluid"],
-                                       carousel = True,
-                                       default = [key for key in self.requirements['geometries'].keys() if self.requirements['geometries'][key]])]
-        
-
-        # Get answers to questions
-        answers = inquirer.prompt(questions)
+            # Get answers to questions
+            answers = inquirer.prompt(questions)
 
 
-        # Set requirements according to answers
-        for requirement_type in self.requirements.keys():
+            # Set requirements according to answers
+            for requirement_type in self.requirements.keys():
 
-            for requirement in self.requirements[requirement_type].keys():
+                for requirement in self.requirements[requirement_type].keys():
 
-                self.requirements[requirement_type][requirement] = requirement in answers[requirement_type]
+                    self.requirements[requirement_type][requirement] = requirement in answers[requirement_type]
 
 
     def get_all_files(self):
