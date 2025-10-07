@@ -1,0 +1,10 @@
+{
+    "geometries": {
+        "abaqus_whole-chip_solid": true,
+        "abaqus_whole-chip_acoustic": true,
+        "abaqus_submodel_solid": false,
+        "abaqus_submodel_acoustic": false,
+        "fluent_whole-chip_fluid": true,
+        "fluent_submodel_fluid": false
+    }
+}

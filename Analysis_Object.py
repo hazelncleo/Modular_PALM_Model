@@ -60,12 +60,8 @@ class Analysis_Object:
         
         self.load_requirements()
 
-        self.get_all_files()
-        
-        
-
         self.parameters = {}
-        self.load_parameters()
+        self.load_parameters() 
         
         
         print('-----------------------------------------------')
@@ -217,9 +213,9 @@ class Analysis_Object:
                     print('\tDescription: {}'.format(self.parameters[parameter]['description']))
                     print('\tData-type: {}'.format(self.parameters[parameter]['dtype']))
                     print('\tDefault Value: {}'.format(self.parameters[parameter]['default_value']))
-                    print('\tFiles: ')
-                    for file in self.parameters[parameter]['files']:
-                        print('\t\t"{}"'.format(file))
+                    print('\tSolvers: ')
+                    for solver in self.parameters[parameter]['solvers']:
+                        print('\t\t"{}"'.format(solver))
 
                 print('---------------------------------------------------')
 
@@ -253,7 +249,7 @@ class Analysis_Object:
                     inquirer.Text('description', message='Please enter a description of the parameter to be added'),
                     inquirer.List('dtype', message='Please choose a data-type for the parameter to be added', choices=dtypes, carousel = True),
                     inquirer.Text('default_value', 'Please enter the default value for the parameter to be added'),
-                    inquirer.Checkbox('files', message='Please choose the files this parameter controls', choices = self.files, carousel=True)]
+                    inquirer.Checkbox('solvers', message='Please choose the solvers this parameter controls', choices = ['abaqus','fluent','mpcci'], carousel=True)]
 
         # Loop until new name is unique
         while True:
@@ -291,10 +287,10 @@ class Analysis_Object:
                 print('ERROR: The description: "{}", does not meet the requirements.'.format(answers['description']))
                 print('---------------------------------------------------')
 
-            # Check at least one file has been chosen
-            elif not answers['files']:
+            # Check at least one solver has been chosen
+            elif not answers['solvers']:
                 print('---------------------------------------------------')
-                print('ERROR: No File chosen')
+                print('ERROR: No Solver chosen')
                 print('---------------------------------------------------')
 
             else:
@@ -364,7 +360,7 @@ class Analysis_Object:
                     inquirer.Text('description', message='Please enter a description of the parameter to be modified', default=self.parameters[parameter_to_modify]['description']),
                     inquirer.List('dtype', message='Please choose a data-type for the parameter to be modified', choices=dtypes, default=[self.parameters[parameter_to_modify]['dtype']], carousel = True),
                     inquirer.Text('default_value', 'Please enter the default value for the parameter to be modified', default=self.parameters[parameter_to_modify]['default_value']),
-                    inquirer.Checkbox('files', message='Please choose the files this parameter controls', choices = self.files, carousel=True, default=self.parameters[parameter_to_modify]['files'])]
+                    inquirer.Checkbox('solvers', message='Please choose the solvers this parameter controls', choices = ['abaqus','fluent','mpcci'], carousel=True, default=self.parameters[parameter_to_modify]['solvers'])]
 
         # Loop until new name is unique
         while True:
@@ -403,9 +399,9 @@ class Analysis_Object:
                 print('---------------------------------------------------')
 
             # Check at least one file has been chosen
-            elif not answers['files']:
+            elif not answers['solvers']:
                 print('---------------------------------------------------')
-                print('ERROR: No File chosen')
+                print('ERROR: No Solver chosen')
                 print('---------------------------------------------------')
 
             else:
@@ -439,10 +435,14 @@ class Analysis_Object:
                 
             # Delete file from directory
             os.remove(os.path.join(self.fpath,'parameters.json'))
+
+            self.get_all_files()
             
                 
         except:
             # If no file to read have the user set the parameters
+            self.get_all_files()
+
             self.define_parameters()
 
 
@@ -530,7 +530,6 @@ class Analysis_Object:
             for requirement in self.requirements[requirement_type].keys():
 
                 self.requirements[requirement_type][requirement] = requirement in answers[requirement_type]
-
 
 
     def get_all_files(self):

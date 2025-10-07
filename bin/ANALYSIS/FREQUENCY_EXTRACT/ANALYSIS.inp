@@ -1,6 +1,5 @@
 ** ----------------------------------------------------------------
 ** IMPORT INPUT FILES FOR FREQUENCY EXTRACTION
 ** ----------------------------------------------------------------
-*INCLUDE, INPUT=FLUID_GEOMETRY.inp
-*INCLUDE, INPUT=ASSEMBLY.inp
-*INCLUDE, INPUT=FREQUENCY.inp
+*INCLUDE, INPUT=abaqus_whole-chip_acoustic.inp
+*INCLUDE, INPUT=frequency.inp

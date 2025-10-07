@@ -1,7 +1,0 @@
-** ----------------------------------------------------------------
-** IMPORT INPUT FILES FOR FREQUENCY EXTRACTION AND IMPLICIT VIBRATION
-** ----------------------------------------------------------------
-*INCLUDE, INPUT=FLUID_GEOMETRY.inp
-*INCLUDE, INPUT=ASSEMBLY.inp
-*INCLUDE, INPUT=FREQUENCY.inp
-*INCLUDE, INPUT=IMPLICIT_VIBRATION.inp

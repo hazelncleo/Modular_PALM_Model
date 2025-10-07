@@ -1,0 +1,3 @@
+** MAIN INPUT FILE FOR RUNNING SIMULATION
+*INCLUDE, INPUT=abaqus_whole-chip_solid.inp
+*INCLUDE, INPUT=analysis.inp

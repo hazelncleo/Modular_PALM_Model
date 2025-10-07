@@ -1,10 +1,13 @@
 import os
 from shutil import copytree
+from shutil import copyfile
 import string
 from tkinter import Tk
 from tkinter.filedialog import askdirectory
 import inquirer
 from copy import deepcopy
+from shutil import copyfileobj
+from importlib import import_module
 
 
 class Model:
@@ -43,13 +46,18 @@ class Model:
         self.select_geometry()
 
         # Add Materials
-        self.select_materials()
-        
+        if any(self.requirements['materials'].values()):
+            self.select_materials()
+        else:
+            print('-----------------------------------------------')
+            print('No Abaqus Materials required, skipping select materials')
+            print('-----------------------------------------------')
+
         # Get solver fpaths
         self.set_fpaths()
             
-        # Create model parameters and link to object parameters
-        self.create_and_link_parameters()
+        # Copy parameters from objects and prompt user to modify their values
+        self.copy_and_modify_parameters()
         
         # Move files from object fpaths to the solver fpaths
         self.move_files_from_objects()
@@ -59,8 +67,8 @@ class Model:
         print('-----------------------------------------------')
     
 
-    def move_folder(self, source_fpath, destination_fpath):
-        copytree(source_fpath, destination_fpath, symlinks=True)
+    def move_object_folder(self, source_fpath, destination_fpath, dirs_exist_ok=False):
+        copytree(source_fpath, destination_fpath, symlinks=True, dirs_exist_ok=dirs_exist_ok)
 
     
     def new_model_name(self):
@@ -371,80 +379,283 @@ class Model:
             print('Software Requirements are not valid.')
             print('---------------------------------------------------')
             raise ValueError('Software Requirements are not valid.')
-        
-    
-    def create_and_link_parameters(self):
+
+
+    def print_model_parameter_info(self):
         '''
         
         '''
-        
+
         self.parameters = {}
 
         # Print parameters of the analysis object
         print('---------------------------------------------------')
         print('The Chosen Analysis: "{}".'.format(self.analysis.name))
-        print('Has the following Parameters that can be used: ')
+        print('Has the following Parameters that can be changed: ')
         for parameter_name,parameter in self.analysis.parameters.items():
                     print('---------------------------------------------------')
                     print('Name: {}'.format(parameter_name))
                     print('\tDescription: {}'.format(parameter['description']))
                     print('\tData-type: {}'.format(parameter['dtype']))
                     print('\tDefault Value: {}'.format(parameter['default_value']))
-                    print('\tFiles: ')
-                    for file in parameter['files']:
-                        print('\t\t"{}"'.format(file))
+                    print('\tSolvers: ')
+                    for solver in parameter['solvers']:
+                        print('\t\t"{}"'.format(solver))
                         
-        self.parameters.update(self.analysis.parameters)
+        self.parameters.update(deepcopy(self.analysis.parameters))
         
         # Print parameters of the geometry object
         print('---------------------------------------------------')
         print('The Chosen Geometry: "{}".'.format(self.geometry.name))
-        print('Has the following Parameters that can be used: ')
+        print('Has the following Parameters that can be changed: ')
         for parameter_name,parameter in self.geometry.parameters.items():
                     print('---------------------------------------------------')
                     print('Name: {}'.format(parameter_name))
                     print('\tDescription: {}'.format(parameter['description']))
                     print('\tData-type: {}'.format(parameter['dtype']))
                     print('\tDefault Value: {}'.format(parameter['default_value']))
-                    print('\tFiles: ')
-                    for file in parameter['files']:
-                        print('\t\t"{}"'.format(file))
+                    print('\tSolvers: ')
+                    for solver in parameter['solvers']:
+                        print('\t\t"{}"'.format(solver))
         
-        self.parameters.update(self.geometry.parameters)
+        self.parameters.update(deepcopy(self.geometry.parameters))
         
-        
-        # Print parameters for all of the materials
-        for material_name in self.materials.keys():
+        # Check if materials required
+        if any(self.requirements['materials'].values()):
+
+            # Print parameters for all of the materials
+            for material_name in self.materials.keys():
+                print('---------------------------------------------------')
+                print('The Chosen Material: "{}".'.format(material_name))
+                requirement_fulfilled = [requirement[0] for requirement in self.materials[material_name].requirements['materials'].items() if requirement[1]][0]
+                print('Material Type: "{}"'.format(requirement_fulfilled))
+                print('Has the following Parameters that can be used: ')
+                for parameter_name,parameter in self.materials[material_name].parameters.items():
+                            print('---------------------------------------------------')
+                            print('Name: {}'.format(parameter_name))
+                            print('\tDescription: {}'.format(parameter['description']))
+                            print('\tData-type: {}'.format(parameter['dtype']))
+                            print('\tDefault Value: {}'.format(parameter['default_value']))
+                            print('\tSolvers: ')
+                            for solver in parameter['solvers']:
+                                print('\t\t"{}"'.format(solver))
+                
+                self.parameters.update(deepcopy(self.materials[material_name].parameters))
+
+        else:
             print('---------------------------------------------------')
-            print('The Chosen Material: "{}".'.format(material_name))
-            requirement_fulfilled = [requirement[0] for requirement in self.materials[material_name].requirements['materials'].items() if requirement[1]][0]
-            print('Material Type: "{}"'.format(requirement_fulfilled))
-            print('Has the following Parameters that can be used: ')
-            for parameter_name,parameter in self.materials[material_name].parameters.items():
-                        print('---------------------------------------------------')
-                        print('Name: {}'.format(parameter_name))
-                        print('\tDescription: {}'.format(parameter['description']))
-                        print('\tData-type: {}'.format(parameter['dtype']))
-                        print('\tDefault Value: {}'.format(parameter['default_value']))
-                        print('\tFiles: ')
-                        for file in parameter['files']:
-                            print('\t\t"{}"'.format(file))
-            
-            self.parameters.update(self.materials[material_name].parameters)
-            
-        questions = [inquirer.Checkbox('chosen_parameters', 'Pick the parameters to be used in this model', choices = list(self.parameters.keys()), carousel = True)]
+            print('No materials chosen for this model')
+
+
+        print('---------------------------------------------------')
+
+    
+    def copy_and_modify_parameters(self):
+        '''
         
+        '''
+        
+        self.print_model_parameter_info()
+            
+        # Query user to pick which parameters they would like to edit the values of for use in this model
+        questions = [inquirer.Checkbox('chosen_parameters', 'Pick the parameters that you would like to change the values of for this model', choices = list(self.parameters.keys()), carousel = True)]
         answers = inquirer.prompt(questions)
-        
-        print(answers)
-                            
-        
-                            
-                            
-        
-    
-    
-    def move_files_from_objects(self):
-        pass
+
+        # Loop over parameters that user would like to change the values of
+        for chosen_parameter in answers['chosen_parameters']:
+
+            value = inquirer.text('What value would you like to assign to: "{}", Note: dtype = "{}"'.format(chosen_parameter,self.parameters[chosen_parameter]['dtype']),
+                                  default = self.parameters[chosen_parameter]['default_value'])
+
+            if self.parameters[chosen_parameter]['dtype'] == 'int':
+                self.parameters[chosen_parameter]['default_value'] = int(value)
+                print('---------------------------------------------------')
+                print('The value of Parameter "{}" was changed to: {}'.format(chosen_parameter,int(value)))
+ 
+
+            else:
+                self.parameters[chosen_parameter]['default_value'] = float(value)
+                print('---------------------------------------------------')
+                print('The value of Parameter "{}" was changed to: {}'.format(chosen_parameter,float(value)))
+                
+
+        print('---------------------------------------------------')
         
 
+    def move_files_from_objects(self):
+        '''
+        
+        '''
+
+        # Copy analysis files to model directory
+        self.move_object_folder(self.analysis.fpath, self.fpath)
+    
+        # If mpcci abaqus-fluent coupled analysis
+        if all(self.requirements['softwares'].values()):
+            self.build_mpcci_model()
+           
+        # If just abaqus analysis
+        elif self.requirements['softwares']['abaqus']:
+            self.build_abaqus_model()
+
+        # If just fluent analysis
+        elif self.requirements['softwares']['fluent']:
+            self.build_fluent_model()
+
+        else:
+            print('---------------------------------------------------')
+            print('Software Requirements are not valid.')
+            print('---------------------------------------------------')
+            raise ValueError('Software Requirements are not valid.')
+        
+
+    def build_abaqus_model(self):
+        '''
+        
+        '''
+
+        # Satisfy geometry requirements
+        for requirement_name,requirement_value in self.requirements['geometries'].items():
+            if requirement_value:
+                copyfile(os.path.join(self.geometry.fpath,requirement_name+'.inp'), os.path.join(self.solver_fpaths['abaqus'],requirement_name+'.inp'))
+
+
+        # Satisfy material requirements
+        for material_name in self.materials.keys():
+            for requirement_name, requirement_value in self.materials[material_name].requirements['materials'].items():
+                if requirement_value:
+                    copyfile(os.path.join(self.materials[material_name].fpath,requirement_name+'.inp'), os.path.join(self.solver_fpaths['abaqus'],requirement_name+'.inp'))
+
+
+        # Add parameter values to main abaqus input file
+        with open(os.path.join(self.solver_fpaths['abaqus'],'main.inp'),'r') as inp_read, open(os.path.join(self.solver_fpaths['abaqus'],self.name+'.inp'),'w') as inp_write:
+
+            inp_write.write('*Parameter\n')
+            inp_write.write('# -------------------------------------\n')
+            inp_write.write('# --------USER DEFINED PARAMETERS------\n')
+            inp_write.write('# -------------------------------------\n')
+
+            # Write parameter values as dictated by user
+            for parameter_name,parameter in self.parameters.items():
+                if 'abaqus' in parameter['solvers']:
+                    inp_write.write('{} = {}\n'.format(parameter_name, parameter['default_value']))
+
+            # Copy main input file contents
+            copyfileobj(inp_read,inp_write)
+
+        # Delete old main input file
+        os.remove(os.path.join(self.solver_fpaths['abaqus'],'main.inp'))
+
+
+        # If submodel analysis, import global .odb and .prt files (Note: This only works if global analysis has been run, and global script preparation run)
+        if self.requirements['analysis']['abaqus_global_odb'] and self.requirements['analysis']['abaqus_global_prt']:
+
+            potential_models = [model_name for model_name in self.builder.data['model'].keys() if model_name is not self.name]
+
+            if potential_models:
+            
+                model_to_import_global = inquirer.list_input('This model requires a global .odb and .prt file to function, please specify the model you would like to import these from', choices=potential_models, carousel=True)
+                
+                # Copy global .odb 
+                if os.path.exists(os.path.join(self.builder.data['model'][model_to_import_global].solver_fpaths['abaqus'],model_to_import_global+'_global.odb')):
+                    copyfile(os.path.join(self.builder.data['model'][model_to_import_global].solver_fpaths['abaqus'],model_to_import_global+'_global.odb'),
+                                os.path.join(self.solver_fpaths['abaqus'],'global.odb'))
+                
+                # Copy global .prt
+                if os.path.exists(os.path.join(self.builder.data['model'][model_to_import_global].solver_fpaths['abaqus'],model_to_import_global+'_global.prt')):
+                    copyfile(os.path.join(self.builder.data['model'][model_to_import_global].solver_fpaths['abaqus'],model_to_import_global+'_global.prt'),
+                                os.path.join(self.solver_fpaths['abaqus'],'global.prt'))
+
+            else:
+                print('---------------------------------------------------')
+                print('No models to import global files from')
+                print('---------------------------------------------------')
+
+
+    def build_fluent_model(self):
+        '''
+        
+        '''
+        # Satisfy geometry requirements
+        for requirement_name,requirement_value in self.requirements['geometries'].items():
+            if requirement_value:
+                copyfile(os.path.join(self.geometry.fpath,requirement_name+'.msh'), os.path.join(self.solver_fpaths['fluent'],requirement_name+'.msh'))
+
+        
+
+
+    def build_mpcci_model(self):
+        '''
+        
+        '''
+
+        # Satisfy geometry requirements
+        for requirement_name,requirement_value in self.requirements['geometries'].items():
+            if requirement_value:
+                if 'abaqus' in requirement_name:
+                    copyfile(os.path.join(self.geometry.fpath,requirement_name+'.inp'), os.path.join(self.solver_fpaths['abaqus'],requirement_name+'.inp'))
+                else:
+                    copyfile(os.path.join(self.geometry.fpath,requirement_name+'.msh'), os.path.join(self.solver_fpaths['fluent'],requirement_name+'.msh'))
+
+
+        # Satisfy material requirements
+        for material_name in self.materials.keys():
+            for requirement_name, requirement_value in self.materials[material_name].requirements['materials'].items():
+                if requirement_value:
+                    copyfile(os.path.join(self.materials[material_name].fpath,requirement_name+'.inp'), os.path.join(self.solver_fpaths['abaqus'],requirement_name+'.inp'))
+
+
+        # Add parameter values to main abaqus input file
+        with open(os.path.join(self.solver_fpaths['abaqus'],'main.inp'),'r') as inp_read, open(os.path.join(self.solver_fpaths['abaqus'],'temp.inp'),'w') as inp_write:
+
+            inp_write.write('*Parameter\n')
+            inp_write.write('# -------------------------------------\n')
+            inp_write.write('# --------USER DEFINED PARAMETERS------\n')
+            inp_write.write('# -------------------------------------\n')
+
+            # Write parameter values as dictated by user
+            for parameter_name,parameter in self.parameters.items():
+                if 'abaqus' in parameter['solvers']:
+                    inp_write.write('{} = {}\n'.format(parameter_name, parameter['default_value']))
+
+            # Copy main input file contents
+            copyfileobj(inp_read,inp_write)
+        
+        # Replace old main.inp file
+        os.replace(os.path.join(self.solver_fpaths['abaqus'],'temp.inp'),os.path.join(self.solver_fpaths['abaqus'],'main.inp'))
+
+
+        # Fluent parameters and assemble .cas file
+
+
+        # Copy journal file if requirement
+        if self.requirements['analysis']['fluent_journal']:
+            pass
+
+
+
+        # If submodel analysis, import global .odb and .prt files (Note: This only works if global analysis has been run, and global script preparation run)
+        if self.requirements['analysis']['abaqus_global_odb'] and self.requirements['analysis']['abaqus_global_prt']:
+
+            potential_models = [model_name for model_name in self.builder.data['model'].keys() if model_name is not self.name]
+
+            if potential_models:
+            
+                model_to_import_global = inquirer.list_input('This model requires a global .odb and .prt file to function, please specify the model you would like to import these from', choices=potential_models, carousel=True)
+                
+                # Copy global .odb 
+                if os.path.exists(os.path.join(self.builder.data['model'][model_to_import_global].solver_fpaths['abaqus'],model_to_import_global+'_global.odb')):
+                    copyfile(os.path.join(self.builder.data['model'][model_to_import_global].solver_fpaths['abaqus'],model_to_import_global+'_global.odb'),
+                                os.path.join(self.solver_fpaths['abaqus'],'global.odb'))
+                
+                # Copy global .prt
+                if os.path.exists(os.path.join(self.builder.data['model'][model_to_import_global].solver_fpaths['abaqus'],model_to_import_global+'_global.prt')):
+                    copyfile(os.path.join(self.builder.data['model'][model_to_import_global].solver_fpaths['abaqus'],model_to_import_global+'_global.prt'),
+                                os.path.join(self.solver_fpaths['abaqus'],'global.prt'))
+
+            else:
+                print('---------------------------------------------------')
+                print('No models to import global files from')
+                print('---------------------------------------------------')
+
+        
