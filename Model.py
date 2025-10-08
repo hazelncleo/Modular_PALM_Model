@@ -52,6 +52,7 @@ class Model:
             print('-----------------------------------------------')
             print('No Abaqus Materials required, skipping select materials')
             print('-----------------------------------------------')
+            self.materials = {}
 
         # Get solver fpaths
         self.set_fpaths()
