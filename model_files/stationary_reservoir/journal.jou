@@ -1,0 +1,18 @@
+    ; Read the case file
+	/rc fluent_model.cas.h5
+	
+	; Switch back commands because fluent is fucking stupid
+	/mesh/adapt/set/method/hanging-node
+	/file/convert-hanging-nodes-during-read?/no
+	
+	; Initialise the solution
+	/solve/init/init
+	
+	; Patch the initial water level
+    /solve/patch water () 1 1 () mp "IF(Position.z<380[micron],1,0)" 
+	
+	; Start solving
+    /solve/dual-time-iterate , , ok 
+	
+	; Exit 
+	/exit

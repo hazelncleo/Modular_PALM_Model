@@ -4,7 +4,7 @@ from importlib import import_module
 def main():
     
     # Instantiate class
-    builder = Modular_Abaqus_Builder(overwrite=False, overwrite_models=True)
+    builder = Modular_Abaqus_Builder(overwrite=False, overwrite_models=False)
     
     builder.main_loop()
 

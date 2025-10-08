@@ -368,20 +368,32 @@ class Modular_Abaqus_Builder:
             elif command == 'create':
                 self.create_model()
 
+                self.save_database()
+
             elif command == 'modify':
                 self.modify_model()
+
+                self.save_database()
 
             elif command == 'duplicate':
                 self.duplicate_model()
 
+                self.save_database()
+
             elif command == 'delete':
                 self.delete_model()
+
+                self.save_database()
 
             elif command == 'post_process':
                 self.postprocess_model()
 
+                self.save_database()
+
             elif command == 'run':
                 self.run_model()
+
+                self.save_database()
 
         
     def select_object_type(self):
