@@ -8,7 +8,7 @@
 	; Initialise the solution
 	/solve/init/init
 	
-	; Patch the initial water level
+	; Patch the initial water level (WILL NEED TO BE CHANGED FOR RESERVOIR FILLING)
     /solve/patch water () 1 1 () mp "IF(Position.z<480[micron],1,0)" 
 	
 	; Start solving

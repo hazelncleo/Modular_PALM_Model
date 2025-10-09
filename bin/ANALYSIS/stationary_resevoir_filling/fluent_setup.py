@@ -20,7 +20,10 @@ def fluent_setup(file_name = 'fluent_model.cas.h5',
     # ----------------------------------------------------------------
 
     # Instantiate fluent launcher
-    solver = pyfluent.launch_fluent(mode='solver', show_gui=False, precision='double', processor_count=16, cwd=fluent_wd)
+    if fluent_wd:
+        solver = pyfluent.launch_fluent(mode='solver', show_gui=False, precision='double', processor_count=16, cwd=fluent_wd)
+    else:
+        solver = pyfluent.launch_fluent(mode='solver', show_gui=False, precision='double', processor_count=16)
 
     # Import mesh
     solver.file.read(file_type='case', file_name=mesh_file_name)
@@ -54,7 +57,7 @@ def fluent_setup(file_name = 'fluent_model.cas.h5',
     solver.tui.define.phases.set_domain_properties.interaction_domain.forces.surface_tension.sfc_model_type('yes')
     
     # Boundary Conditions 
-    solver.setup.boundary_conditions.wall['coupling_surface'] = {"phase" : {"mixture" : {"multiphase" : {"contact_angles" : {"water-air" : {"value" : 1.5707961}}}}}}
+    solver.setup.boundary_conditions.wall['solid_coupling'] = {"phase" : {"mixture" : {"multiphase" : {"contact_angles" : {"water-air" : {"value" : 1.5707961}}}}}}
 
     # Adaptive Meshing
     solver.tui.mesh.adapt.predefined_criteria.multiphase.vof('1e-08')
