@@ -1,0 +1,27 @@
+*Assembly, name=Assembly
+** abaqus_whole-chip_solid
+*Instance,name=abaqus_whole-chip_solid_1,part=abaqus_whole-chip_solid
+  10.,0.,0.
+*End Instance
+**
+** abaqus_whole-chip_acoustic
+*Instance,name=abaqus_whole-chip_acoustic_1,part=abaqus_whole-chip_acoustic
+  5.,3.457927,0.3
+*End Instance
+*Tie, name=acoustic_coupling, adjust=no
+  abaqus_whole-chip_acoustic_1.acoustic_coupling, abaqus_whole-chip_solid_1.acoustic_coupling
+**
+** abaqus_submodel_solid
+*Instance, name=abaqus_submodel_solid_1, part=abaqus_submodel_solid
+  10.,           0.,           0.
+*End Instance
+**
+** abaqus_submodel_acoustic
+*Instance, name=abaqus_submodel_acoustic_1, part=abaqus_submodel_acoustic
+  5.,     3.457927,          0.3
+*End Instance
+*Tie, name=acoustic_coupling, adjust=no
+  abaqus_submodel_acoustic_1.acoustic_coupling, abaqus_submodel_solid_1.acoustic_coupling
+**
+*End Assembly
+**

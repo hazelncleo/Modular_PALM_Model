@@ -5,6 +5,7 @@
         "mpcci": false
     },
     "geometries": {
+        "assembly" : true,
         "abaqus_whole-chip_solid": true,
         "abaqus_whole-chip_acoustic": true,
         "abaqus_submodel_solid": false,

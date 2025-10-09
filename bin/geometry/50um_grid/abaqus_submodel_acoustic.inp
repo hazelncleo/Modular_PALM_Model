@@ -54667,8 +54667,6 @@
   _acoustic_coupling_S5, S5
   _acoustic_coupling_S1, S1
 *End Part
-** Include acoustic material 
-*INCLUDE, INPUT=abaqus_acoustic.inp
 ** ASSEMBLY
 *Assembly, name=Assembly
 *Instance, name=abaqus_submodel_solid_1, part=abaqus_submodel_solid
