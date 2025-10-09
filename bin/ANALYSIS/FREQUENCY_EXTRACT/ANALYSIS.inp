@@ -1,5 +1,0 @@
-** ----------------------------------------------------------------
-** IMPORT INPUT FILES FOR FREQUENCY EXTRACTION
-** ----------------------------------------------------------------
-*INCLUDE, INPUT=abaqus_whole-chip_acoustic.inp
-*INCLUDE, INPUT=frequency.inp

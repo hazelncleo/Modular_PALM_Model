@@ -82908,8 +82908,6 @@
 *Solid Section, elset=acoustic, material=abaqus_acoustic
   ,
 *End Part
-** Include acoustic material 
-*INCLUDE, INPUT=abaqus_acoustic.inp
 ** ASSEMBLY
 *Assembly,name=Assembly
 *Instance,name=abaqus_whole-chip_solid_1,part=abaqus_whole-chip_solid

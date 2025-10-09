@@ -519,6 +519,44 @@ class Model:
         for requirement_name,requirement_value in self.requirements['geometries'].items():
             if requirement_value:
                 copyfile(os.path.join(self.geometry.fpath,requirement_name+'.inp'), os.path.join(self.solver_fpaths['abaqus'],requirement_name+'.inp'))
+                
+        
+        
+        
+        # NEEDS TO BE DONE            
+        if self.requirements['geometries']['assembly']:
+            with open(os.path.join(self.solver_fpaths['abaqus'],'assembly.inp'),'r') as inp_read, open(os.path.join(self.solver_fpaths['abaqus'],'temp.inp'),'w') as inp_write:
+                
+                abaqus_reqs = [requirement_name for requirement_name,requirement_value in self.requirements['geometries'].items() if requirement_value and ('abaqus' in requirement_name)]
+                
+                inp_write.write(inp_read.read_line())
+                
+                line = inp_read.read_line()
+                write_bool = False
+                
+                # while end of file not reached
+                while line:
+                    
+                    if not abaqus_reqs:
+                        
+                    
+                    if line == '**\n':
+                        write_bool = False
+                    elif write_bool:
+                        inp_write.write(inp_read.read_line())
+                    elif (line[:2] == '**') and any(req in line for req in abaqus_reqs):
+                        write_bool = True
+                        
+                                
+                            
+                        
+                        
+                            
+                        
+                        
+                
+        
+        
 
 
         # Satisfy material requirements
