@@ -1,0 +1,333 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mpcci version="4.8" page="6" modelsValid="true" cplSpec="Absolute pressure based fluid-structure interaction">
+    <code name="FLUENT" codeId="FLUENT" modelDim="3D" solutionType="Transient">
+        <component name="Obstacle-Omega" type="global" pid="1" dim="5" aux="" />
+        <component name="Time-Step-Count" type="global" pid="1" dim="5" aux="" />
+        <component name="Int-Flag" type="global" pid="1" dim="5" aux="" />
+        <component name="mpcci-update-interval" type="global" pid="2" dim="5" aux="" />
+        <component name="Electric-Voltage-4" type="global" pid="1" dim="5" aux="" />
+        <component name="Electric-Voltage-3" type="global" pid="1" dim="5" aux="" />
+        <component name="Electric-Voltage-2" type="global" pid="1" dim="5" aux="" />
+        <component name="Electric-Current-4" type="global" pid="1" dim="5" aux="" />
+        <component name="Electric-Voltage-1" type="global" pid="1" dim="5" aux="" />
+        <component name="Electric-Current-3" type="global" pid="1" dim="5" aux="" />
+        <component name="Electric-Current-2" type="global" pid="1" dim="5" aux="" />
+        <component name="Reference-Pressure" type="global" pid="1" dim="5" aux="" />
+        <component name="Electric-Current-1" type="global" pid="1" dim="5" aux="" />
+        <component name="Time-Step-Size" type="global" pid="1" dim="5" aux="" />
+        <component name="Real-Flag" type="global" pid="1" dim="5" aux="" />
+        <component name="Obstacle-Angle" type="global" pid="1" dim="5" aux="" />
+        <component name="fluid" type="fluid" pid="4" dim="3" aux="" />
+        <component name="Physical-Time" type="global" pid="1" dim="5" aux="" />
+        <component name="Global-Residual" type="global" pid="1" dim="5" aux="" />
+        <component name="Obstacle-Velocity" type="global" pid="1" dim="5" aux="" />
+        <component name="outlet" type="pressure-outlet" pid="8" dim="2" aux="" />
+        <component name="coupling_surface" type="wall" pid="5" dim="2" aux="" />
+        <component name="Obstacle-Position" type="global" pid="1" dim="5" aux="" />
+        <component name="Iteration-Count" type="global" pid="1" dim="5" aux="" />
+        <mesh id="1">
+            <component name="coupling_surface">
+                <quantitySet name="NPosition&lt;-Abaqus" id="0" />
+            </component>
+        </mesh>
+        <group name="CodeInfo">
+            <param name="Units" modified="false" type="string" value="SI" />
+            <param name="Type" modified="false" type="string" value="Fluid FluidThermal FluidHydrodynamics" />
+            <param name="Feature" modified="false" type="string" value="CopyComponents SelfCoupler iterativeCoupling mpcciConfigurator Guided" />
+        </group>
+        <group name="ModelsMenuEntries">
+            <param name="Version" modified="false" type="enum" value="3ddp" />
+            <param name="Release" modified="true" type="enum" value="24.1.0" />
+            <param name="RigidBody" modified="false" type="bool" value="false" />
+            <param name="ModelFile" modified="true" type="filename" value="$(CWD)\..\fluent\fluid_model.cas.h5" />
+            <param name="SolutionType" modified="true" type="string" value="Transient" />
+            <param name="SolutionTypeRef" modified="false" type="string" value="Transient" valueRef="%(ModelsMenuEntries.SolutionType)" />
+        </group>
+        <group name="CouplingMenuEntries">
+            <param name="Analysis" modified="false" type="panel">
+                <param name="AnalysisType" modified="false" type="enum" value="Transient" />
+            </param>
+            <param name="Solver" modified="false" type="panel">
+                <param name="StepSize" modified="false" type="enum" value="Defined by model" />
+            </param>
+            <param name="CouplingSteps" modified="false" type="panel">
+                <param name="StepSizeType" modified="false" type="enum" value="Constant" />
+                <param name="StepSize" modified="false" type="int" value="1" />
+            </param>
+            <param name="Runtime" modified="false" type="panel">
+                <param name="cbegType" modified="false" type="enum" value="Take latest time" />
+            </param>
+        </group>
+        <group name="SupportedQuantities">
+            <group name="StorageOptions">
+                <param name="Dir" modified="false" type="int" value="0" />
+                <param name="Buf" modified="false" type="int" value="1" />
+                <param name="UDM" modified="false" type="int" value="2" />
+                <param name="UDS" modified="false" type="int" value="3" />
+            </group>
+            <group name="Quantities">
+                <param name="NPosition" modified="false" type="quantity" locValue="code" soValue="Dir" roValue="Buf" soIndex="0" roIndex="1" units="m" factor="1.0" offset="0.0" default="0.0" autoDefault="false" />
+            </group>
+        </group>
+        <group name="GoMenuEntries">
+            <param name="batchMode" modified="false" type="bool" value="false" />
+            <param name="DatFile" modified="false" type="filename" value="" />
+            <param name="JouFile" modified="false" type="filename" value="" />
+            <param name="CmdOpts" modified="false" type="string" value="" />
+            <param name="AutoMake" modified="false" type="bool" value="true" />
+            <param name="AutoReadCD" modified="false" type="bool" value="true" />
+            <param name="AutoLibudf" modified="false" type="bool" value="true" />
+            <param name="AutoHooks" modified="false" type="bool" value="true" />
+            <param name="AutoMDM" modified="false" type="bool" value="true" />
+            <param name="AutoBC" modified="false" type="bool" value="true" />
+            <param name="ParallelRun" modified="true" type="panel" value="true">
+                <param name="NumProcs" modified="true" type="int" value="13" />
+                <param name="InterCon" modified="false" type="enum" value="default" />
+                <param name="ParComm" modified="false" type="enum" value="default" />
+                <param name="HostList" modified="false" type="hostlist" value="" />
+                <param name="HostFile" modified="false" type="filename" value="" />
+                <param name="DefaultHosts" modified="false" type="bool" value="false" />
+            </param>
+        </group>
+    </code>
+    <code name="Abaqus" codeId="Abaqus" modelDim="3D" solutionType="Transient">
+        <component name="ASSEMBLY_FLUID_GEOMETRY_1_DRIVEN_NODES" type="nset" pid="1" dim="0" aux="" />
+        <component name="ASSEMBLY_FLUID_GEOMETRY_1_ACOUSTIC_COUPLING" type="surface" pid="2" dim="2" aux="" />
+        <component name="ASSEMBLY.SOLID_GEOMETRY_1.DRIVEN_NODES" type="elset" pid="4" dim="3" aux="" />
+        <component name="ASSEMBLY_SOLID_GEOMETRY_1_ACOUSTIC_COUPLING" type="surface" pid="2" dim="2" aux="" />
+        <component name="ASSEMBLY_SOLID_GEOMETRY_1_DRIVEN_NODES" type="nset" pid="3" dim="0" aux="" />
+        <component name="ASSEMBLY.FLUID_GEOMETRY_1.FLUID" type="elset" pid="3" dim="3" aux="" />
+        <component name="ASSEMBLY_FLUID_GEOMETRY_1_FLUID" type="nset" pid="2" dim="0" aux="" />
+        <component name="Time-Step-Size" type="global" pid="1" dim="5" aux="" />
+        <component name="ASSEMBLY_SOLID_GEOMETRY_1_SOLID" type="nset" pid="4" dim="0" aux="" />
+        <component name="ASSEMBLY.SOLID_GEOMETRY_1.SOLID" type="elset" pid="2" dim="3" aux="" />
+        <component name="ASSEMBLY.FLUID_GEOMETRY_1.DRIVEN_NODES" type="elset" pid="4" dim="3" aux="" />
+        <component name="ASSEMBLY_SOLID_GEOMETRY_1_FLUID_MODEL_COUPLING" type="surface" pid="0" dim="2" aux="" />
+        <mesh id="1">
+            <component name="ASSEMBLY_SOLID_GEOMETRY_1_FLUID_MODEL_COUPLING">
+                <quantitySet name="NPosition&lt;-Abaqus" id="0" />
+            </component>
+        </mesh>
+        <group name="CodeInfo">
+            <param name="Units" modified="false" type="string" value="variable" />
+            <param name="Type" modified="false" type="string" value="SolidStructure SolidAcoustics SolidThermal" />
+            <param name="Feature" modified="false" type="string" value="SelfCoupler iterativeCoupling Negotiation mpcciConfigurator Guided" />
+        </group>
+        <group name="ModelsMenuEntries">
+            <param name="Release" modified="true" type="enum" value="2025" />
+            <param name="ScanMethod" modified="false" type="enum" value="Scan for all regions" />
+            <param name="ModelFile" modified="true" type="filename" value="$(CWD)\..\abaqus\MAIN.inp" />
+            <param name="SolutionType" modified="true" type="string" value="Transient" />
+            <param name="SolutionTypeRef" modified="false" type="string" value="Transient" valueRef="%(ModelsMenuEntries.SolutionType)" />
+            <param name="Units" modified="true" type="enum" value="mm-t-s" />
+        </group>
+        <group name="CouplingMenuEntries">
+            <param name="Analysis" modified="false" type="panel">
+                <param name="AnalysisType" modified="false" type="enum" value="Transient" />
+            </param>
+            <param name="Solver" modified="false" type="panel">
+                <param name="SubCycle" modified="false" type="panel" value="true">
+                    <param name="TimeMarks" modified="false" type="bool" value="true" />
+                </param>
+            </param>
+            <param name="CouplingSteps" modified="false" type="panel">
+                <param name="StepSizeType" modified="true" type="enum" value="Defined by model" />
+            </param>
+            <param name="Runtime" modified="false" type="panel">
+                <param name="cbegType" modified="false" type="enum" value="Take latest time" />
+            </param>
+        </group>
+        <group name="SupportedQuantities">
+            <group name="StorageOptions">
+                <param name="Direct" modified="false" type="int" value="0" />
+                <param name="Buffer" modified="false" type="int" value="1" />
+                <param name="FieldVariable" modified="false" type="int" value="3" />
+            </group>
+            <group name="Quantities">
+                <param name="NPosition" modified="true" type="quantity" locValue="code" soValue="Direct" roValue="" soIndex="0" roIndex="-1" units="mm" factor="0.001" offset="0.0" default="0.0" autoDefault="false" />
+            </group>
+        </group>
+        <group name="GoMenuEntries">
+            <param name="JobName" modified="false" type="string" value="abaqus_run" />
+            <param name="CouplingStep" modified="false" type="int" value="1" />
+            <param name="CmdOpts" modified="true" type="string" value="-output_precision full -globalmodel global.odb" />
+            <param name="RestartODB" modified="false" type="filename" value="" />
+            <param name="UserRoutines" modified="false" type="filename" value="" />
+            <param name="SolverType" modified="false" type="string" value="Standard" valueRef="%(ScannerInfo.SolverType)" />
+            <param name="NumThreads" modified="true" type="int" value="7" />
+            <param name="ParallelRun" modified="false" type="panel" value="false" />
+            <param name="CSERun" modified="false" type="panel" value="false" />
+        </group>
+        <group name="ScannerInfo">
+            <param name="SolverType" modified="false" type="string" value="Standard" />
+            <param name="ModelDimensions" modified="true" type="string" value="3" />
+        </group>
+    </code>
+    <meshes>
+        <mesh id="1" name="Region_1" />
+    </meshes>
+    <quantitySets>
+        <quantitySet name="NPosition&lt;-Abaqus" id="0" autoNaming="true" cplSpecId="default">
+            <code name="FLUENT" dim="2" />
+            <code name="Abaqus" dim="2" />
+            <quantityTransfer name="NPosition">
+                <quantity code="Abaqus" action="-1" />
+                <quantity code="FLUENT" action="1" />
+            </quantityTransfer>
+        </quantitySet>
+    </quantitySets>
+    <periodicities>
+        <periodicity name="Periodicity_1" ox="0.0" oy="0.0" oz="0.0" ax="0.0" ay="0.0" az="1.0" n="2" />
+    </periodicities>
+    <edit>
+        <group name="Monitor">
+            <param name="Enable" modified="false" type="bool" value="true" />
+            <param name="NodeIds" modified="false" type="bool" value="false" />
+            <param name="ElemIds" modified="false" type="bool" value="false" />
+            <param name="Size" modified="false" type="bool" value="false" />
+            <param name="Orphans" modified="false" type="bool" value="true" />
+            <param name="Globals" modified="false" type="bool" value="false" />
+            <param name="Slaves" modified="false" type="bool" value="false" />
+            <param name="Domains" modified="false" type="bool" value="false" />
+            <param name="Normals" modified="false" type="bool" value="false" />
+            <param name="Peaks" modified="false" type="bool" value="false" />
+            <param name="AbsDiff" modified="false" type="bool" value="false" />
+            <param name="RelDiff" modified="false" type="bool" value="false" />
+            <param name="Inorm" modified="false" type="bool" value="false" />
+            <param name="Relax" modified="false" type="bool" value="false" />
+            <param name="Periodic" modified="false" type="bool" value="false" />
+            <param name="Modulo" modified="false" type="int" value="100" />
+            <param name="Memory" modified="false" type="int" value="50" />
+            <param name="AutoLaunch" modified="false" type="bool" value="true" />
+            <param name="Host" modified="false" type="hostlist" value="localhost" />
+            <param name="Port" modified="false" type="int" value="47002" />
+            <param name="NetDevice" modified="false" type="string" value="" />
+        </group>
+        <group name="Job">
+            <param name="PreCheck" modified="false" type="bool" value="false" />
+            <param name="AngularInterpolation" modified="false" type="enum" value="NLERP" />
+            <param name="MeshMotion" modified="false" type="bool" value="false" />
+            <param name="MRFCorrect" modified="false" type="bool" value="false" />
+            <param name="UseInitialNBH" modified="false" type="bool" value="false" />
+            <param name="OverlapCheck" modified="false" type="bool" value="true" />
+            <param name="DomainCheck" modified="false" type="bool" value="false" />
+            <param name="ConformalMesh" modified="false" type="bool" value="false" />
+            <param name="TimeTolerance" modified="true" type="float" value="0.001" />
+            <param name="ConvergenceRule" modified="false" type="enum" value="All" />
+            <param name="HistorySize" modified="false" type="int" value="4" />
+            <param name="NetDevice" modified="false" type="string" value="" />
+            <group name="QuasiNewton">
+                <param name="MaxIteration" modified="false" type="int" value="20" />
+                <param name="LinearDependencyTol" modified="true" type="float" value="1.0E-6" />
+                <param name="NoiseTol" modified="true" type="float" value="1.0E-4" />
+                <param name="WindowTol" modified="true" type="float" value="1.0E-5" />
+                <param name="NbResiduals" modified="false" type="int" value="0" />
+                <param name="RestartLimit" modified="true" type="float" value="0.01" />
+                <param name="RestartFactor" modified="true" type="float" value="0.1" />
+                <param name="WriteLog" modified="false" type="bool" value="false" />
+                <param name="MonitorResidual" modified="false" type="bool" value="true" />
+            </group>
+        </group>
+        <group name="RelationSearch">
+            <param name="Multiplicity" modified="true" type="float" value="1.0" />
+            <param name="ExpertMode" modified="false" type="bool" value="false" />
+            <param name="UserNormalDistance" modified="true" type="float" value="0.0" />
+        </group>
+        <group name="Output">
+            <param name="Level" modified="false" type="int" value="1" />
+            <group name="Tracefile">
+                <param name="Save" modified="false" type="bool" value="true" />
+                <param name="WriterHome" modified="false" type="string" value="$MPCCI_JOBDIR" />
+                <group name="WriterStep">
+                    <param name="Enable" modified="false" type="bool" value="false" />
+                    <param name="CouplingStep" modified="false" type="int" value="1" />
+                    <param name="IterationStep" modified="false" type="int" value="-1" />
+                    <param name="TimeStep" modified="true" type="float" value="-1.0" />
+                </group>
+                <group name="Writers">
+                    <group name="CCVX">
+                        <param name="Use" modified="false" type="bool" value="true" />
+                        <param name="Orphans" modified="false" type="bool" value="false" />
+                        <param name="Size" modified="false" type="bool" value="false" />
+                        <param name="NodeIds" modified="false" type="bool" value="false" />
+                        <param name="ElemIds" modified="false" type="bool" value="false" />
+                        <param name="Globals" modified="false" type="bool" value="false" />
+                        <param name="Slaves" modified="false" type="bool" value="false" />
+                        <param name="Domains" modified="false" type="bool" value="false" />
+                        <param name="Peaks" modified="false" type="bool" value="false" />
+                        <param name="Inorm" modified="false" type="bool" value="false" />
+                        <param name="Periodic" modified="false" type="bool" value="false" />
+                    </group>
+                    <group name="CSV">
+                        <param name="Use" modified="false" type="bool" value="false" />
+                        <param name="Globals" modified="false" type="bool" value="false" />
+                    </group>
+                    <group name="VTK">
+                        <param name="Use" modified="false" type="bool" value="false" />
+                        <param name="Orphans" modified="false" type="bool" value="false" />
+                        <param name="Size" modified="false" type="bool" value="false" />
+                        <param name="Binary" modified="false" type="bool" value="false" />
+                        <param name="NodeIds" modified="false" type="bool" value="false" />
+                        <param name="ElemIds" modified="false" type="bool" value="false" />
+                        <param name="Midedge" modified="false" type="bool" value="false" />
+                        <param name="Group" modified="false" type="enum" value="mesh" />
+                        <param name="Slaves" modified="false" type="bool" value="false" />
+                        <param name="Domains" modified="false" type="bool" value="false" />
+                        <param name="Periodic" modified="false" type="bool" value="false" />
+                    </group>
+                    <group name="EnSight">
+                        <param name="Use" modified="false" type="bool" value="false" />
+                        <param name="Sflush" modified="false" type="bool" value="false" />
+                        <param name="Orphans" modified="false" type="bool" value="false" />
+                        <param name="Size" modified="false" type="bool" value="false" />
+                        <param name="NodeIds" modified="false" type="bool" value="false" />
+                        <param name="ElemIds" modified="false" type="bool" value="false" />
+                        <param name="Midedge" modified="false" type="bool" value="false" />
+                        <param name="Slaves" modified="false" type="bool" value="false" />
+                        <param name="Domains" modified="false" type="bool" value="false" />
+                        <param name="Periodic" modified="false" type="bool" value="false" />
+                    </group>
+                    <group name="VTFA">
+                        <param name="Use" modified="false" type="bool" value="false" />
+                        <param name="Orphans" modified="false" type="bool" value="false" />
+                        <param name="Size" modified="false" type="bool" value="false" />
+                        <param name="Periodic" modified="false" type="bool" value="false" />
+                    </group>
+                </group>
+            </group>
+        </group>
+    </edit>
+    <mpcciserver>
+        <group name="CouplingMenuEntries">
+            <param name="Analysis" modified="false" type="panel">
+                <param name="AnalysisType" modified="false" type="enum" value="Transient" />
+                <param name="CouplingScheme" modified="false" type="enum" value="Explicit" />
+            </param>
+            <param name="CouplingSteps" modified="false" type="panel">
+                <param name="StepSizeType" modified="false" type="enum" value="Defined by each code" />
+                <param name="IpolOrder" modified="true" type="enum" value="First order" />
+                <param name="StepSize" modified="false" type="enum" value="Code specific" />
+            </param>
+            <param name="AlgorithmDef" modified="false" type="panel">
+                <param name="Algorithm" modified="false" type="enum" value="Serial" />
+                <param name="Code" modified="false" type="enum" value="FLUENT" />
+            </param>
+            <param name="CouplingDuration" modified="false" type="panel">
+                <param name="UseTotalTime" modified="true" type="bool" value="true" />
+                <param name="TotalTime" modified="true" type="float" value="3.0675E-5" />
+            </param>
+        </group>
+        <group name="GoMenuEntries">
+            <param name="Jobname" modified="false" type="string" value="mpccirun" />
+            <param name="ServerPort" modified="false" type="int" value="47010" />
+            <param name="HostAlias" modified="false" type="string" value="" />
+            <param name="ServerRemote" modified="false" type="panel">
+                <param name="Host" modified="false" type="hostlist" value="" />
+                <param name="rshType" modified="false" type="enum" value="rsh (classic rsh)" />
+            </param>
+            <param name="Xterm" modified="false" type="panel" value="false" />
+            <param name="AutoExit" modified="false" type="panel" value="false" />
+            <param name="TracefileCleanUp" modified="false" type="bool" value="false" />
+        </group>
+    </mpcciserver>
+</mpcci>

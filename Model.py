@@ -7,7 +7,10 @@ from tkinter.filedialog import askdirectory
 import inquirer
 from copy import deepcopy
 from shutil import copyfileobj
-from importlib import import_module
+from importlib.util import spec_from_file_location
+from importlib.util import module_from_spec
+import ansys.fluent.core as pyfluent
+import sys
 
 
 class Model:
@@ -461,6 +464,7 @@ class Model:
         # Query user to pick which parameters they would like to edit the values of for use in this model
         questions = [inquirer.Checkbox('chosen_parameters', 'Pick the parameters that you would like to change the values of for this model', choices = list(self.parameters.keys()), carousel = True)]
         answers = inquirer.prompt(questions)
+        print('---------------------------------------------------')
 
         # Loop over parameters that user would like to change the values of
         for chosen_parameter in answers['chosen_parameters']:
@@ -470,17 +474,13 @@ class Model:
 
             if self.parameters[chosen_parameter]['dtype'] == 'int':
                 self.parameters[chosen_parameter]['default_value'] = int(value)
-                print('---------------------------------------------------')
                 print('The value of Parameter "{}" was changed to: {}'.format(chosen_parameter,int(value)))
- 
 
             else:
                 self.parameters[chosen_parameter]['default_value'] = float(value)
-                print('---------------------------------------------------')
                 print('The value of Parameter "{}" was changed to: {}'.format(chosen_parameter,float(value)))
-                
 
-        print('---------------------------------------------------')
+            print('---------------------------------------------------')
         
 
     def move_files_from_objects(self):
@@ -490,7 +490,10 @@ class Model:
 
         # Copy analysis files to model directory
         self.move_object_folder(self.analysis.fpath, self.fpath)
-    
+        print('---------------------------------------------------')
+        print('Moved analysis files successfully')
+        print('---------------------------------------------------')
+        
         # If mpcci abaqus-fluent coupled analysis
         if all(self.requirements['softwares'].values()):
             self.build_mpcci_model()
@@ -514,56 +517,54 @@ class Model:
         '''
         
         '''
+        print('---------------------------------------------------')
+        print('Assembling Abaqus model')
+        print('---------------------------------------------------')
 
         # Satisfy geometry requirements
         for requirement_name,requirement_value in self.requirements['geometries'].items():
-            if requirement_value:
+            if requirement_value and (('abaqus' in requirement_name) or ('assembly' in requirement_name)):
                 copyfile(os.path.join(self.geometry.fpath,requirement_name+'.inp'), os.path.join(self.solver_fpaths['abaqus'],requirement_name+'.inp'))
+                print('File: "{}", copied to model path'.format(requirement_name+'.inp'))
                 
         
-        
-        
-        # NEEDS TO BE DONE            
+        # Modify assembly.inp based on geometry requirements       
         if self.requirements['geometries']['assembly']:
             with open(os.path.join(self.solver_fpaths['abaqus'],'assembly.inp'),'r') as inp_read, open(os.path.join(self.solver_fpaths['abaqus'],'temp.inp'),'w') as inp_write:
                 
-                abaqus_reqs = [requirement_name for requirement_name,requirement_value in self.requirements['geometries'].items() if requirement_value and ('abaqus' in requirement_name)]
+                # get the names of the geometry requirements
+                abaqus_reqs = [requirement_name for requirement_name,requirement_value in self.requirements['geometries'].items() if requirement_value and (('abaqus' in requirement_name) or ('assembly' in requirement_name))]
                 
-                inp_write.write(inp_read.read_line())
-                
-                line = inp_read.read_line()
-                write_bool = False
+                line = inp_read.readline()
                 
                 # while end of file not reached
                 while line:
-                    
-                    if not abaqus_reqs:
                         
-                    
-                    if line == '**\n':
-                        write_bool = False
-                    elif write_bool:
-                        inp_write.write(inp_read.read_line())
-                    elif (line[:2] == '**') and any(req in line for req in abaqus_reqs):
-                        write_bool = True
+                    # if geometry is required then write its assembly lines
+                    if '**' in line and any(req in line for req in abaqus_reqs):
                         
-                                
-                            
-                        
-                        
-                            
-                        
-                        
-                
-        
-        
+                        line = inp_read.readline()
 
+                        while '**' not in line:
+                            inp_write.write(line)
+                            line = inp_read.readline()
+                            
+                    line = inp_read.readline()
+
+                # Write comment on final line to ensure no empty lines
+                inp_write.write('**')
+
+            # Replace old assembly.inp with modified version
+            os.replace(os.path.join(self.solver_fpaths['abaqus'],'temp.inp'),os.path.join(self.solver_fpaths['abaqus'],'assembly.inp'))
+            print('File: "Assembly.inp", modified and moved to model path')
+                                
 
         # Satisfy material requirements
         for material_name in self.materials.keys():
             for requirement_name, requirement_value in self.materials[material_name].requirements['materials'].items():
                 if requirement_value:
                     copyfile(os.path.join(self.materials[material_name].fpath,requirement_name+'.inp'), os.path.join(self.solver_fpaths['abaqus'],requirement_name+'.inp'))
+                    print('File: "{}", copied to model path'.format(requirement_name+'.inp'))
 
 
         # Add parameter values to main abaqus input file
@@ -578,6 +579,7 @@ class Model:
             for parameter_name,parameter in self.parameters.items():
                 if 'abaqus' in parameter['solvers']:
                     inp_write.write('{} = {}\n'.format(parameter_name, parameter['default_value']))
+                    print('Parameter: "{} = {}", inserted into main input file'.format(parameter_name,parameter['default_value']))
 
             # Copy main input file contents
             copyfileobj(inp_read,inp_write)
@@ -599,28 +601,75 @@ class Model:
                 if os.path.exists(os.path.join(self.builder.data['model'][model_to_import_global].solver_fpaths['abaqus'],model_to_import_global+'_global.odb')):
                     copyfile(os.path.join(self.builder.data['model'][model_to_import_global].solver_fpaths['abaqus'],model_to_import_global+'_global.odb'),
                                 os.path.join(self.solver_fpaths['abaqus'],'global.odb'))
+                    print('File: "global.odb", copied to model path from model: {}'.format(model_to_import_global))
                 
                 # Copy global .prt
                 if os.path.exists(os.path.join(self.builder.data['model'][model_to_import_global].solver_fpaths['abaqus'],model_to_import_global+'_global.prt')):
                     copyfile(os.path.join(self.builder.data['model'][model_to_import_global].solver_fpaths['abaqus'],model_to_import_global+'_global.prt'),
                                 os.path.join(self.solver_fpaths['abaqus'],'global.prt'))
+                    print('File: "global.prt", copied to model path from model: {}'.format(model_to_import_global))
 
             else:
-                print('---------------------------------------------------')
-                print('No models to import global files from')
-                print('---------------------------------------------------')
+                raise FileExistsError('No models to import global files from')
+
+        print('---------------------------------------------------')
+        print('Assembly of Abaqus model successful')
+        print('---------------------------------------------------')
 
 
     def build_fluent_model(self):
         '''
         
         '''
-        # Satisfy geometry requirements
-        for requirement_name,requirement_value in self.requirements['geometries'].items():
-            if requirement_value:
-                copyfile(os.path.join(self.geometry.fpath,requirement_name+'.msh'), os.path.join(self.solver_fpaths['fluent'],requirement_name+'.msh'))
+
+        print('---------------------------------------------------')
+        print('Assembling Fluent model')
+        print('---------------------------------------------------')
+        
+
+        fluent_setup = self.get_fluent_script()
+        print('Fluent script: "fluent_setup.py" retrieved successfully')
 
         
+        # Satisfy geometry requirements
+        for requirement_name,requirement_value in self.requirements['geometries'].items():
+            if requirement_value and ('fluent' in requirement_name):
+                copyfile(os.path.join(self.geometry.fpath,requirement_name+'.msh'), os.path.join(self.solver_fpaths['fluent'],requirement_name+'.msh'))
+                print('File: "{}", copied to model path'.format(requirement_name+'.msh'))
+
+                print('---------------------------------------------------')
+                print('Calling fluent_setup script to build case file')
+                print('---------------------------------------------------')
+
+                if self.solver_fpaths['mpcci']:
+                    fluent_name = 'fluent_model.cas.h5'
+                else: 
+                    fluent_name = self.name+'.cas.h5'
+
+                # Call setup script
+                fluent_setup(file_name = fluent_name,
+                             mesh_file_name = requirement_name+'.msh',
+                             fluent_wd = os.path.join(os.getcwd(),self.solver_fpaths['fluent']),
+                             parameters = self.parameters)
+                
+                print('---------------------------------------------------')
+                print('Assembly of Fluent model successful')
+                print('---------------------------------------------------')
+                return
+
+
+    def get_fluent_script(self):
+        '''
+        
+        '''
+
+        # Get setup python script
+        spec = spec_from_file_location('fluent_setup',os.path.join(self.solver_fpaths['fluent'],'fluent_setup.py'))
+        temp = module_from_spec(spec)
+        sys.modules["fluent_setup"] = temp
+        spec.loader.exec_module(temp)
+
+        return temp.fluent_setup
 
 
     def build_mpcci_model(self):
@@ -628,13 +677,57 @@ class Model:
         
         '''
 
+        print('---------------------------------------------------')
+        print('Assembling MPCCI coupled abaqus-fluent model')
+        print('---------------------------------------------------')
+
+        self.build_fluent_model()
+
+        self.build_abaqus_model()
+
+        # DO MPCCI STUFF
+
+        '''
+
         # Satisfy geometry requirements
         for requirement_name,requirement_value in self.requirements['geometries'].items():
             if requirement_value:
                 if 'abaqus' in requirement_name:
                     copyfile(os.path.join(self.geometry.fpath,requirement_name+'.inp'), os.path.join(self.solver_fpaths['abaqus'],requirement_name+'.inp'))
-                else:
-                    copyfile(os.path.join(self.geometry.fpath,requirement_name+'.msh'), os.path.join(self.solver_fpaths['fluent'],requirement_name+'.msh'))
+
+        
+        # Modify assembly.inp based on geometry requirements       
+        if self.requirements['geometries']['assembly']:
+            with open(os.path.join(self.solver_fpaths['abaqus'],'assembly.inp'),'r') as inp_read, open(os.path.join(self.solver_fpaths['abaqus'],'temp.inp'),'w') as inp_write:
+                
+                # get the names of the geometry requirements
+                abaqus_reqs = [requirement_name for requirement_name,requirement_value in self.requirements['geometries'].items() if requirement_value and (('abaqus' in requirement_name) or ('assembly' in requirement_name))]
+                
+                inp_write.write(inp_read.readline())
+                
+                line = inp_read.readline()
+                
+                # while end of file not reached
+                while line:
+                        
+                    # if geometry is required then write its assembly lines
+                    if '**' in line and any(req in line for req in abaqus_reqs):
+                        
+                        line = inp_read.readline()
+
+                        while '**' not in line:
+
+                            inp_write.write(line)
+                            
+                            line = inp_read.readline()
+                            
+                    line = inp_read.readline()
+
+                # Write comment on final line to ensure no empty lines
+                inp_write.write('**')
+
+            # Replace old assembly.inp with modified version
+            os.replace(os.path.join(self.solver_fpaths['abaqus'],'temp.inp'),os.path.join(self.solver_fpaths['abaqus'],'assembly.inp'))
 
 
         # Satisfy material requirements
@@ -662,6 +755,7 @@ class Model:
         
         # Replace old main.inp file
         os.replace(os.path.join(self.solver_fpaths['abaqus'],'temp.inp'),os.path.join(self.solver_fpaths['abaqus'],'main.inp'))
+
 
 
         # Fluent parameters and assemble .cas file
@@ -696,5 +790,7 @@ class Model:
                 print('---------------------------------------------------')
                 print('No models to import global files from')
                 print('---------------------------------------------------')
+
+        '''
 
         

@@ -122,29 +122,37 @@ class Modular_Abaqus_Builder:
         ---------------------------------------------------
         '''
         
-        # Delete all analysis object files
-        for analysis in glob.glob(os.path.join(self.fpaths['analysis'], '*', ''), recursive=False):
-            rmtree(analysis)
-            print('Deleted: "{}"'.format(analysis))
+        try:
+            # Delete all analysis object files
+            for analysis in glob.glob(os.path.join(self.fpaths['analysis'], '*', ''), recursive=False):
+                rmtree(analysis)
+                print('Deleted: "{}"'.format(analysis))
 
-        # Delete all geometry object files
-        for geometry in glob.glob(os.path.join(self.fpaths['geometry'], '*', ''), recursive=False):
-            rmtree(geometry)
-            print('Deleted: "{}"'.format(geometry))
+            # Delete all geometry object files
+            for geometry in glob.glob(os.path.join(self.fpaths['geometry'], '*', ''), recursive=False):
+                rmtree(geometry)
+                print('Deleted: "{}"'.format(geometry))
 
-        # Delete all material object files
-        for material in glob.glob(os.path.join(self.fpaths['material'], '*', ''), recursive=False):
-            rmtree(material)
-            print('Deleted: "{}"'.format(material))
+            # Delete all material object files
+            for material in glob.glob(os.path.join(self.fpaths['material'], '*', ''), recursive=False):
+                rmtree(material)
+                print('Deleted: "{}"'.format(material))
 
-        # Delete all model files
-        for model in glob.glob(os.path.join(self.fpaths['model_files'], '*', ''), recursive=False):
-            rmtree(model)
-            print('Deleted: "{}"'.format(model))
+            # Delete all model files
+            for model in glob.glob(os.path.join(self.fpaths['model_files'], '*', ''), recursive=False):
+                rmtree(model)
+                print('Deleted: "{}"'.format(model))
 
-        if os.path.exists(self.fpaths['data']):
-            # Delete pickle storage file
-            os.remove(self.fpaths['data'])
+            if os.path.exists(self.fpaths['data']):
+                # Delete pickle storage file
+                os.remove(self.fpaths['data'])
+
+        except:
+            print('-----------------------------------------------')
+            print('ERROR: The program cannot delete a file due to another program using a directory.')
+            print('-----------------------------------------------')
+
+            exit(0)
 
 
     def overwrite_models(self):
@@ -154,14 +162,22 @@ class Modular_Abaqus_Builder:
         ---------------------------------------------------
         '''
 
-        for model in glob.glob(os.path.join(self.fpaths['model_files'], '*', ''), recursive=False):
-            rmtree(model)
-            print('Deleted Directory: "{}"'.format(model))
+        try:
+            for model in glob.glob(os.path.join(self.fpaths['model_files'], '*', ''), recursive=False):
+                rmtree(model)
+                print('Deleted Directory: "{}"'.format(model))
 
-        for model in self.data['model'].keys():
-            print('Deleted Model: "{}", from the database.'.format(model))
+            for model in self.data['model'].keys():
+                print('Deleted Model: "{}", from the database.'.format(model))
 
-        self.data['model'] = {}
+            self.data['model'] = {}
+
+        except:
+            print('-----------------------------------------------')
+            print('ERROR: The program cannot delete a file due to another program using a directory.')
+            print('-----------------------------------------------')
+
+            exit(0)
 
 
     def load_database(self):
@@ -171,6 +187,7 @@ class Modular_Abaqus_Builder:
         ---------------------------------------------------
         '''
         with open(self.fpaths['data'], 'rb') as df:
+            
 
             self.data = pkl.load(df).data
 
@@ -915,6 +932,8 @@ class Modular_Abaqus_Builder:
             print('-----------------------------------------------')
             print('Create Model Failed, returning to Model loop.')
             print('-----------------------------------------------')
+
+            # DELETE FAILED MODEL FILES AND REMOVE FROM DATABASE
             return
         
 

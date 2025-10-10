@@ -82908,15 +82908,4 @@
 *Solid Section, elset=acoustic, material=abaqus_acoustic
   ,
 *End Part
-** ASSEMBLY
-*Assembly,name=Assembly
-*Instance,name=abaqus_whole-chip_solid_1,part=abaqus_whole-chip_solid
-  10.,0.,0.
-*End Instance
-*Instance,name=abaqus_whole-chip_acoustic_1,part=abaqus_whole-chip_acoustic
-  5.,3.457927,0.3
-*End Instance
-*Tie, name=acoustic_coupling, adjust=no
-  abaqus_whole-chip_acoustic_1.acoustic_coupling, abaqus_whole-chip_solid_1.acoustic_coupling
-*End Assembly
 **

@@ -1,0 +1,25 @@
+{
+    "softwares": {
+        "abaqus": true,
+        "fluent": true,
+        "mpcci": true
+    },
+    "geometries": {
+        "assembly" : true,
+        "abaqus_whole-chip_solid": false,
+        "abaqus_whole-chip_acoustic": false,
+        "abaqus_submodel_solid": true,
+        "abaqus_submodel_acoustic": true,
+        "fluent_whole-chip_fluid": false,
+        "fluent_submodel_fluid": true
+    },
+    "materials": {
+        "abaqus_solid": true,
+        "abaqus_acoustic": true
+    },
+    "analysis": {
+        "abaqus_global_odb": true,
+        "abaqus_global_prt": true,
+        "fluent_journal": true
+    }
+}

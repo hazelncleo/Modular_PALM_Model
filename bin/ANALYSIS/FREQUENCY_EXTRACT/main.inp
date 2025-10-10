@@ -9,6 +9,7 @@
 ** Extract Frequencies for specified frequencies +- specified range
 ** ----------------------------------------------------------------
 *Parameter
+** Calculate frequency bounds and names
 freq_1_lower = freq_1 - range
 freq_1_upper = freq_1 + range
 name_1 = 'freq_extract_' + str(int(freq_1))

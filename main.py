@@ -1,5 +1,4 @@
 from Modular_Abaqus_Builder import Modular_Abaqus_Builder
-from importlib import import_module
 
 def main():
     
@@ -7,8 +6,6 @@ def main():
     builder = Modular_Abaqus_Builder(overwrite=True, overwrite_models=False)
     
     builder.main_loop()
-
-
 
 
 ''' 
@@ -19,9 +16,9 @@ def main():
 IMPORTANT STUFF
 --------------------------
 
+- if cant delete directories on reset prompt user
 - validate database
-- geometry object class
-- model class
+- model class (pogging off)
 - model loop
 - parameters
 - postprocess model
