@@ -2,45 +2,58 @@ import ansys.fluent.core as pyfluent
 
 def fluent_setup(file_name = 'fluent_model.cas.h5', 
                  mesh_file_name = 'fluent_submodel_fluid.msh', 
-                 fluent_wd = '', 
-                 X_Grid_Position = 2, 
-                 Y_Grid_Position = 2, 
-                 Frequency = 1.63e6, 
-                 N_Cycles = 50):
+                 fluent_wd = '',
+                 parameters = {'x_grid_position' : {'default_value' : 3},
+                               'y_grid_position' : {'default_value' : 3},
+                               'frequency' : {'default_value' : 1.63e6},
+                               'n_cycles' : {'default_value' : 50}}):
     '''
     
     '''
 
-    # Check input parameter values
-    X_Grid_Position = max(min(14,int(X_Grid_Position)),2)
-    Y_Grid_Position = max(min(14,int(Y_Grid_Position)),2)
-    N_Cycles = int(N_Cycles)
-    Frequency = float(Frequency)
+    # Get parameter values
+    x_grid_position = parameters['x_grid_position']['default_value']
+    y_grid_position = parameters['y_grid_position']['default_value']
+    frequency = parameters['frequency']['default_value']
+    n_cycles = parameters['n_cycles']['default_value']
+
+    print('Parameter Values: ')
+    print('x_grid_position = "{}"'.format(x_grid_position))
+    print('y_grid_position = "{}"'.format(y_grid_position))
+    print('frequency = "{}"'.format(frequency))
+    print('n_cycles = "{}"'.format(n_cycles))
 
     # Grid spacing between each section
     GRID_SPACING = 0.5e-3
 
     # Calculate translation coordinates of Fluid Mesh
-    X_TRANSLATION = GRID_SPACING*(X_Grid_Position-2)
-    Y_TRANSLATION = GRID_SPACING*(Y_Grid_Position-2)
+    X_TRANSLATION = GRID_SPACING*(x_grid_position-3)
+    Y_TRANSLATION = GRID_SPACING*(y_grid_position-3)
 
     # Calculate Total Time and other time stepping parameters
-    TOTAL_TIME = N_Cycles / Frequency
-    MINIMUM_STEP_SIZE = 1/(1000*Frequency)
-    MAXIMUM_STEP_SIZE = 1/(20*Frequency)
-    INITIAL_STEP_SIZE = 1/(50*Frequency)
-    SAVE_FREQUENCY = 1/(10*Frequency)
+    TOTAL_TIME = n_cycles / frequency
+    MINIMUM_STEP_SIZE = 1/(1000*frequency)
+    MAXIMUM_STEP_SIZE = 1/(20*frequency)
+    INITIAL_STEP_SIZE = 1/(50*frequency)
+    SAVE_FREQUENCY = 1/(10*frequency)
 
     # ----------------------------------------------------------------
     # Setup of Model
     # ----------------------------------------------------------------
 
+    print('Instantiating Fluent session, Note: this can take a while.')
     # Instantiate fluent launcher
-    solver = pyfluent.launch_fluent(mode='solver', show_gui=False, precision='double', processor_count=16, cwd=fluent_wd)
+    if fluent_wd:
+        solver = pyfluent.launch_fluent(mode='solver', ui_mode='hidden_gui', precision='double', processor_count=16, cwd=fluent_wd, start_transcript=False)
+    else:
+        solver = pyfluent.launch_fluent(mode='solver', ui_mode='hidden_gui', precision='double', processor_count=16, start_transcript=False)
+    print('Fluent session instantiated')
 
     # Import mesh
     solver.file.read(file_type='case', file_name=mesh_file_name)
+    print('Imported mesh file: "{}"'.format(mesh_file_name))
 
+    print('Beginning model setup')
     # Copy fluid materials from database
     solver.settings.setup.materials.database.copy_by_name(type="fluid", name="water-liquid")
 
@@ -73,8 +86,7 @@ def fluent_setup(file_name = 'fluent_model.cas.h5',
     solver.tui.define.dynamic_mesh.dynamic_mesh('yes', 'no', 'no', 'no', 'no')
     solver.tui.define.dynamic_mesh.controls.smoothing('yes')
     solver.tui.define.dynamic_mesh.zones.create('outlet', 'deforming', 'faceted', 'no', 'yes', 'no', 'no', '0', '0', '0.7', 'no', 'yes')
-    solver.tui.define.dynamic_mesh.zones.create('x_symmetry', 'deforming', 'faceted', 'no', 'yes', 'no', 'no', '0', '0', '0.7', 'no', 'yes')
-    solver.tui.define.dynamic_mesh.zones.create('y_symmetry', 'deforming', 'faceted', 'no', 'yes', 'no', 'no', '0', '0', '0.7', 'no', 'yes')
+    solver.tui.define.dynamic_mesh.zones.create('symmetry', 'deforming', 'faceted', 'no', 'yes', 'no', 'no', '0', '0', '0.7', 'no', 'yes')
 
     # Enable remeshing for highly skewed cells and very small elements
     solver.tui.define.dynamic_mesh.controls.remeshing('yes')
@@ -84,7 +96,7 @@ def fluent_setup(file_name = 'fluent_model.cas.h5',
     solver.tui.define.dynamic_mesh.controls.remeshing_parameters.cell_skew_max('0.65')
     
     # Boundary Conditions 
-    solver.setup.boundary_conditions.wall['coupling_surface'] = {"phase" : {"mixture" : {"multiphase" : {"contact_angles" : {"water-air" : {"value" : 1.5707961}}}}}}
+    solver.setup.boundary_conditions.wall['solid_coupling'] = {"phase" : {"mixture" : {"multiphase" : {"contact_angles" : {"water-air" : {"value" : 1.5707961}}}}}}
 
     # Adaptive Meshing
     solver.tui.mesh.adapt.predefined_criteria.multiphase.vof('1e-08')
@@ -128,6 +140,8 @@ def fluent_setup(file_name = 'fluent_model.cas.h5',
     # Save frequency controls
     solver.file.auto_save.save_data_file_every = {"frequency_type" : "flow-time"}
     solver.file.auto_save.data_frequency = SAVE_FREQUENCY
+    print('Model setup completed successfully')
 
     # Save to .cas file
-    solver.tui.file.write_case(file_name)
+    solver.file.write_case(file_name = file_name)
+    print('Case file saved as: "{}"'.format(file_name))

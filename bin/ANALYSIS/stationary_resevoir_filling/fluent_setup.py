@@ -3,10 +3,16 @@ import ansys.fluent.core as pyfluent
 def fluent_setup(file_name = 'fluent_model.cas.h5', 
                  mesh_file_name = 'fluent_whole-chip_fluid.msh', 
                  fluent_wd = '',
-                 total_time = 0.001):
+                 parameters = {'total_time' : {'default_value' : 0.001}}):
     '''
     
     '''
+
+    # Get parameter values from dictionary
+    total_time = parameters['total_time']['default_value']
+
+    print('Parameter Values: ')
+    print('total_time = "{}s"'.format(total_time))
 
     # Calculate Total Time and other time stepping parameters
     TOTAL_TIME = total_time
@@ -19,15 +25,20 @@ def fluent_setup(file_name = 'fluent_model.cas.h5',
     # Setup of Model
     # ----------------------------------------------------------------
 
+    print('Instantiating Fluent session, Note: this can take a while.')
     # Instantiate fluent launcher
     if fluent_wd:
-        solver = pyfluent.launch_fluent(mode='solver', show_gui=False, precision='double', processor_count=16, cwd=fluent_wd)
+        solver = pyfluent.launch_fluent(mode='solver', ui_mode='hidden_gui', precision='double', processor_count=16, cwd=fluent_wd, start_transcript=False)
     else:
-        solver = pyfluent.launch_fluent(mode='solver', show_gui=False, precision='double', processor_count=16)
+        solver = pyfluent.launch_fluent(mode='solver', ui_mode='hidden_gui', precision='double', processor_count=16, start_transcript=False)
+    print('Fluent session instantiated')
 
     # Import mesh
     solver.file.read(file_type='case', file_name=mesh_file_name)
+    print('Imported mesh file: "{}"'.format(mesh_file_name))
 
+
+    print('Beginning model setup')
     # Copy fluid materials from database
     solver.settings.setup.materials.database.copy_by_name(type="fluid", name="water-liquid")
 
@@ -96,6 +107,8 @@ def fluent_setup(file_name = 'fluent_model.cas.h5',
     # Save frequency controls
     solver.file.auto_save.save_data_file_every = {"frequency_type" : "flow-time"}
     solver.file.auto_save.data_frequency = SAVE_FREQUENCY
+    print('Model setup completed successfully')
 
     # Save to .cas file
-    solver.tui.file.write_case(file_name)
+    solver.file.write_case(file_name = file_name)
+    print('Case file saved as: "{}"'.format(file_name))
