@@ -1,6 +1,3 @@
-    ; Read the case file
-	/rc fluent_model.cas.h5
-	
 	; Switch back commands because fluent is fucking stupid
 	/mesh/adapt/set/method/hanging-node
 	/file/convert-hanging-nodes-during-read?/no

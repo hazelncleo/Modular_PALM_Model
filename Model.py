@@ -11,6 +11,7 @@ from importlib.util import spec_from_file_location
 from importlib.util import module_from_spec
 import ansys.fluent.core as pyfluent
 import sys
+import xml.etree.ElementTree as ET
 
 
 class Model:
@@ -556,7 +557,7 @@ class Model:
 
             # Replace old assembly.inp with modified version
             os.replace(os.path.join(self.solver_fpaths['abaqus'],'temp.inp'),os.path.join(self.solver_fpaths['abaqus'],'assembly.inp'))
-            print('File: "Assembly.inp", modified and moved to model path')
+            print('File: "assembly.inp", modified to reflect requirements')
                                 
 
         # Satisfy material requirements
@@ -567,8 +568,11 @@ class Model:
                     print('File: "{}", copied to model path'.format(requirement_name+'.inp'))
 
 
+        
+
+
         # Add parameter values to main abaqus input file
-        with open(os.path.join(self.solver_fpaths['abaqus'],'main.inp'),'r') as inp_read, open(os.path.join(self.solver_fpaths['abaqus'],self.name+'.inp'),'w') as inp_write:
+        with open(os.path.join(self.solver_fpaths['abaqus'],'main.inp'),'r') as inp_read, open(os.path.join(self.solver_fpaths['abaqus'],'temp.inp'),'w') as inp_write:
 
             inp_write.write('*Parameter\n')
             inp_write.write('# -------------------------------------\n')
@@ -584,10 +588,19 @@ class Model:
             # Copy main input file contents
             copyfileobj(inp_read,inp_write)
 
-        # Delete old main input file
-        os.remove(os.path.join(self.solver_fpaths['abaqus'],'main.inp'))
 
+        if self.solver_fpaths['mpcci']:
+            
+            # Overwrite old main.inp
+            os.replace(os.path.join(self.solver_fpaths['abaqus'],'temp.inp'),os.path.join(self.solver_fpaths['abaqus'],'main.inp'))
+            
+        else: 
+            
+            # Delete old main input file and rename temp file
+            os.remove(os.path.join(self.solver_fpaths['abaqus'],'main.inp'))
+            os.rename(os.path.join(self.solver_fpaths['abaqus'],'temp.inp'),os.path.join(self.solver_fpaths['abaqus'],self.name+'.inp'))
 
+       
         # If submodel analysis, import global .odb and .prt files (Note: This only works if global analysis has been run, and global script preparation run)
         if self.requirements['analysis']['abaqus_global_odb'] and self.requirements['analysis']['abaqus_global_prt']:
 
@@ -598,16 +611,20 @@ class Model:
                 model_to_import_global = inquirer.list_input('This model requires a global .odb and .prt file to function, please specify the model you would like to import these from', choices=potential_models, carousel=True)
                 
                 # Copy global .odb 
-                if os.path.exists(os.path.join(self.builder.data['model'][model_to_import_global].solver_fpaths['abaqus'],model_to_import_global+'_global.odb')):
-                    copyfile(os.path.join(self.builder.data['model'][model_to_import_global].solver_fpaths['abaqus'],model_to_import_global+'_global.odb'),
+                if os.path.exists(os.path.join(self.builder.data['model'][model_to_import_global].solver_fpaths['abaqus'],model_to_import_global+'.odb')):
+                    copyfile(os.path.join(self.builder.data['model'][model_to_import_global].solver_fpaths['abaqus'],model_to_import_global+'.odb'),
                                 os.path.join(self.solver_fpaths['abaqus'],'global.odb'))
-                    print('File: "global.odb", copied to model path from model: {}'.format(model_to_import_global))
+                    print('Global .odb file copied from model: "{}".'.format(model_to_import_global))
+                else:
+                    raise FileExistsError('{}.odb does not exist in the model: "{}"'.format(model_to_import_global,model_to_import_global))
                 
                 # Copy global .prt
-                if os.path.exists(os.path.join(self.builder.data['model'][model_to_import_global].solver_fpaths['abaqus'],model_to_import_global+'_global.prt')):
-                    copyfile(os.path.join(self.builder.data['model'][model_to_import_global].solver_fpaths['abaqus'],model_to_import_global+'_global.prt'),
+                if os.path.exists(os.path.join(self.builder.data['model'][model_to_import_global].solver_fpaths['abaqus'],model_to_import_global+'.prt')):
+                    copyfile(os.path.join(self.builder.data['model'][model_to_import_global].solver_fpaths['abaqus'],model_to_import_global+'.prt'),
                                 os.path.join(self.solver_fpaths['abaqus'],'global.prt'))
-                    print('File: "global.prt", copied to model path from model: {}'.format(model_to_import_global))
+                    print('Global .prt file copied from model: "{}".'.format(model_to_import_global))
+                else:
+                    raise FileExistsError('{}.prt does not exist in the model: "{}"'.format(model_to_import_global, model_to_import_global))
 
             else:
                 raise FileExistsError('No models to import global files from')
@@ -670,6 +687,20 @@ class Model:
         spec.loader.exec_module(temp)
 
         return temp.fluent_setup
+    
+
+    def get_mpcci_script(self):
+        '''
+        
+        '''
+
+        # Get setup python script
+        spec = spec_from_file_location('mpcci_setup',os.path.join(self.solver_fpaths['mpcci'],'mpcci_setup.py'))
+        temp = module_from_spec(spec)
+        sys.modules["mpcci_setup"] = temp
+        spec.loader.exec_module(temp)
+
+        return temp.mpcci_setup
 
 
     def build_mpcci_model(self):
@@ -685,112 +716,22 @@ class Model:
 
         self.build_abaqus_model()
 
-        # DO MPCCI STUFF
-
-        '''
-
-        # Satisfy geometry requirements
-        for requirement_name,requirement_value in self.requirements['geometries'].items():
-            if requirement_value:
-                if 'abaqus' in requirement_name:
-                    copyfile(os.path.join(self.geometry.fpath,requirement_name+'.inp'), os.path.join(self.solver_fpaths['abaqus'],requirement_name+'.inp'))
+        mpcci_setup = self.get_mpcci_script()
+        print('MPCCI script: "mpcci_setup.py" retrieved successfully')
 
         
-        # Modify assembly.inp based on geometry requirements       
-        if self.requirements['geometries']['assembly']:
-            with open(os.path.join(self.solver_fpaths['abaqus'],'assembly.inp'),'r') as inp_read, open(os.path.join(self.solver_fpaths['abaqus'],'temp.inp'),'w') as inp_write:
-                
-                # get the names of the geometry requirements
-                abaqus_reqs = [requirement_name for requirement_name,requirement_value in self.requirements['geometries'].items() if requirement_value and (('abaqus' in requirement_name) or ('assembly' in requirement_name))]
-                
-                inp_write.write(inp_read.readline())
-                
-                line = inp_read.readline()
-                
-                # while end of file not reached
-                while line:
-                        
-                    # if geometry is required then write its assembly lines
-                    if '**' in line and any(req in line for req in abaqus_reqs):
-                        
-                        line = inp_read.readline()
-
-                        while '**' not in line:
-
-                            inp_write.write(line)
-                            
-                            line = inp_read.readline()
-                            
-                    line = inp_read.readline()
-
-                # Write comment on final line to ensure no empty lines
-                inp_write.write('**')
-
-            # Replace old assembly.inp with modified version
-            os.replace(os.path.join(self.solver_fpaths['abaqus'],'temp.inp'),os.path.join(self.solver_fpaths['abaqus'],'assembly.inp'))
+        # PROMPT USER FOR NCPUS ABQ AND NCPUS FLUENT
 
 
-        # Satisfy material requirements
-        for material_name in self.materials.keys():
-            for requirement_name, requirement_value in self.materials[material_name].requirements['materials'].items():
-                if requirement_value:
-                    copyfile(os.path.join(self.materials[material_name].fpath,requirement_name+'.inp'), os.path.join(self.solver_fpaths['abaqus'],requirement_name+'.inp'))
+        # Edit mpcci .csp file via script, depending on parameters set for the analysis.
+        mpcci_setup(fpath = self.solver_fpaths['mpcci'], name = self.name, parameters = self.parameters, fluent_cpus = 10, abaqus_cpus = 10)
+
+        # DELETE OLD MPCCI .csp
+
+        print('---------------------------------------------------')
+        print('Assembly of MPCCI coupled abaqus-fluent model successful')
+        print('---------------------------------------------------')
 
 
-        # Add parameter values to main abaqus input file
-        with open(os.path.join(self.solver_fpaths['abaqus'],'main.inp'),'r') as inp_read, open(os.path.join(self.solver_fpaths['abaqus'],'temp.inp'),'w') as inp_write:
-
-            inp_write.write('*Parameter\n')
-            inp_write.write('# -------------------------------------\n')
-            inp_write.write('# --------USER DEFINED PARAMETERS------\n')
-            inp_write.write('# -------------------------------------\n')
-
-            # Write parameter values as dictated by user
-            for parameter_name,parameter in self.parameters.items():
-                if 'abaqus' in parameter['solvers']:
-                    inp_write.write('{} = {}\n'.format(parameter_name, parameter['default_value']))
-
-            # Copy main input file contents
-            copyfileobj(inp_read,inp_write)
-        
-        # Replace old main.inp file
-        os.replace(os.path.join(self.solver_fpaths['abaqus'],'temp.inp'),os.path.join(self.solver_fpaths['abaqus'],'main.inp'))
-
-
-
-        # Fluent parameters and assemble .cas file
-
-
-        # Copy journal file if requirement
-        if self.requirements['analysis']['fluent_journal']:
-            pass
-
-
-
-        # If submodel analysis, import global .odb and .prt files (Note: This only works if global analysis has been run, and global script preparation run)
-        if self.requirements['analysis']['abaqus_global_odb'] and self.requirements['analysis']['abaqus_global_prt']:
-
-            potential_models = [model_name for model_name in self.builder.data['model'].keys() if model_name is not self.name]
-
-            if potential_models:
-            
-                model_to_import_global = inquirer.list_input('This model requires a global .odb and .prt file to function, please specify the model you would like to import these from', choices=potential_models, carousel=True)
-                
-                # Copy global .odb 
-                if os.path.exists(os.path.join(self.builder.data['model'][model_to_import_global].solver_fpaths['abaqus'],model_to_import_global+'_global.odb')):
-                    copyfile(os.path.join(self.builder.data['model'][model_to_import_global].solver_fpaths['abaqus'],model_to_import_global+'_global.odb'),
-                                os.path.join(self.solver_fpaths['abaqus'],'global.odb'))
-                
-                # Copy global .prt
-                if os.path.exists(os.path.join(self.builder.data['model'][model_to_import_global].solver_fpaths['abaqus'],model_to_import_global+'_global.prt')):
-                    copyfile(os.path.join(self.builder.data['model'][model_to_import_global].solver_fpaths['abaqus'],model_to_import_global+'_global.prt'),
-                                os.path.join(self.solver_fpaths['abaqus'],'global.prt'))
-
-            else:
-                print('---------------------------------------------------')
-                print('No models to import global files from')
-                print('---------------------------------------------------')
-
-        '''
 
         

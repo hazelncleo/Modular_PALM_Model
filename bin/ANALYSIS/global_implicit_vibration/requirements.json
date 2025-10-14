@@ -19,7 +19,6 @@
     },
     "analysis": {
         "abaqus_global_odb": false,
-        "abaqus_global_prt": false,
-        "fluent_journal": false
+        "abaqus_global_prt": false
     }
 }

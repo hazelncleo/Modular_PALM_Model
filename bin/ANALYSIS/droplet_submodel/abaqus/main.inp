@@ -12,18 +12,16 @@
 ** ----------------------------------------------------------------
 ** CALCULATED VALUES
 ** ----------------------------------------------------------------
-** Calculate the Implicit Step Size to ensure 10 data points per vibration
-implicit_step_size = 1/(10*vibration_frequency)
-** Calculate the minimum step size
-min_step_size = implicit_step_size/10
 ** Calculate the total time of the simulation
-total_time = n_cycles * 10 * min_step_size
+total_time = n_cycles / vibration_frequency
+** Calculate the max time step
+max_time_step_size = 1 / (50 * vibration_frequency)
 ** Calculate the max number of increments
-max_n_increments = n_cycles * 11 * min_step_size
+n_increments = n_cycles * 10
 ** ----------------------------------------------------------------
-*Step, name=Vibration, nlgeom=YES, inc=<max_n_increments>
-*Dynamic, application=TRANSIENT FIDELITY
-<implicit_step_size>,<total_time>,<min_step_size>,<implicit_step_size>
+*Step, name=Vibration, nlgeom=YES
+*Dynamic, EXPLICIT, ELEMENT BY ELEMENT
+,<total_time>,,<max_time_step_size>
 **
 *Boundary, submodel, step=1
   abaqus_submodel_acoustic_1.driven_nodes, 8, 8
@@ -33,14 +31,12 @@ max_n_increments = n_cycles * 11 * min_step_size
 ** 
 ** OUTPUT REQUESTS
 ** 
-*Restart, write, frequency=0
 ** 
 ** FIELD OUTPUT: F-Output-1
 ** 
-*Output, field, frequency=1
+*Output, field, NUMBER INTERVAL = <n_increments>
 *Node Output, variable=PRESELECT
 *Element Output, directions=YES, variable=PRESELECT
-*Contact Output, variable=PRESELECT
 ** 
 ** HISTORY OUTPUT: H-Output-1
 ** 

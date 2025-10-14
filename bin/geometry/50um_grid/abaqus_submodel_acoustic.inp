@@ -54666,5 +54666,7 @@
   _acoustic_coupling_S4, S4
   _acoustic_coupling_S5, S5
   _acoustic_coupling_S1, S1
+*Solid Section, elset=acoustic, material=abaqus_acoustic
+  ,
 *End Part
 **
