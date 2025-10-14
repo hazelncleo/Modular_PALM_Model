@@ -15,7 +15,7 @@ import xml.etree.ElementTree as ET
 
 
 class Model:
-    def __init__(self, builder):
+    def __init__(self, builder, analysis_name = None, geometry_name = None, material_names = None):
         '''
         ---------------------------------------------------
         
@@ -44,14 +44,14 @@ class Model:
         self.new_description()
 
         # Select Analysis
-        self.select_analysis()
+        self.select_analysis(analysis_name) if analysis_name else self.select_analysis()
 
         # Select Geometry
-        self.select_geometry()
+        self.select_geometry(geometry_name) if geometry_name else self.select_geometry()
 
         # Add Materials
         if any(self.requirements['materials'].values()):
-            self.select_materials()
+            self.select_materials(material_names) if material_names else self.select_materials()
         else:
             print('-----------------------------------------------')
             print('No Abaqus Materials required, skipping select materials')
@@ -162,35 +162,37 @@ class Model:
                 return
             
     
-    def select_analysis(self):
+    def select_analysis(self, analysis_name = None):
         '''
         ---------------------------------------------------
         Select an analysis object from the database for this model
         ---------------------------------------------------
         '''
-        
-        # Get the Analysis objects loaded in the database
-        potential_analyses = [analysis for analysis in self.builder.data['analysis'].keys()]
 
-        # THIS NEEDS TO BE CAUGHT IN THE MODULAR ABAQUS BUILDER CLASS
-        if not potential_analyses:
-            raise FileExistsError('No analysis objects available in the database')
+        if not analysis_name:
 
-        print('---------------------------------------------------')
-        print('Analyses Available for use:')
-        print('---------------------------------------------------')
-        for analysis in potential_analyses:
-            print('Name: "{}"'.format(analysis))
-            print('Description: "{}"'.format(self.builder.data['analysis'][analysis].description))
+            # Get the Analysis objects loaded in the database
+            potential_analyses = [analysis for analysis in self.builder.data['analysis'].keys()]
+
+            # THIS NEEDS TO BE CAUGHT IN THE MODULAR ABAQUS BUILDER CLASS
+            if not potential_analyses:
+                raise FileExistsError('No analysis objects available in the database')
+
             print('---------------------------------------------------')
+            print('Analyses Available for use:')
+            print('---------------------------------------------------')
+            for analysis in potential_analyses:
+                print('Name: "{}"'.format(analysis))
+                print('Description: "{}"'.format(self.builder.data['analysis'][analysis].description))
+                print('---------------------------------------------------')
 
-        potential_analyses.append('cancel')
+            potential_analyses.append('cancel')
 
-        # Prompt user to pick an analysis
-        analysis_name = inquirer.list_input('Pick Analysis to use', choices=potential_analyses, carousel = True)
+            # Prompt user to pick an analysis
+            analysis_name = inquirer.list_input('Pick Analysis to use', choices=potential_analyses, carousel = True)
 
-        if (not analysis_name) or (analysis_name == 'cancel'):
-            raise NameError('Select Analysis cancelled')
+            if (not analysis_name) or (analysis_name == 'cancel'):
+                raise NameError('Select Analysis cancelled')
 
         self.analysis = self.builder.data['analysis'][analysis_name]
 
@@ -217,46 +219,48 @@ class Model:
         return potential_geometries
 
 
-    def select_geometry(self):
+    def select_geometry(self, geometry_name = None):
         '''
         ---------------------------------------------------
         Select a Geometry object from the database for this model
         ---------------------------------------------------
         '''
-        
-        # Get the Geometry objects loaded in the database
-        potential_geometries = self.get_potential_geometries()
-        
 
-        # THIS NEEDS TO BE CAUGHT IN THE MODULAR ABAQUS BUILDER CLASS
-        if not potential_geometries:
-            raise FileExistsError('No Geometry objects that meet the requirements available in the database')
+        if not geometry_name:
         
-        print('---------------------------------------------------')
-        print('The Chosen Analysis: "{}".'.format(self.analysis.name))
-        print('Description: "{}"'.format(self.analysis.description))
-        print('Has the following Geometry requirements: ')
-        for requirement, is_required in self.requirements['geometries'].items():
-            if is_required:
-                print('\t{}'.format(requirement))
+            # Get the Geometry objects loaded in the database
+            potential_geometries = self.get_potential_geometries()
+            
 
-
-        print('---------------------------------------------------')
-        print('The following Geometries meet the requirements: ')
-        print('---------------------------------------------------')
-        for geometry in potential_geometries:
-            print('Name: "{}"'.format(geometry))
-            print('Description: "{}"'.format(self.builder.data['geometry'][geometry].description))
+            # THIS NEEDS TO BE CAUGHT IN THE MODULAR ABAQUS BUILDER CLASS
+            if not potential_geometries:
+                raise FileExistsError('No Geometry objects that meet the requirements available in the database')
+            
             print('---------------------------------------------------')
+            print('The Chosen Analysis: "{}".'.format(self.analysis.name))
+            print('Description: "{}"'.format(self.analysis.description))
+            print('Has the following Geometry requirements: ')
+            for requirement, is_required in self.requirements['geometries'].items():
+                if is_required:
+                    print('\t{}'.format(requirement))
 
-        potential_geometries.append('cancel')
 
-        # Prompt user to pick a Geometry
-        geometry_name = inquirer.list_input('Pick Geometry to use', choices=potential_geometries, carousel = True)
+            print('---------------------------------------------------')
+            print('The following Geometries meet the requirements: ')
+            print('---------------------------------------------------')
+            for geometry in potential_geometries:
+                print('Name: "{}"'.format(geometry))
+                print('Description: "{}"'.format(self.builder.data['geometry'][geometry].description))
+                print('---------------------------------------------------')
 
-        # If cancel chosen, or no geometry name given
-        if (not geometry_name) or (geometry_name == 'cancel'):
-            raise NameError('Select Geometry cancelled')
+            potential_geometries.append('cancel')
+
+            # Prompt user to pick a Geometry
+            geometry_name = inquirer.list_input('Pick Geometry to use', choices=potential_geometries, carousel = True)
+
+            # If cancel chosen, or no geometry name given
+            if (not geometry_name) or (geometry_name == 'cancel'):
+                raise NameError('Select Geometry cancelled')
 
         # Set as model geometry
         self.geometry = self.builder.data['geometry'][geometry_name]
@@ -282,75 +286,83 @@ class Model:
         return potential_materials
 
 
-    def select_materials(self):
+    def select_materials(self, material_names = None):
         '''
         ---------------------------------------------------
         Select Material objects from the database for this model
         ---------------------------------------------------
         '''
-        
-        # Get the Material objects loaded in the database
-        potential_materials = self.get_potential_materials()
-        
-        # THIS NEEDS TO BE CAUGHT IN THE MODULAR ABAQUS BUILDER CLASS
-        if not potential_materials:
-            raise FileExistsError('No Material objects that meet the requirements available in the database')
-
-        requirements_to_be_fulfilled = {}
-        
-        print('---------------------------------------------------')
-        print('The Chosen Analysis: "{}".'.format(self.analysis.name))
-        print('Description: "{}"'.format(self.analysis.description))
-        print('Has the following Material requirements: ')
-        for requirement, is_required in self.requirements['materials'].items():
-            if is_required:
-                print('\t{}'.format(requirement))
-                requirements_to_be_fulfilled[requirement] = is_required
-
-
-        print('---------------------------------------------------')
-        print('The following Materials meet at least one of the requirements: ')
-        print('---------------------------------------------------')
-        for material in potential_materials:
-            print('Name: "{}"'.format(material))
-            print('Description: "{}"'.format(self.builder.data['material'][material].description))
-            requirement_fulfilled = [requirement[0] for requirement in self.builder.data['material'][material].requirements['materials'].items() if requirement[1]]
-            print('Requirement Fulfilled: {}'.format(requirement_fulfilled[0]))
-            print('---------------------------------------------------')
-
-        potential_materials.append('cancel')
         self.materials = {}
 
-        # Loop until all requirements have been met
-        while len(requirements_to_be_fulfilled):
-            print('Requirements still to be fulfilled: ')
-            for requirement, is_required in requirements_to_be_fulfilled.items():
-                print('\t{}'.format(requirement))
+        if not material_names:
+        
+            # Get the Material objects loaded in the database
+            potential_materials = self.get_potential_materials()
+            
+            # THIS NEEDS TO BE CAUGHT IN THE MODULAR ABAQUS BUILDER CLASS
+            if not potential_materials:
+                raise FileExistsError('No Material objects that meet the requirements available in the database')
+
+            requirements_to_be_fulfilled = {}
+            
             print('---------------------------------------------------')
-            
-            # Prompt user to pick a Material
-            material_name = inquirer.list_input('Pick a Material to use', choices=potential_materials, carousel = True)
+            print('The Chosen Analysis: "{}".'.format(self.analysis.name))
+            print('Description: "{}"'.format(self.analysis.description))
+            print('Has the following Material requirements: ')
+            for requirement, is_required in self.requirements['materials'].items():
+                if is_required:
+                    print('\t{}'.format(requirement))
+                    requirements_to_be_fulfilled[requirement] = is_required
 
-            # If cancel chosen, or no material name given
-            if (not material_name) or (material_name == 'cancel'):
-                raise NameError('Select Material cancelled')
 
-
-            requirement_fulfilled = [fulfilled[0] for fulfilled in self.builder.data['material'][material_name].requirements['materials'].items() if fulfilled[1]][0]
-            
-            
-            try:
-                requirements_to_be_fulfilled.pop(requirement_fulfilled)
-            except:
+            print('---------------------------------------------------')
+            print('The following Materials meet at least one of the requirements: ')
+            print('---------------------------------------------------')
+            for material in potential_materials:
+                print('Name: "{}"'.format(material))
+                print('Description: "{}"'.format(self.builder.data['material'][material].description))
+                requirement_fulfilled = [requirement[0] for requirement in self.builder.data['material'][material].requirements['materials'].items() if requirement[1]]
+                print('Requirement Fulfilled: {}'.format(requirement_fulfilled[0]))
                 print('---------------------------------------------------')
-                print('The Material: "{}", fulfills a requirement that has already been fulfilled by a previously chosen material.'.format(material_name))
+
+            potential_materials.append('cancel')
+            
+            # Loop until all requirements have been met
+            while len(requirements_to_be_fulfilled):
+                print('Requirements still to be fulfilled: ')
+                for requirement, is_required in requirements_to_be_fulfilled.items():
+                    print('\t{}'.format(requirement))
                 print('---------------------------------------------------')
-                continue
-            
-            potential_materials.remove(material_name)
-            
-            # Append to Materials
-            self.materials[material_name] = self.builder.data['material'][material_name]
+                
+                # Prompt user to pick a Material
+                material_name = inquirer.list_input('Pick a Material to use', choices=potential_materials, carousel = True)
+
+                # If cancel chosen, or no material name given
+                if (not material_name) or (material_name == 'cancel'):
+                    raise NameError('Select Material cancelled')
+
+
+                requirement_fulfilled = [fulfilled[0] for fulfilled in self.builder.data['material'][material_name].requirements['materials'].items() if fulfilled[1]][0]
+                
+                
+                try:
+                    requirements_to_be_fulfilled.pop(requirement_fulfilled)
+                except:
+                    print('---------------------------------------------------')
+                    print('The Material: "{}", fulfills a requirement that has already been fulfilled by a previously chosen material.'.format(material_name))
+                    print('---------------------------------------------------')
+                    continue
+                
+                potential_materials.remove(material_name)
+                
+                # Append to Materials
+                self.materials[material_name] = self.builder.data['material'][material_name]
+
+
+        # If material names provided
+        else:
+            for material_name in material_names:
+                self.materials[material_name] = self.builder.data['material'][material_name]
             
 
     def set_fpaths(self):
@@ -720,13 +732,18 @@ class Model:
         print('MPCCI script: "mpcci_setup.py" retrieved successfully')
 
         
-        # PROMPT USER FOR NCPUS ABQ AND NCPUS FLUENT
-
+        # Prompt user for number of cpus for fluent and number of cpus for abaqus
+        questions = [inquirer.Text('fluent_cpus', 'Please enter the number of cpus to use for the fluent simulation', default = 2, validate = lambda _, c : c.isnumeric() and (int(c) > 1)),
+                     inquirer.Text('abaqus_cpus', 'Please enter the number of cpus to use for the abaqus simulation', default = 2, validate = lambda _, c : c.isnumeric() and (int(c) > 1))]
+        
+        answers = inquirer.prompt(questions)
 
         # Edit mpcci .csp file via script, depending on parameters set for the analysis.
-        mpcci_setup(fpath = self.solver_fpaths['mpcci'], name = self.name, parameters = self.parameters, fluent_cpus = 10, abaqus_cpus = 10)
+        mpcci_setup(fpath = self.solver_fpaths['mpcci'], name = self.name, parameters = self.parameters, fluent_cpus = answers['fluent_cpus'], abaqus_cpus = answers['abaqus_cpus'])
 
-        # DELETE OLD MPCCI .csp
+        # Delete old main.csp
+        os.remove(os.path.join(self.solver_fpaths['mpcci'],'main.csp'))
+        print('Deleted old main.csp')
 
         print('---------------------------------------------------')
         print('Assembly of MPCCI coupled abaqus-fluent model successful')
@@ -734,4 +751,4 @@ class Model:
 
 
 
-        
+    

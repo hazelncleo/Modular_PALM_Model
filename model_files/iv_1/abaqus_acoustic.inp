@@ -1,0 +1,7 @@
+** Material Definition for Acoustic Water SI(mm)
+*Material, name=abaqus_acoustic
+*Acoustic Medium
+ 2100.,
+*Density
+ 9.97e-10,
+ **

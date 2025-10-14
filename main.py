@@ -3,7 +3,7 @@ from Modular_Abaqus_Builder import Modular_Abaqus_Builder
 def main():
     
     # Instantiate class
-    builder = Modular_Abaqus_Builder(overwrite=True, overwrite_models=False)
+    builder = Modular_Abaqus_Builder(overwrite=False, overwrite_models=False)
     
     builder.main_loop()
 
@@ -16,6 +16,7 @@ def main():
 IMPORTANT STUFF
 --------------------------
 
+- validate functions for interpreters
 - if cant delete directories on reset prompt user
 - validate database
 - model class (pogging off)

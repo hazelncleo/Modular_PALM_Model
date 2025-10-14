@@ -914,7 +914,43 @@ class Modular_Abaqus_Builder:
         return full_fpath
         
         
+    def delete_model(self):
+        '''
         
+        '''
+        
+        model_names = list(self.data['model'].keys())
+
+        if model_names:
+        
+            answer = inquirer.list_input('Please select the model you would like to delete from the database', choices = model_names+['cancel'], carousel = True)
+
+            if answer == 'cancel':
+                print('-----------------------------------------------')
+                print('Delete model operation cancelled, returning to edit model loop')
+                print('-----------------------------------------------')
+
+            try:
+                # Delete folder
+                fpath = self.data['model'][answer].fpath
+                rmtree(fpath)
+                print('-----------------------------------------------')
+                print('Deleted Folder: "{}"'.format(fpath))
+
+                # Delete from database
+                self.data['model'].pop(answer)
+                print('Deleted model: "{}", from the database.'.format(answer))
+                print('-----------------------------------------------')
+
+            except:
+                print('-----------------------------------------------')
+                print('Tried to delete the model: "{}", but could not. Check if the directory is open in another application.'.format(answer))
+                print('-----------------------------------------------')
+
+        else:
+            print('-----------------------------------------------')
+            print('No models in database to delete, returning to edit model loop')
+            print('-----------------------------------------------')   
         
 
 
@@ -954,19 +990,40 @@ class Modular_Abaqus_Builder:
         '''
         
         '''
-        pass
+        model_names = list(self.data['model'].keys())
+
+        if model_names:
+        
+            answer = inquirer.list_input('Please select the model you would like to duplicate from the database', choices = model_names+['cancel'], carousel = True)
+
+            if answer == 'cancel':
+                print('-----------------------------------------------')
+                print('Duplicate model operation cancelled, returning to edit model loop')
+                print('-----------------------------------------------')
+
+            print('Model: "{}", chosen to be duplicated'.format(answer))
+
+            try:
+                analysis_name = self.data['model'][answer].analysis.name
+                geometry_name = self.data['model'][answer].geometry.name
+                material_names = list(self.data['model'][answer].materials.keys())
+
+                duplicate_model = Model(self, analysis_name, geometry_name, material_names)
+
+                self.data['model'][duplicate_model.name] = duplicate_model
+
+                
+
+            except:
+                print('-----------------------------------------------')
+                print('Tried to duplicate the model: "{}", but could not. Check if the directory is open in another application.'.format(answer))
+                print('-----------------------------------------------')
+
+        else:
+            print('-----------------------------------------------')
+            print('No models in database to duplicate, returning to edit model loop')
+            print('-----------------------------------------------')
     
-
-    def delete_model(self):
-        '''
-        
-        '''
-        pass
-
-        '''
-        
-        '''
-        pass
     
 
     def postprocess_model(self):
