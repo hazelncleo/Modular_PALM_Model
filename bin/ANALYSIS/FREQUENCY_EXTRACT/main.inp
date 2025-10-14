@@ -1,0 +1,85 @@
+** Include Required Geometries
+*INCLUDE, INPUT=abaqus_whole-chip_solid.inp
+*INCLUDE, INPUT=abaqus_whole-chip_acoustic.inp
+*INCLUDE, INPUT=assembly.inp
+** Include Required Materials
+*INCLUDE, INPUT=abaqus_solid.inp
+*INCLUDE, INPUT=abaqus_acoustic.inp
+** ----------------------------------------------------------------
+** Extract Frequencies for specified frequencies +- specified range
+** ----------------------------------------------------------------
+*Parameter
+** Calculate frequency bounds and names
+freq_1_lower = freq_1 - range
+freq_1_upper = freq_1 + range
+name_1 = 'freq_extract_' + str(int(freq_1))
+freq_2_lower = freq_2 - range
+freq_2_upper = freq_2 + range
+name_2 = 'freq_extract_' + str(int(freq_2))
+freq_3_lower = freq_3 - range
+freq_3_upper = freq_3 + range
+name_3 = 'freq_extract_' + str(int(freq_3))
+** Fix the base of the chip
+*BOUNDARY
+  abaqus_whole-chip_solid_1.fixed, 1, 1
+  abaqus_whole-chip_solid_1.fixed, 2, 2
+  abaqus_whole-chip_solid_1.fixed, 3, 3
+** ----------------------------------------------------------------
+** 
+*STEP, NAME=<name_1>, NLGEOM=NO, PERTURBATION
+*FREQUENCY, EIGENSOLVER=LANCZOS, SIM, ACOUSTIC COUPLING=ON, NORMALIZATION=MASS
+  , <freq_1_lower>, <freq_1_upper>, , , 
+** 
+** OUTPUT REQUESTS
+** 
+*RESTART, WRITE, FREQUENCY=0
+** 
+** FIELD OUTPUT: F-OUTPUT-2
+** 
+*OUTPUT, FIELD
+*NODE OUTPUT, VARIABLE=PRESELECT
+** 
+** HISTORY OUTPUT: H-OUTPUT-2
+** 
+*OUTPUT, HISTORY
+*ENERGY OUTPUT, VARIABLE=ALL
+*END STEP
+** 
+*STEP, NAME=<name_2>, NLGEOM=NO, PERTURBATION
+*FREQUENCY, EIGENSOLVER=LANCZOS, SIM, ACOUSTIC COUPLING=ON, NORMALIZATION=MASS
+  , <freq_2_lower>, <freq_2_upper>, , , 
+** 
+** OUTPUT REQUESTS
+** 
+*RESTART, WRITE, FREQUENCY=0
+** 
+** FIELD OUTPUT: F-OUTPUT-2
+** 
+*OUTPUT, FIELD
+*NODE OUTPUT, VARIABLE=PRESELECT
+** 
+** HISTORY OUTPUT: H-OUTPUT-2
+** 
+*OUTPUT, HISTORY
+*ENERGY OUTPUT, VARIABLE=ALL
+*END STEP
+** 
+*STEP, NAME=<name_3>, NLGEOM=NO, PERTURBATION
+*FREQUENCY, EIGENSOLVER=LANCZOS, SIM, ACOUSTIC COUPLING=ON, NORMALIZATION=MASS
+  , <freq_3_lower>, <freq_3_upper>, , , 
+** 
+** OUTPUT REQUESTS
+** 
+*RESTART, WRITE, FREQUENCY=0
+** 
+** FIELD OUTPUT: F-OUTPUT-2
+** 
+*OUTPUT, FIELD
+*NODE OUTPUT, VARIABLE=PRESELECT
+** 
+** HISTORY OUTPUT: H-OUTPUT-2
+** 
+*OUTPUT, HISTORY
+*ENERGY OUTPUT, VARIABLE=ALL
+*END STEP
+**

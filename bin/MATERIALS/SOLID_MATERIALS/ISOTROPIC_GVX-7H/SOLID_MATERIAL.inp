@@ -1,6 +1,0 @@
-** Material Definition for Isotropic GVX-7H SI(mm)
-*Material, name=SOLID_MATERIAL
-*Density
- 1.85e-09,
-*Elastic
- 2.80e04, 0.35

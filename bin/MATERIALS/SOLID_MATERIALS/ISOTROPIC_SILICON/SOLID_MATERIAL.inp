@@ -1,6 +1,0 @@
-** Material Definition for Isotropic Silicon SI(mm)
-*Material, name=SOLID_MATERIAL
-*Density
- 2.33e-09,
-*Elastic
- 130000., 0.2783

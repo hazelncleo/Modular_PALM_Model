@@ -1,127 +1,234 @@
-import numpy as np
-import matplotlib.pyplot as plt
-import os
-import json
 import glob
-from shutil import copy2 as copy_input_file
-from shutil import rmtree
-import inquirer
-from tkinter import Tk
-from tkinter.filedialog import askdirectory
+import os
 import string
-
-    
-'''
-*****************************************************************************************************************************
-****************************************************TODO*********************************************************************
-*****************************************************************************************************************************
-
-IMPORTANT STUFF
---------------------------
-- add more information for the objects (input files in folder, editable parameters) will need to edit create, modify, duplicate and delete at the very least
-- build model
-- set requirements (basic implementation atm, might need to be made more complex)
-- validate
-- modify model
-- duplicate model
-- delete model
-- postprocess model
-- alter model loop
-- add cancel option (?)
-- run model
-- clean up main loops
-
-
-NICE TO HAVE STUFF
--------------------------------
-- __repr__
-- __str__
-- main help message
-- object help message
-- model help message
-- make tkinter dialog box not lose cmd priority
-- run model progress?? :o
-'''
+import inquirer
+from shutil import rmtree
+import pickle as pkl
+from copy import deepcopy
+from sys import exit
+from Analysis_Object import Analysis_Object
+from Geometry_Object import Geometry_Object
+from Material_Object import Material_Object
+from Model import Model
 
 
 class Modular_Abaqus_Builder:
-    def __init__(self):
+    def __init__(self, overwrite=False, overwrite_models=False):
         '''
         ---------------------------------------------------
-        Initialise the class and load the data from the *.json files.
+        Initialise the class and load the data from the .pkl file.
         ---------------------------------------------------
         '''
-        # Initialise dictionaries
-        self.data = {}
+        
+        # Create base database
+        self.instantiate_database()
+        
+        # If overwrite flag set to true, delete all files
+        if overwrite:
+            print('-----------------------------------------------')
+            print('OVERWRITE FLAG SET TO TRUE')
+            print('-----------------------------------------------')
 
-        # Change icon to be cool
-        root = Tk()
-        root.withdraw()
-        root.iconbitmap('cade.ico')
+            if self.yes_no_question('Are you sure you would like to overwrite the database? (This will delete all object, model and .pkl files)'):
+                self.overwrite_database()
+
+            else:
+                print('-----------------------------------------------')
+                print('The overwrite flag was set to true, but the overwrite was denied. Closing the database.')
+                print('-----------------------------------------------')
+
+                exit(0)
+
+        # If overwrite models flag set to true, delete all model files
+        elif overwrite_models:
+            print('-----------------------------------------------')
+            print('OVERWRITE MODELS FLAG SET TO TRUE')
+            print('-----------------------------------------------')
+
+            if self.yes_no_question('Are you sure you would like to overwrite the models of the database? (This will delete all model files and their database entries)'):
+
+                try:
+                    self.load_database()
+                except:
+                    print('-----------------------------------------------')
+                    print('The data.pkl file: "{}" does not exist. An empty Modular_Abaqus_Builder has been loaded.'.format(self.fpaths['data']))
+                    print('-----------------------------------------------')
+
+                self.overwrite_models()
+            
+            else:
+                print('-----------------------------------------------')
+                print('The overwrite models flag was set to true, but the overwrite was denied. Closing the database.')
+                print('-----------------------------------------------')
+
+                exit(0)
+
+        else:
+
+            # Load data from data.pickle
+            try:
+                self.load_database()
+
+            # If it doesnt exist load an empty Modular_Abaqus_Builder
+            except:
+                
+                print('-----------------------------------------------')
+                print('The data.pkl file: "{}" does not exist. An empty Modular_Abaqus_Builder has been loaded.'.format(self.fpaths['data']))
+                print('-----------------------------------------------')        
+
+        self.save_database()
+    
+
+    def instantiate_database(self):
+        '''
+        ---------------------------------------------------
+        Instantiate an empty database
+        ---------------------------------------------------
+        '''
 
         # Set filepaths
-        modelfile_fpath = 'Model_Files'
-        self.fpaths = {'model_files' : modelfile_fpath,
-                       'analysis' : os.path.join(modelfile_fpath, 'ANALYSIS'),
-                       'geometry' : os.path.join(modelfile_fpath, 'GEOMETRY'),
-                       'material': os.path.join(modelfile_fpath, 'MATERIALS'),
-                       'simulation': 'Simulations',
-                       'data': 'Data.json'}
-        
+        objectfiles_fpath = 'object_files'
+        self.fpaths = {'object_files' : objectfiles_fpath,
+                    'analysis' : os.path.join(objectfiles_fpath, 'analysis'),
+                    'geometry' : os.path.join(objectfiles_fpath, 'geometry'),
+                    'material': os.path.join(objectfiles_fpath, 'materials'),
+                    'model_files': 'model_files',
+                    'data': 'data.pickle'}
+
         # Set allowed characters
         self.allowed_characters = {'Name' : set(string.ascii_lowercase + string.digits + '_-'),
-                                   'Model' : set(string.ascii_letters + string.digits + '_-!()[]'),
-                                   'Description' : set(string.ascii_letters + string.digits + '_-,.?! ()[]"')}
+                                'Model' : set(string.ascii_letters + string.digits + '_-!()[]'),
+                                'Description' : set(string.ascii_letters + string.digits + '_-,.?! ()[]"')}
         
         # Set inquirer dialog lists
         self.inquirer_dialogs = {'Object_Types' : ['analysis','geometry','material'],
-                                 'Main_Loop' : ['alter_objects', 'build_model', 'save_database', 'help', 'exit', 'force_exit'],
-                                 'Object_Loop' : ['create', 'modify', 'duplicate', 'delete', 'help', 'back'],
-                                 'Model_Loop' : ['build', 'modify', 'duplicate', 'delete', 'post_process', 'run', 'help', 'back']}
+                                'Main_Loop' : ['edit_objects', 'edit_models', 'save_database', 'help', 'exit', 'force_exit'],
+                                'Object_Loop' : ['create', 'modify', 'duplicate', 'delete', 'help', 'back'],
+                                'Model_Loop' : ['create', 'modify', 'duplicate', 'delete', 'post_process', 'run', 'help', 'back']}
+    
+        self.data = {'analysis': {}, 'geometry': {}, 'material': {}, 'model': {}}
+
+        # Make storage folders if they dont exist
+        os.makedirs(self.fpaths['analysis'], exist_ok=True)
+        os.makedirs(self.fpaths['geometry'], exist_ok=True)
+        os.makedirs(self.fpaths['material'], exist_ok=True)
+        os.makedirs(self.fpaths['model_files'], exist_ok=True)
+
+
+    def overwrite_database(self):
+        '''
+        ---------------------------------------------------
+        Delete all objects and models in the relevant filepaths
+        ---------------------------------------------------
+        '''
         
-        # Load data from Data.json
         try:
-            with open(self.fpaths['data'], 'r') as df:
-                self.data = json.load(df)
-                print('-----------------------------------------------')
-                print('Loading from: "{}" was successful.'.format(self.fpaths['data']))
-                print('-----------------------------------------------')
-        
-        # If it doesnt exist load an empty dictionary
+            # Delete all analysis object files
+            for analysis in glob.glob(os.path.join(self.fpaths['analysis'], '*', ''), recursive=False):
+                rmtree(analysis)
+                print('Deleted: "{}"'.format(analysis))
+
+            # Delete all geometry object files
+            for geometry in glob.glob(os.path.join(self.fpaths['geometry'], '*', ''), recursive=False):
+                rmtree(geometry)
+                print('Deleted: "{}"'.format(geometry))
+
+            # Delete all material object files
+            for material in glob.glob(os.path.join(self.fpaths['material'], '*', ''), recursive=False):
+                rmtree(material)
+                print('Deleted: "{}"'.format(material))
+
+            # Delete all model files
+            for model in glob.glob(os.path.join(self.fpaths['model_files'], '*', ''), recursive=False):
+                rmtree(model)
+                print('Deleted: "{}"'.format(model))
+
+            if os.path.exists(self.fpaths['data']):
+                # Delete pickle storage file
+                os.remove(self.fpaths['data'])
+
         except:
-            self.data = {'analysis': {}, 'geometry': {}, 'material': {}, 'simulation': {}}
-            print('The Data .json file: "{}" does not exist. A default dictionary has been loaded.\nUpon save a .json file will be made.'.format(self.fpaths['data']))
+            print('-----------------------------------------------')
+            print('ERROR: The program cannot delete a file due to another program using a directory.')
+            print('-----------------------------------------------')
+
+            exit(0)
+
+
+    def overwrite_models(self):
+        '''
+        ---------------------------------------------------
+        Delete all models in the relevant filepaths and removes their entries from the database
+        ---------------------------------------------------
+        '''
+
+        try:
+            for model in glob.glob(os.path.join(self.fpaths['model_files'], '*', ''), recursive=False):
+                rmtree(model)
+                print('Deleted Directory: "{}"'.format(model))
+
+            for model in self.data['model'].keys():
+                print('Deleted Model: "{}", from the database.'.format(model))
+
+            self.data['model'] = {}
+
+        except:
+            print('-----------------------------------------------')
+            print('ERROR: The program cannot delete a file due to another program using a directory.')
+            print('-----------------------------------------------')
+
+            exit(0)
+
+
+    def load_database(self):
+        '''
+        ---------------------------------------------------
+        Load the database from the .pkl file
+        ---------------------------------------------------
+        '''
+        with open(self.fpaths['data'], 'rb') as df:
             
 
-    def save_database(self):
-            '''
-            ---------------------------------------------------
-            Saves the database to .json files
-            ---------------------------------------------------
-            '''
+            self.data = pkl.load(df).data
 
             print('-----------------------------------------------')
-            print('Saving the Database')
+            print('Loading from: "{}" was successful.'.format(self.fpaths['data']))
+            print('The following data was imported into the database: ')
             print('-----------------------------------------------')
-            # Save data
-            with open(self.fpaths['data'], 'w') as df:
-                json.dump(self.data, df)
-                print('-----------------------------------------------')
-                print('Save to: "{}" was successful.'.format(self.fpaths['data']))
-                print('-----------------------------------------------')
+
+        self.print_database()
+
+
+    def save_database(self):
+        '''
+        ---------------------------------------------------
+        Saves the database to a .pkl file
+        ---------------------------------------------------
+        '''
+
+        print('-----------------------------------------------')
+        print('Saving the Database')
+        print('-----------------------------------------------')
+        # Save data
+        with open(self.fpaths['data'], 'wb') as df:
+            pkl.dump(self, df)
+            print('-----------------------------------------------')
+            print('Save to: "{}" was successful.'.format(self.fpaths['data']))
+            print('-----------------------------------------------')
 
 
     def main_loop(self):
         '''
         ---------------------------------------------------
-        The main functioning loop
+        Main loop that controls the tui of the database
         ---------------------------------------------------
         '''
+        command = 'edit_objects'
 
         while True:
             
-            # Commands = ['alter_objects', 'build_model', 'save_database', 'help', 'exit', 'force_exit']
-            command = inquirer.list_input('Pick Command: ', choices=self.inquirer_dialogs['Main_Loop'])
+            # Commands = ['edit_objects', 'edit_models', 'save_database', 'help', 'exit', 'force_exit']
+            command = inquirer.list_input('Pick Command: ', choices=self.inquirer_dialogs['Main_Loop'], carousel = True, default = command)
 
             if command == 'exit':
                 if self.yes_no_question('Are you sure you would like to exit?'):
@@ -129,7 +236,7 @@ class Modular_Abaqus_Builder:
                     break
 
             elif command == 'help':
-                help_message = inquirer.list_input('Print database structure or Help menu? ', choices=['print','help'])
+                help_message = inquirer.list_input('Print database structure or Help menu? ', choices=['print','help'], carousel = True)
 
                 if help_message == 'print':
                     self.print_database()
@@ -139,22 +246,11 @@ class Modular_Abaqus_Builder:
             elif command == 'save_database':
                 self.save_database()
 
-            elif command == 'build_model':
-
-                # Get new model name
-                model_name = self.new_model_name()
-
-                # Get model description
-                description = self.provide_description()
-
-                # Build model
-                self.build_model(model_name, description)
-
-                self.save_database()
+            elif command == 'edit_models':
+                self.edit_models()
                 
-
-            elif command == 'alter_objects':
-                self.alter_objects()
+            elif command == 'edit_objects':
+                self.edit_objects()
 
             elif command == 'force_exit':
                 if self.yes_no_question('Are you sure you would like to force exit without saving?'):
@@ -166,27 +262,27 @@ class Modular_Abaqus_Builder:
         print('-----------------------------------------------')
 
 
-    def alter_objects(self):
+    def edit_objects(self):
         '''
         ---------------------------------------------------
-        Main loop for altering objects in the database
+        Main loop for editing objects in the database
         ---------------------------------------------------
         '''
 
         print('-----------------------------------------------')
-        print('Entering alter objects interface')
+        print('Entering Edit Objects interface')
         print('-----------------------------------------------')
 
-        command = ''
+        command = 'create'
 
         while command != 'back':
             
             # Commands = ['create', 'modify', 'duplicate', 'delete', 'help', 'back']
-            command = inquirer.list_input('Pick Object Alteration Command: ', choices=self.inquirer_dialogs['Object_Loop'])
+            command = inquirer.list_input('Pick Edit Object Command', choices=self.inquirer_dialogs['Object_Loop'], carousel = True, default = command)
 
 
             if command == 'help':
-                help_message = inquirer.list_input('Print database structure or Help menu? ', choices=['print','help'])
+                help_message = inquirer.list_input('Print database structure or Help menu? ', choices=['print','help'], carousel = True)
 
                 if help_message == 'print':
                     self.print_database()
@@ -196,45 +292,11 @@ class Modular_Abaqus_Builder:
 
             elif command == 'create':
 
-                # Get object type to be created
                 object_type = self.select_object_type()
 
-                # Get name of the object to be created
-                object_name = self.new_object_name(object_type)
+                self.create_object(object_type)
 
-                # Get description for object to be added
-                description = self.provide_description()
-
-                # Get requirements of analysis
-                if object_type == 'analysis':
-                    fluid_required, requirements = self.set_requirements()
-                else:
-                    requirements = []
-                    fluid_required = False
-
-                # Get filepath of *.inp files to add to the new object filepath
-                fpath = askdirectory(title = 'Select folder to read *.inp files: ', initialdir=os.path.abspath(os.getcwd()))
-
-                # Check if cancel button was pushed
-                if fpath:
-
-                    # Check if directory contains any .inp files
-                    if any(file.endswith('.inp') for file in os.listdir(fpath)):
-                        self.create_object(object_type, object_name, fpath, description, requirements, fluid_required)
-
-                        self.save_database()
-
-                    else:
-                        print('-----------------------------------------------')
-                        print('ERROR: The directory: "{}", does not contain any .inp files.'.format(fpath))
-                        print('Returning to main loop.')
-                        print('-----------------------------------------------')
-
-                else:
-                    print('-----------------------------------------------')
-                    print('ERROR: The cancel button was pushed and no directory was chosen.')
-                    print('Returning to main loop.')
-                    print('-----------------------------------------------')
+                self.save_database()
 
 
             elif command == 'modify':
@@ -244,56 +306,13 @@ class Modular_Abaqus_Builder:
                 
                 # Check if object was available
                 if object_name:
+
+                    self.modify_object(object_name, object_type)
                     
-                    # Get objects to be changed
-                    change_list = inquirer.checkbox('What would you like to change about the object: "{}", of type: "{}"'.format(object_name,object_type),
-                                                    choices = ['name', 'description', 'requirements', 'fluid_required'])
-
-                    # Create change dictionary
-                    change_dict = {'name': {'change' : False, 'new_name' : ''},
-                                   'description' : {'change' : False, 'new_description' : ''},
-                                   'requirements' : {'change' : False, 'new_requirement' : []},
-                                   'fluid_required' : {'change' : False, 'new_fluid_required' : False}}
-                    
-                    # If no changes picked return to main loop
-                    if not change_list:
-                        print('-----------------------------------------------')
-                        print('No changes picked.')
-                        print('Returning to main loop.')
-                        print('-----------------------------------------------')
-                        continue
-
-                    if 'name' in change_list:
-
-                        # Select new name
-                        change_dict['name']['new_name'] = self.new_object_name(object_type)
-                        change_dict['name']['change'] = True
-
-                    if 'description' in change_list:
-
-                        # Select new description
-                        change_dict['description']['new_description'] = self.provide_description()
-                        change_dict['description']['change'] = True
-
-                    if 'requirements' in change_list:
-                        
-                        # Select new requirements
-                        change_dict['requirements']['new_requirement'] = []
-                        change_dict['requirements']['change'] = True
-
-                    if ('fluid_required' in change_list) and (object_type == 'analysis'):
-
-                        # Select new fluid required state
-                        change_dict['fluid_required']['change'] = True
-                        change_dict['fluid_required']['new_fluid_required'] = self.yes_no_question('Should the modified object require an acoustic fluid representation?')
-
-                    # Modify the object
-                    self.modify_object(object_type, object_name, change_dict)
-
                     self.save_database()
 
                 else: 
-                    print('Returning to main loop.')
+                    print('Returning to object loop.')
                     print('-----------------------------------------------')
 
             elif command == 'duplicate':
@@ -303,24 +322,21 @@ class Modular_Abaqus_Builder:
 
                 # Check if object was available
                 if object_name:
-                
-                    # Select new name
-                    new_name = self.new_object_name(object_type)
 
-                    # Duplicate the object to the new name
-                    self.duplicate_object(object_type, object_name, new_name)
+                    # Duplicate the object to a new name
+                    self.duplicate_object(object_type, object_name)
 
                     self.save_database()
 
                 else: 
-                    print('Returning to main loop.')
+                    print('Returning to object loop.')
                     print('-----------------------------------------------')
 
 
             elif command == 'delete':
                 
                 # Select object to be deleted
-                object_name, object_type = self.select_object()
+                object_name, object_type = self.select_object(message = ' you would like to delete')
 
                 # Check if object was available
                 if object_name:
@@ -331,7 +347,7 @@ class Modular_Abaqus_Builder:
                     self.save_database()
 
                 else: 
-                    print('Returning to main loop.')
+                    print('Returning to object loop.')
                     print('-----------------------------------------------')
 
 
@@ -340,133 +356,61 @@ class Modular_Abaqus_Builder:
         print('-----------------------------------------------')
 
 
-    def alter_models(self):
+    def edit_models(self):
         '''
         ---------------------------------------------------
-        Main loop for altering models in the database
+        Main loop for editing models in the database
         ---------------------------------------------------
         '''
 
         print('-----------------------------------------------')
-        print('Entering alter models interface')
+        print('Entering edit models interface')
         print('-----------------------------------------------')
         
-        command = ''
+        command = 'create'
 
         while command != 'back':
             
-            # Commands = ['build', 'modify', 'duplicate', 'delete', 'post_process', 'run', 'help', 'back']
-            command = inquirer.list_input('Pick Model Alteration Command: ', choices=self.inquirer_dialogs['Model_Loop'])
+            # Commands = ['create', 'modify', 'duplicate', 'delete', 'post_process', 'run', 'help', 'back']
+            command = inquirer.list_input('Pick Model Edit Command: ', choices=self.inquirer_dialogs['Model_Loop'], carousel = True, default = command)
 
+            if command == 'help':
+                help_message = inquirer.list_input('Print database structure or Help menu? ', choices=['print','help'], carousel = True)
 
-    def new_model_name(self):
-        '''
-        ---------------------------------------------------
-        Returns a new model name
-        ---------------------------------------------------
-        RETURNS
-        ---------------------------------------------------
-        new_name : str
-            The name for the new model
-        ---------------------------------------------------
-        '''
-        # Get current models
-        current_models = [x for x in self.data['simulation'].keys()]
+                if help_message == 'print':
+                    self.print_database()
+                else:
+                    self.print_model_help_message()
 
-        new_name = ''
+            elif command == 'create':
+                self.create_model()
 
-        # Loop until new name is unique
-        while True:
-            print('---------------------------------------------------')
-            print('Please enter a new name for the model to be created: ')
-            print('Note: ')
-            print('- It must only use letters, numbers and the following symbols (not including single quotes): \'_-!()[]\'')
-            print('- It must be unique.')
-            print('---------------------------------------------------')
-            print('The model names currently in use are listed below: ')
-            print(current_models)
-            print('---------------------------------------------------')
-            
-            new_name = input('Please enter a new name for the model to be created: ')
+                self.save_database()
 
-            if not new_name:
-                print('---------------------------------------------------')
-                print('ERROR: The name provided was an empty string')
-                print('---------------------------------------------------')
+            elif command == 'modify':
+                self.modify_model()
 
-            elif not (set(new_name) <= self.allowed_characters['Model']):
-                print('---------------------------------------------------')
-                print('ERROR: The name: "{}", is not entirely lowercase, numbers or underscores.'.format(new_name))
-                print('---------------------------------------------------')
-            
-            elif new_name not in current_models:
-                print('---------------------------------------------------')
-                print('The name: "{}", for the new model has been selected.'.format(new_name))
-                print('---------------------------------------------------')
-                return new_name
-            
-            else: 
-                print('---------------------------------------------------')
-                print('ERROR: The name: "{}", already exists in the database.'.format(new_name))
-                print('---------------------------------------------------')
+                self.save_database()
 
+            elif command == 'duplicate':
+                self.duplicate_model()
 
-    def new_object_name(self, object_type):
-        '''
-        ---------------------------------------------------
-        Gets a new object name of a specific type, ensures that no object already exists of that type
-        ---------------------------------------------------
-        PARAMETERS
-        ---------------------------------------------------
-        object_type : str, [analysis/geometry/material]
-            The type of object to be added. This can be either of the three types listed above. If the string does not match exactly an error will be thrown.
-        ---------------------------------------------------
-        RETURNS
-        ---------------------------------------------------
-        new_name : str
-            The name for the new object
-        ---------------------------------------------------
-        '''
-        # Get current objects
-        current_objects = [x for x in self.data[object_type].keys()]
+                self.save_database()
 
-        new_name = ''
+            elif command == 'delete':
+                self.delete_model()
 
-        # Loop until new name is unique
-        while True:
-            print('---------------------------------------------------')
-            print('Please enter a new name for the object to be created: ')
-            print('Note: ')
-            print('- It must only use letters, numbers, underscores and hyphens.')
-            print('- It must be lowercase.')
-            print('- It must be unique.')
-            print('---------------------------------------------------')
-            print('The object names currently in use for the object type: "{}", are listed below: '.format(object_type))
-            print(current_objects)
-            print('---------------------------------------------------')
-            
-            new_name = input('Please enter a new name for the object to be created: ')
+                self.save_database()
 
-            if not new_name:
-                print('---------------------------------------------------')
-                print('ERROR: The name provided was an empty string')
-                print('---------------------------------------------------')
+            elif command == 'post_process':
+                self.postprocess_model()
 
-            elif not (set(new_name) <= self.allowed_characters['Name']):
-                print('---------------------------------------------------')
-                print('ERROR: The name: "{}", is not entirely lowercase, numbers or underscores.'.format(new_name))
-                print('---------------------------------------------------')
-            
-            elif new_name not in current_objects:
-                print('---------------------------------------------------')
-                print('The name: "{}", for the new object has been selected.'.format(new_name))
-                print('---------------------------------------------------')
-                return new_name
-            
-            else: 
-                print('---------------------------------------------------')
-                print('ERROR: The name: "{}", already exists in the database.'.format(new_name))
-                print('---------------------------------------------------')
+                self.save_database()
+
+            elif command == 'run':
+                self.run_model()
+
+                self.save_database()
 
         
     def select_object_type(self):
@@ -481,7 +425,7 @@ class Modular_Abaqus_Builder:
         ---------------------------------------------------
         '''
 
-        object_type = inquirer.list_input('Pick Object Type: ', choices=self.inquirer_dialogs['Object_Types'])
+        object_type = inquirer.list_input('Pick Object Type: ', choices=self.inquirer_dialogs['Object_Types'], carousel = True)
 
         print('-----------------------------------------------')
         print('Object Type: "{}" was selected.'.format(object_type))
@@ -513,7 +457,7 @@ class Modular_Abaqus_Builder:
 
         # Check there are choices available
         if len(choices):
-            selected_object = inquirer.list_input('Pick the {} object{}: '.format(object_type,message), choices=choices)
+            selected_object = inquirer.list_input('Pick the {} object{}'.format(object_type,message), choices=choices, carousel = True)
 
         else:
             print('-----------------------------------------------')
@@ -527,141 +471,84 @@ class Modular_Abaqus_Builder:
         return selected_object, object_type
 
 
-    def provide_description(self):
+    def get_object_modifications(self, object_name, object_type):
         '''
         ---------------------------------------------------
-        Provide a description for the object added to the database.
-        ---------------------------------------------------
-        RETURNS
-        ---------------------------------------------------
-        description : str
-            A string typed by the user that describes the new object that only has characters from "allowed_characters_description".
-        ---------------------------------------------------
-        '''
-
-        description = ''
-
-        # Loop until new name is unique
-        while True:
-            print('---------------------------------------------------')
-            print('Please enter a description for the object to be created: ')
-            print('Note: ')
-            print('- It must only use letters, numbers, or the following symbols (not including single quotes): \'_-,.?! ()[]"\'')
-            print('---------------------------------------------------')
-            
-            description = input('Please enter a description for the object to be created: ')
-
-            if not description:
-                print('---------------------------------------------------')
-                print('ERROR: The description provided was an empty string')
-                print('---------------------------------------------------')
-
-            elif not (set(description) <= self.allowed_characters['Description']):
-                print('---------------------------------------------------')
-                print('ERROR: The description: "{}", does not meet the requirements.'.format(description))
-                print('---------------------------------------------------')
-            
-            else:
-                print('---------------------------------------------------')
-                print('The description: "{}", for the new object has been selected.'.format(description))
-                print('---------------------------------------------------')
-                return description
-
-
-    def set_requirements(self):
-        '''
         
+        ---------------------------------------------------
+        PARAMETERS
+        ---------------------------------------------------
+        object_name : str
+
+
+        object_type : str, [analysis/geometry/material]
+            
+        ---------------------------------------------------
         '''
+        possible_changes = ['name', 'description', 'parameters', 'requirements', 'cancel']
+        
+        # Get objects to be changed
+        modifications = inquirer.checkbox('What would you like to change about the object: "{}", of type: "{}"'.format(object_name,object_type),
+                                        choices = possible_changes)
 
-        requirements = ['MAIN.inp', 'SOLID_GEOMETRY.inp', 'SOLID_MATERIAL.inp', 'ANALYSIS.inp']
+        # Create change dictionary
+        object_modifications = {'name': False,
+                       'description' : False,
+                       'parameters' : False,
+                       'requirements' : False}
+        
+        # If no changes picked or cancelled return to main loop
+        if (not modifications) or ('cancel' in modifications):
+            print('-----------------------------------------------')
+            print('No changes picked or cancel command picked')
+            print('Returning to main loop.')
+            print('-----------------------------------------------')
+            return object_modifications
 
-        # if requires acoustic fluid add , FLUID_MATERIAL.inp, ASSEMBLY.inp
-        fluid = self.yes_no_question('Does the analysis require an acoustic fluid representation? ')
+        for modification_key in object_modifications.keys():
+            object_modifications[modification_key] = modification_key in modifications
 
-        if fluid:
-            requirements.append('FLUID_GEOMETRY.inp') 
-            requirements.append('FLUID_MATERIAL.inp') 
-            requirements.append('ASSEMBLY.inp') 
+        return object_modifications
+        
 
-
-        return fluid, requirements
-
-
-    def create_object(self, object_type, object_name, source_file_path, description, requirements, fluid_required):
+    def create_object(self, object_type):
         '''
         ---------------------------------------------------
-        Creates a new object in the database with an object type  from a specified file path. All input files from this file path will be copied to a new destination folder
+        Creates a new object in the database with a specified object type
         ---------------------------------------------------
         PARAMETERS
         ---------------------------------------------------
         object_type : str, [analysis/geometry/material]
             The type of object to be added to the database. This can be either of the three types listed above. If the string does not match exactly an error will be thrown.
-
-        object_name : str
-            The name of the object to be added. This will be used in the database, and as the file path that the input files will be stored in.
-
-        source_file_path : str
-            The file path which contains the input files to be added to the database. The names of these files will be used in the database, so must be set correctly.
-
-        description : str
-            A description of what the object to be created is.
-
-        requirements : list
-            A list of all the requirements/dependencies for this object to work in a model.
-
-        fluid_required : boolean
-            variable only relevant for analysis objects, True if fluid representation required else, False.
         ---------------------------------------------------
         '''
-        print('-----------------------------------------------')
-        print('Create object operation started.')
-        print('-----------------------------------------------')
 
-        # Get destination filepath of analysis
-        dest_file_path = os.path.join(self.fpaths[object_type], object_name.upper())
+        try:
+            if object_type == 'analysis':
+                
+                temp_object = Analysis_Object(self)
 
-        # Check file path does not already exist
-        if os.path.exists(dest_file_path):
+                self.data['analysis'][temp_object.name] = temp_object
+
+            elif object_type == 'geometry':
+
+                temp_object = Geometry_Object(self)
+
+                self.data['geometry'][temp_object.name] = temp_object
+
+            elif object_type == 'material':
+
+                temp_object = Material_Object(self)
+
+                self.data['material'][temp_object.name] = temp_object
+
+        except:
             print('-----------------------------------------------')
-            print('ERROR: The fpath: "{}", already exists.')
-            print('Returning to main loop.')
+            print('An error occurred while adding the object to the Database.')
             print('-----------------------------------------------')
-            return
-
-        # Create object in the database
-        self.data[object_type][object_name.lower()] = {'Name': object_name.lower(),
-                                                       'File_Path': dest_file_path,
-                                                       'Description': description,
-                                                       'Requirements' : requirements,
-                                                       'Fluid_Required' : fluid_required}
-        
-        print('The {}: "{}" has been successfully added to the local dictionary.'.format(object_type, object_name))
-        
-
-        # Copy *.inp files from source file path to the destination file path
-        files_to_copy = glob.glob(os.path.join(source_file_path,'*.inp'))
-        
-        # Create destination folder
-        os.makedirs(dest_file_path, exist_ok=True)
-        print('The Destination folder: "{}" has been successfully created.'.format(dest_file_path))
-
-        # Copy material file to new folder with new name
-        for file in files_to_copy:
-            file_name = file.split('\\')[-1]
-
-            # Try to copy the input file
-            try:
-                copy_input_file(file, os.path.join(dest_file_path, file_name[:-4].upper()+'.inp'), follow_symlinks=True)
-                print('The file: "{}" has been successfully added to the destination filepath: "{}".'.format(file_name[:-4].upper()+'.inp',dest_file_path))
-            except:
-                raise FileNotFoundError('The file: "{}" was not moved to the destination filepath. The database may now be corrupted.'.format(file_name[:-4].upper()+'.inp'))
-            
-        print('-----------------------------------------------')
-        print('Create object operation successful.')
-        print('-----------------------------------------------')
             
     
-    def modify_object(self, object_type, object_name, change_dict):
+    def modify_object(self, object_name, object_type):
         '''
         ---------------------------------------------------
         Modifies either an objects name or its fpath
@@ -673,67 +560,67 @@ class Modular_Abaqus_Builder:
 
         object_name : str
             The name of the object to be modified. If this does not match an object in the object type dictionary then an error will be thrown.
-        
-        change_dict : dict
-            A dictionary containing the values to be modified
         ---------------------------------------------------
         '''
         # Check the user would like to delete the object
-        if not self.yes_no_question('Would you like to modify object: "{}" of type: "{}"? \nNOTE: The database will be saved automatically afterwards and the previous name will be LOST'.format(object_name, object_type)):
+        if not self.yes_no_question('Would you like to modify object: "{}" of type: "{}"? \nNOTE: The database will be saved automatically afterwards and the previous information will be LOST'.format(object_name, object_type)):
             return
 
         print('-----------------------------------------------')
         print('Modify object operation begun.')
         print('-----------------------------------------------')
+
+        object_modifications = self.get_object_modifications(object_name, object_type)
         
         # Change name/file directory
-        if change_dict['name']['change']:
+        if object_modifications['name']:
+
+
+            # Pick new name
+            self.data[object_type][object_name].new_object_name()
+            new_name = self.data[object_type][object_name].name
+
+            self.data[object_type][new_name] = self.data[object_type].pop(object_name)
+
 
             # Change folder name
             try:
-                fpath = os.path.join(self.fpaths[object_type], object_name.upper())
-                new_fpath = os.path.join(self.fpaths[object_type], change_dict['name']['new_name'].upper())
+                fpath = os.path.join(self.fpaths[object_type], object_name)
+                new_fpath = os.path.join(self.fpaths[object_type], new_name)
                 os.rename(fpath, new_fpath)
                 print('Renaming the filepath: "{}" to "{}" was successful.'.format(fpath,new_fpath))
 
             except:
                 raise FileExistsError('Renaming the filepath: "{}" to "{}" has failed.'.format(fpath,new_fpath))
             
-            # Change name
-            self.data[object_type][object_name]['Name'] = change_dict['name']['new_name'].lower()
-            self.data[object_type][change_dict['name']['new_name']] = self.data[object_type].pop(object_name)
-            print('The {} name has been changed successfully from: "{}" to "{}".'.format(object_type,object_name,change_dict['name']['new_name']))
-
-            # Update object name if reused
-            object_name = change_dict['name']['new_name']
-
             # Change fpath
-            self.data[object_type][change_dict['name']['new_name']]['File_Path'] = new_fpath
-            print('The filepath for {} "{}" was successfully changed to "{}" in the local dictionary.'.format(object_type,change_dict['name']['new_name'],new_fpath))
+            self.data[object_type][new_name].fpath = new_fpath
+            print('The filepath for {} "{}" was successfully changed to "{}" in the local dictionary.'.format(object_type,new_name,new_fpath))
             
-            print('Name change was successful.')
+            object_name = new_name
+
+            print('Name modification was successful.')
 
         # Change description
-        if change_dict['description']['change']:
-            self.data[object_type][object_name]['Description'] = change_dict['description']['new_description']
-            print('Description change was successful.')
+        if object_modifications['description']:
+            self.data[object_type][object_name].new_description()
+            print('Description modification was successful.')
 
-        # Change requirements
-        if change_dict['requirements']['change']:
-            self.data[object_type][object_name]['Requirements'] = change_dict['requirements']['new_requirement']
-            print('Requirements change was successful.')
+        # Change parameters
+        if object_modifications['parameters']:
+            self.data[object_type][object_name].define_parameters()
+            print('Parameters modification was successful.')
+            
+        if object_modifications['requirements']:
+            self.data[object_type][object_name].set_requirements()
 
-        # Change fluid_required
-        if change_dict['fluid_required']['change']:
-            self.data[object_type][object_name]['Fluid_Required'] = change_dict['fluid_required']['new_fluid_required']
-            print('Fluid_Required change was successful.')
 
         print('-----------------------------------------------')
         print('Modify object operation successful.')
         print('-----------------------------------------------')
 
 
-    def duplicate_object(self, object_type, object_name, new_name):
+    def duplicate_object(self, object_type, object_name):
         '''
         ---------------------------------------------------
         Duplicates an object, both in the local dictionary and into a new filepath. 
@@ -745,58 +632,40 @@ class Modular_Abaqus_Builder:
 
         object_name : str
             The name of the object to be duplicated, all of this *.inp files will be duplicated from the file path. If this does not match an object in the object type dictionary then an error will be thrown.
-        
-        new_name : str
-            The new name of the object, this will be the name of the new file path.
         ---------------------------------------------------
         '''
         print('-----------------------------------------------')
         print('Duplicate object operation begun.')
         print('-----------------------------------------------')
 
-        # Get File paths
-        fpath = os.path.join(self.fpaths[object_type], object_name.upper())
-        new_fpath = os.path.join(self.fpaths[object_type], new_name.upper())
+        # Copy object and change its name
+        duplicated_object = deepcopy(self.data[object_type][object_name])
+        duplicated_object.builder = self
+        duplicated_object.new_object_name()
+        
+        new_name = duplicated_object.name
+
+        # Get new fpath
+        new_fpath = os.path.join(self.fpaths[object_type], new_name)
+        duplicated_object.fpath = new_fpath
+
+        self.data[object_type][new_name] = duplicated_object
+
+        # Get old file path
+        fpath = os.path.join(self.fpaths[object_type], object_name)
 
         # Check file path does not already exist
         if os.path.exists(new_fpath):
             raise FileExistsError('The file path: "{}" already exists.'.format(new_fpath))
 
-        # Make new folder
-        try:
-            os.makedirs(new_fpath, exist_ok=True)
-            print('The filepath: "{}" was created successfully.'.format(new_fpath))
-
-        except:
-            raise FileExistsError('Creating the filepath: "{}" has failed.'.format(new_fpath))
-        
-        # Duplicate dictionary object
-        self.data[object_type][new_name.lower()] = self.data[object_type][object_name.lower()]
-        self.data[object_type][new_name.lower()]['Name'] = new_name.lower()
-        self.data[object_type][new_name.lower()]['File_Path'] = new_fpath
-
-        # Get *.inp files as list
-        files_to_copy = glob.glob(os.path.join(fpath,'*.inp'))
-
-        # Copy *.inp files to new file path
-        for file in files_to_copy:
-
-            file_name = file.split('\\')[-1]
-
-            try:
-                copy_input_file(file, os.path.join(new_fpath, file_name[:-4].upper()+'.inp'), follow_symlinks=True)
-                print('The file: "{}" has been successfully duplicated to the filepath: "{}" from "{}".'.format(file_name[:-4].upper()+'.inp',new_fpath, fpath))
-
-            except:
-                raise FileNotFoundError('The file: "{}" was not moved to the destination filepath.'.format(file_name[:-4].upper()+'.inp'))
-        
+        self.data[object_type][new_name].move_folder(fpath, new_fpath)  
 
         print('-----------------------------------------------')
         print('Duplicate object operation successful.')
         print('-----------------------------------------------')
 
 
-    def delete_object(self, object_type, object_name):    
+    def delete_object(self, object_type, object_name):
         '''
         ---------------------------------------------------
         Deletes an object from the local database and the folder of *.inp files.
@@ -819,11 +688,8 @@ class Modular_Abaqus_Builder:
         print('Delete object operation begun.')
         print('-----------------------------------------------')
 
-        # Make object name lower case
-        object_name = object_name.lower()
-
         # Get file path of files
-        fpath = os.path.join(self.fpaths[object_type], object_name.upper())
+        fpath = os.path.join(self.fpaths[object_type], object_name)
 
         # Delete files from filepath
         rmtree(fpath)
@@ -839,148 +705,242 @@ class Modular_Abaqus_Builder:
         print('-----------------------------------------------')
         
 
-    def build_model(self, model_name, description):
+    def print_database(self):
+        '''
+        ---------------------------------------------------
+        Print Database in a cooler way than __str__. Hate that shit.
+        ---------------------------------------------------
+        '''
+
+        print('-----------------------------------------------')
+        print('The Analyses currently loaded are: ')
+        print('-----------------------------------------------')
+        for analysis in self.data['analysis'].values():
+
+            print('Analysis Name: "{}"'.format(analysis.name))
+            print('\tPath: "{}"'.format(analysis.fpath))
+            print('\tDescription: "{}"'.format(analysis.description))
+            print('\tFiles: ')
+
+            for file in analysis.files:
+                print('\t\t"{}"'.format(file))
+
+            print('\tParameters: ')
+
+            for parameter in analysis.parameters.keys():
+
+                print('\t\tName: "{}"'.format(analysis.parameters[parameter]['name']))
+                print('\t\t\tDescription: "{}"'.format(analysis.parameters[parameter]['description']))
+                print('\t\t\tData-type: "{}"'.format(analysis.parameters[parameter]['dtype']))
+                print('\t\t\tDefault Value: "{}"'.format(analysis.parameters[parameter]['default_value']))
+
+                print('\t\t\tSolvers parameter modifies: ')
+                for solver in analysis.parameters[parameter]['solvers']:
+                        print('\t\t\t\t"{}"'.format(solver))
+
+
+            print('\tRequirements: ')
+
+            for requirement_type in analysis.requirements.keys():
+                
+                print('\t\t"{}"'.format(requirement_type))
+
+                for requirement,requirement_value in analysis.requirements[requirement_type].items():
+                    print('\t\t\t"{}": "{}"'.format(requirement,requirement_value))
+
+            print('-----------------------------------------------')
+
+        
+        print('The Geometries currently loaded are: ')
+        print('-----------------------------------------------')
+        for geometry in self.data['geometry'].values():
+
+            print('Geometry Name: "{}"'.format(geometry.name))
+            print('\tPath: "{}"'.format(geometry.fpath))
+            print('\tDescription: "{}"'.format(geometry.description))
+            print('\tFiles: ')
+
+            for file in geometry.files:
+                print('\t\t"{}"'.format(file))
+
+            print('\tParameters: ')
+
+            for parameter in geometry.parameters.keys():
+
+                print('\t\tName: "{}"'.format(geometry.parameters[parameter]['name']))
+                print('\t\t\tDescription: "{}"'.format(geometry.parameters[parameter]['description']))
+                print('\t\t\tData-type: "{}"'.format(geometry.parameters[parameter]['dtype']))
+                print('\t\t\tDefault Value: "{}"'.format(geometry.parameters[parameter]['default_value']))
+
+                print('\t\t\tSolvers parameter modifies: ')
+                for solver in geometry.parameters[parameter]['solvers']:
+                        print('\t\t\t\t"{}"'.format(solver))
+
+
+            print('\tRequirements: ')
+
+            for requirement_type in geometry.requirements.keys():
+                
+                print('\t\t"{}"'.format(requirement_type))
+
+                for requirement,requirement_value in geometry.requirements[requirement_type].items():
+                    print('\t\t\t"{}": "{}"'.format(requirement,requirement_value))
+
+            print('-----------------------------------------------')
+
+
+        print('The Materials currently loaded are: ')
+        print('-----------------------------------------------')
+        for material in self.data['material'].values():
+
+            print('Material Name: "{}"'.format(material.name))
+            print('\tPath: "{}"'.format(material.fpath))
+            print('\tDescription: "{}"'.format(material.description))
+            print('\tFiles: ')
+
+            for file in material.files:
+                print('\t\t"{}"'.format(file))
+
+            print('\tParameters: ')
+
+            for parameter in material.parameters.keys():
+
+                print('\t\tName: "{}"'.format(material.parameters[parameter]['name']))
+                print('\t\t\tDescription: "{}"'.format(material.parameters[parameter]['description']))
+                print('\t\t\tData-type: "{}"'.format(material.parameters[parameter]['dtype']))
+                print('\t\t\tDefault Value: "{}"'.format(material.parameters[parameter]['default_value']))
+
+                print('\t\t\tSolvers parameter modifies: ')
+                for solver in material.parameters[parameter]['solvers']:
+                        print('\t\t\t\t"{}"'.format(solver))
+
+
+            print('\tRequirements: ')
+
+            for requirement_type in material.requirements.keys():
+                
+                print('\t\t"{}"'.format(requirement_type))
+
+                for requirement,requirement_value in material.requirements[requirement_type].items():
+                    print('\t\t\t"{}": "{}"'.format(requirement,requirement_value))
+
+            print('-----------------------------------------------')
+
+
+        # ******************* WILL NEED TO BE UPDATED UPON ADDING MODEL CLASS *************************
+
+        print('The Models currently loaded are: ')
+        print('-----------------------------------------------')
+        for model in self.data['model'].values():
+
+            print('Model Name: "{}"'.format(model.name))
+            print('\tDescription: "{}"'.format(model.description))
+            print('\tPath: "{}"'.format(model.fpath))
+            print('\tSolver Fpaths: ')
+
+            for solver,fpath in model.solver_fpaths.items():
+                if fpath is not None:
+                    print('\t\t "{}": "{}"'.format(solver,fpath))
+
+            print('\tAnalysis used: "{}"'.format(model.analysis.name))
+            print('\tWhich has requirements: ')
+
+            for requirement_type in model.requirements.keys():
+                
+                print('\t\t"{}"'.format(requirement_type))
+
+                for requirement,requirement_value in model.requirements[requirement_type].items():
+                    print('\t\t\t"{}": "{}"'.format(requirement,requirement_value))
+
+            print('\tGeometry used: "{}"'.format(model.geometry.name))
+            print('\tMaterials used: ')
+
+            for material in model.materials.keys():
+                print('\t\t"{}"'.format(model.materials[material].name))
+
+            print('\tParameters: ')
+
+            for parameter in model.parameters.keys():
+
+                print('\t\tName: "{}"'.format(model.parameters[parameter]['name']))
+                print('\t\t\tDescription: "{}"'.format(model.parameters[parameter]['description']))
+                print('\t\t\tData-type: "{}"'.format(model.parameters[parameter]['dtype']))
+                print('\t\t\tDefault Value: "{}"'.format(model.parameters[parameter]['default_value']))
+
+                print('\t\t\tSolvers parameter modifies: ')
+                for solver in model.parameters[parameter]['solvers']:
+                        print('\t\t\t\t"{}"'.format(solver))
+
+
+            print('-----------------------------------------------')
+
+
+    def yes_no_question(self, message):
+        '''
+        -----------------------------------------------
+        Ask a yes/no question, "yes" returns True and "no" returns False
+        -----------------------------------------------
+        '''
+        # Splits the message into lines
+        strings = message.split('\n')
+
+        # prints all except the final line
+        for smaller_string in strings[:-1]:
+            print(smaller_string)
+
+        # Enquire the yes and no question using the final line as the message
+        command = inquirer.list_input(strings[-1], choices=['yes','no'], carousel = True)
+
+        if command == 'yes':
+            return True 
+        elif command == 'no':
+            return False
+
+
+    def get_relative_fpath(self, full_fpath, relative_to_fpath):
+        '''
+        
+        '''
+        if relative_to_fpath and full_fpath:
+
+            full_fpath_list = os.path.normpath(full_fpath).split(os.path.sep)
+            relative_to_fpath_list = os.path.normpath(relative_to_fpath).split(os.path.sep)
+            
+            for dir in relative_to_fpath_list:
+                full_fpath_list.remove(dir)
+                
+            return os.path.join(*full_fpath_list)
+        
+        return full_fpath
+        
+        
+        
+        
+
+
+
+
+    def create_model(self): # update
         '''
         Build model
         '''
+        try:
+            model = Model(self)
+            
+            self.data['model'][model.name] = model
+        except:
+            print('-----------------------------------------------')
+            print('Create Model Failed, returning to Model loop.')
+            print('-----------------------------------------------')
+
+            # DELETE FAILED MODEL FILES AND REMOVE FROM DATABASE
+            return
         
-        # Add to local dictionary
-        self.data['simulation'][model_name] = {'Name' : model_name,
-                                               'File_Path' : os.path.join(self.fpaths['simulation'],model_name),
-                                               'Description' : description,
-                                               'Main_File' : '',
-                                               'Input_Files' : [],
-                                               'Requirements' : [],
-                                               'Objects' : []}
 
-        # Make folder
-        new_fpath = self.data['simulation'][model_name]['File_Path']
-        os.makedirs(new_fpath, exist_ok=True)
-
-
-        # Copy main.inp with new name
-        new_main_name = model_name.upper()+'.inp'
-        copy_input_file(os.path.join(self.fpaths['model_files'], 'MAIN.inp'), os.path.join(new_fpath, new_main_name), follow_symlinks=True)
-        self.data['simulation'][model_name]['Main_File'] = new_main_name
-        self.data['simulation'][model_name]['Input_Files'].append(new_main_name)
-        print('The file: "{}" has been successfully duplicated to the filepath: "{}" from "{}".'.format(new_main_name, new_fpath, self.fpaths['model_files']))
-        print('-----------------------------------------------')
-
-
-
-        # Select Analysis
-        analysis_name,_ = self.select_object('analysis', message=' for the model: "{}" to be built'.format(model_name))
-
-        # Get old file path of analysis
-        fpath = self.data['analysis'][analysis_name]['File_Path']
-
-        # Update local dictionary to add analysis information
-        self.data['simulation'][model_name]['Objects'].append(analysis_name)
-        self.data['simulation'][model_name]['Requirements'] = self.data['analysis'][analysis_name]['Requirements']
-
-        # Get *.inp files as list from analysis filepath
-        files_to_copy = glob.glob(os.path.join(fpath,'*.inp'))
-
-        # Copy *.inp files to new file path
-        for file in files_to_copy:
-
-            file_name = file.split('\\')[-1]
-
-            self.data['simulation'][model_name]['Input_Files'].append(file_name[:-4].upper()+'.inp')
-
-            try:
-                copy_input_file(file, os.path.join(new_fpath, file_name[:-4].upper()+'.inp'), follow_symlinks=True)
-                print('The file: "{}" has been successfully duplicated to the filepath: "{}" from "{}".'.format(file_name[:-4].upper()+'.inp',new_fpath, fpath))
-
-            except:
-                raise FileNotFoundError('The file: "{}" was not moved to the destination filepath.'.format(file_name[:-4].upper()+'.inp'))
-
-
-
-        # Select Geometry
-        geometry_name,_ = self.select_object('geometry', message=' for the model: "{}" to be built'.format(model_name))
-
-        # Get old file path
-        fpath = self.data['geometry'][geometry_name]['File_Path']
-
-        # Update local dictionary to add analysis information
-        self.data['simulation'][model_name]['Objects'].append(geometry_name)
-
-        # Get *.inp files as list from analysis filepath
-        files_to_copy = glob.glob(os.path.join(fpath,'*.inp'))
-
-        # Copy *.inp files to new file path
-        for file in files_to_copy:
-
-            file_name = file.split('\\')[-1]
-
-            self.data['simulation'][model_name]['Input_Files'].append(file_name[:-4].upper()+'.inp')
-
-            try:
-                copy_input_file(file, os.path.join(new_fpath, file_name[:-4].upper()+'.inp'), follow_symlinks=True)
-                print('The file: "{}" has been successfully duplicated to the filepath: "{}" from "{}".'.format(file_name[:-4].upper()+'.inp',new_fpath, fpath))
-
-            except:
-                raise FileNotFoundError('The file: "{}" was not moved to the destination filepath.'.format(file_name[:-4].upper()+'.inp'))
-
-
-
-        # Select solid material
-        material_name,_ = self.select_object('material', message=' for the model: "{}" to be built. (Note: this is the solid material)'.format(model_name))
-
-        # Get old file path
-        fpath = self.data['material'][material_name]['File_Path']
-
-        # Update local dictionary to add analysis information
-        self.data['simulation'][model_name]['Objects'].append(material_name)
-
-        # Get *.inp files as list from analysis filepath
-        files_to_copy = glob.glob(os.path.join(fpath,'*.inp'))
-
-        # Copy *.inp files to new file path
-        for file in files_to_copy:
-
-            file_name = file.split('\\')[-1]
-
-            self.data['simulation'][model_name]['Input_Files'].append(file_name[:-4].upper()+'.inp')
-
-            try:
-                copy_input_file(file, os.path.join(new_fpath, file_name[:-4].upper()+'.inp'), follow_symlinks=True)
-                print('The file: "{}" has been successfully duplicated to the filepath: "{}" from "{}".'.format(file_name[:-4].upper()+'.inp',new_fpath, fpath))
-
-            except:
-                raise FileNotFoundError('The file: "{}" was not moved to the destination filepath.'.format(file_name[:-4].upper()+'.inp'))
-
-
-
-        fluid_required = True
-
-        # Select fluid material
-        if fluid_required:
-            material_name,_ = self.select_object('material', message=' for the model: "{}" to be built. (Note: this is the fluid material)'.format(model_name))
-
-            # Get old file path
-            fpath = self.data['material'][material_name]['File_Path']
-
-            # Update local dictionary to add analysis information
-            self.data['simulation'][model_name]['Objects'].append(material_name)
-
-            # Get *.inp files as list from analysis filepath
-            files_to_copy = glob.glob(os.path.join(fpath,'*.inp'))
-
-            # Copy *.inp files to new file path
-            for file in files_to_copy:
-
-                file_name = file.split('\\')[-1]
-
-                self.data['simulation'][model_name]['Input_Files'].append(file_name[:-4].upper()+'.inp')
-
-                try:
-                    copy_input_file(file, os.path.join(new_fpath, file_name[:-4].upper()+'.inp'), follow_symlinks=True)
-                    print('The file: "{}" has been successfully duplicated to the filepath: "{}" from "{}".'.format(file_name[:-4].upper()+'.inp',new_fpath, fpath))
-
-                except:
-                    raise FileNotFoundError('The file: "{}" was not moved to the destination filepath.'.format(file_name[:-4].upper()+'.inp'))
+        
+        
+        
+        
 
 
     def modify_model(self):
@@ -1009,40 +969,18 @@ class Modular_Abaqus_Builder:
         pass
     
 
-    def postprocess_model(self, model_name):
+    def postprocess_model(self):
         '''
         
         '''
         pass
 
 
-    def run_model(self, model_name):
+    def run_model(self):
         '''
         
         '''
         pass 
-
-
-    def yes_no_question(self, message):
-        '''
-        -----------------------------------------------
-        Ask a yes/no question, "yes" returns True and "no" returns False
-        -----------------------------------------------
-        '''
-        # Splits the message into lines
-        strings = message.split('\n')
-
-        # prints all except the final line
-        for smaller_string in strings[:-1]:
-            print(smaller_string)
-
-        # Enquire the yes and no question using the final line as the message
-        command = inquirer.list_input(strings[-1], choices=['yes','no'])
-
-        if command == 'yes':
-            return True 
-        elif command == 'no':
-            return False
 
 
     def validate(self):
@@ -1064,71 +1002,6 @@ class Modular_Abaqus_Builder:
         return ':3'
 
 
-    def print_database(self):
-        '''
-        ---------------------------------------------------
-        Print Database in a cooler way than __str__. Hate that shit.
-        ---------------------------------------------------
-        '''
-
-        print('-----------------------------------------------')
-        print('The Analyses currently loaded are: ')
-        print('-----------------------------------------------')
-        for analysis in self.data['analysis'].values():
-
-            # Get input files
-            fpath = os.path.join(analysis['File_Path'],'*.inp')
-            input_files = [x.split('\\')[-1] for x in glob.glob(fpath)]
-
-            print('Analysis Name: "{}'.format(analysis['Name']))
-            print('\tPath: "{}"'.format(analysis['File_Path']))
-            print('\tDescription: "{}"'.format(analysis['Description']))
-            print('\tRequirements: "{}"'.format(analysis['Requirements']))
-            print('\tInput Files: "{}"'.format(input_files))
-            print('\tFluid Required: "{}"'.format(analysis['Fluid_Required']))
-            print('-----------------------------------------------')
-
-        print('The Geometries currently loaded are: ')
-        print('-----------------------------------------------')
-        for geometry in self.data['geometry'].values():
-
-            # Get input files
-            fpath = os.path.join(geometry['File_Path'],'*.inp')
-            input_files = [x.split('\\')[-1] for x in glob.glob(fpath)]
-
-            print('Geometry Name: "{}'.format(geometry['Name']))
-            print('\tPath: "{}"'.format(geometry['File_Path']))
-            print('\tDescription: "{}"'.format(geometry['Description']))
-            print('\tRequirements: "{}"'.format(geometry['Requirements']))
-            print('\tInput Files: "{}"'.format(input_files))
-            print('-----------------------------------------------')
-
-
-        print('The Materials currently loaded are: ')
-        print('-----------------------------------------------')
-        for material in self.data['material'].values():
-
-            # Get input files
-            fpath = os.path.join(material['File_Path'],'*.inp')
-            input_files = [x.split('\\')[-1] for x in glob.glob(fpath)]
-
-            print('Material Name: "{}'.format(material['Name']))
-            print('\tPath: "{}"'.format(material['File_Path']))
-            print('\tDescription: "{}"'.format(material['Description']))
-            print('\tRequirements: "{}"'.format(material['Requirements']))
-            print('\tInput Files: "{}"'.format(input_files))
-            print('-----------------------------------------------')
-
-        for model in self.data['simulation'].values():
-            print('Model Name: "{}'.format(model['Name']))
-            print('\tPath: "{}"'.format(model['File_Path']))
-            print('\tDescription: "{}"'.format(model['Description']))
-            print('\tMain File: "{}"'.format(model['Main_File']))
-            print('\tRequirements: "{}"'.format(model['Requirements']))
-            print('\tInput Files: "{}"'.format(model['Input_Files']))
-            print('\tObjects : "{}"'.format(model['Objects']))
-            print('-----------------------------------------------')
-
     def print_main_help_message(self):
         '''
         ---------------------------------------------------
@@ -1144,7 +1017,7 @@ class Modular_Abaqus_Builder:
     def print_object_help_message(self):
         '''
         ---------------------------------------------------
-        Prints a help message for using the alter object text interface
+        Prints a help message for using the Edit Object text interface
 
         **********************************TODO***********************************
         ---------------------------------------------------

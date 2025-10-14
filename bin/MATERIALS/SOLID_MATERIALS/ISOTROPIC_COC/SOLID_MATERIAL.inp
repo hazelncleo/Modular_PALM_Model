@@ -1,6 +1,0 @@
-** Material Definition for Isotropic COC SI(mm)
-*Material, name=SOLID_MATERIAL
-*Density
- 1.34e-09,
-*Elastic
- 4000., 0.38
