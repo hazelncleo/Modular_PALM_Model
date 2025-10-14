@@ -46,8 +46,10 @@ abaqus_whole-chip_solid_1.FIXED, 3, 3, <vibration_amplitude>
 ** FIELD OUTPUT: F-Output-1
 ** 
 *Output, field, frequency=1
-*Node Output
+*Node Output, nset=abaqus_whole-chip_solid_1.solid
   U,
+*Node Output, nset=abaqus_whole-chip_acoustic_1.acoustic
+  POR,
 ** 
 ** HISTORY OUTPUT: H-Output-1
 ** 

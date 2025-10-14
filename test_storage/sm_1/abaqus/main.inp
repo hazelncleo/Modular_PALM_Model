@@ -1,0 +1,49 @@
+*Parameter
+vibration_frequency=1e6
+n_cycles=2
+x_grid_position=6
+y_grid_position=8
+** Include Required Geometries
+*INCLUDE, INPUT=abaqus_submodel_solid.inp
+*INCLUDE, INPUT=abaqus_submodel_acoustic.inp
+*INCLUDE, INPUT=assembly.inp
+** Include Required Materials
+*INCLUDE, INPUT=abaqus_solid.inp
+*INCLUDE, INPUT=abaqus_acoustic.inp
+** ----------------------------------------------------------------
+** Coupled abaqus-fluent vibration model, looking at droplet ejection
+** ----------------------------------------------------------------
+*Parameter
+** ----------------------------------------------------------------
+** CALCULATED VALUES
+** ----------------------------------------------------------------
+** Calculate the total time of the simulation
+total_time = n_cycles / vibration_frequency
+** Calculate the max number of increments
+n_increments = n_cycles * 10
+** ----------------------------------------------------------------
+*Step, name=Vibration, nlgeom=YES
+*Dynamic, EXPLICIT, ELEMENT BY ELEMENT
+,<total_time>,,
+*Boundary, submodel, step=1
+  abaqus_submodel_acoustic_1.driven_nodes, 8, 8
+  abaqus_submodel_solid_1.driven_nodes, 1, 1
+  abaqus_submodel_solid_1.driven_nodes, 2, 2
+  abaqus_submodel_solid_1.driven_nodes, 3, 3
+** 
+** OUTPUT REQUESTS
+** 
+** 
+** FIELD OUTPUT: F-Output-1
+** 
+*Output, field, NUMBER INTERVAL = <n_increments>
+*Node Output, variable=PRESELECT
+*Element Output, directions=YES, variable=PRESELECT
+*Contact Output, variable=PRESELECT
+** 
+** HISTORY OUTPUT: H-Output-1
+** 
+*Output, history
+*Energy Output, variable=ALL
+*End Step
+** test comment

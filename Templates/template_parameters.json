@@ -4,8 +4,8 @@
         "description": "",
         "dtype": "float",
         "default_value": 1.57,
-        "files": [
-            "PATH\\TO\\FILE"
+        "solvers": [
+            "abaqus"
         ]
     },
     "<int_parameter_name>": {
@@ -13,8 +13,9 @@
         "description": "",
         "dtype": "int",
         "default_value": 2,
-        "files": [
-            "PATH\\TO\\FILE"
+        "solvers": [
+            "fluent",
+			"mpcci"
         ]
     }
 }

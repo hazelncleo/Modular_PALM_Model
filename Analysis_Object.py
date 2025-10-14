@@ -492,8 +492,7 @@ class Analysis_Object:
                                 },
                                 "analysis": {
                                     "abaqus_global_odb": False,
-                                    "abaqus_global_prt": False,
-                                    "fluent_journal": False
+                                    "abaqus_global_prt": False
                                 }}
         
 
@@ -515,7 +514,7 @@ class Analysis_Object:
                                        default = [key for key in self.requirements['materials'].keys() if self.requirements['materials'][key]]),
                      inquirer.Checkbox('analysis',
                                        message = 'Please choose the additional components required for this analysis',
-                                       choices = ['abaqus_global_odb', 'abaqus_global_prt','fluent_journal'],
+                                       choices = ['abaqus_global_odb', 'abaqus_global_prt'],
                                        carousel = True,
                                        default = [key for key in self.requirements['analysis'].keys() if self.requirements['analysis'][key]])]
         

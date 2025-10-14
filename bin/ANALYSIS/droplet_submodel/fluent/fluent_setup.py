@@ -5,7 +5,7 @@ def fluent_setup(file_name = 'fluent_model.cas.h5',
                  fluent_wd = '',
                  parameters = {'x_grid_position' : {'default_value' : 3},
                                'y_grid_position' : {'default_value' : 3},
-                               'frequency' : {'default_value' : 1.63e6},
+                               'vibration_frequency' : {'default_value' : 1.63e6},
                                'n_cycles' : {'default_value' : 50}}):
     '''
     
@@ -14,13 +14,13 @@ def fluent_setup(file_name = 'fluent_model.cas.h5',
     # Get parameter values
     x_grid_position = parameters['x_grid_position']['default_value']
     y_grid_position = parameters['y_grid_position']['default_value']
-    frequency = parameters['frequency']['default_value']
+    vibration_frequency = parameters['vibration_frequency']['default_value']
     n_cycles = parameters['n_cycles']['default_value']
 
     print('Parameter Values: ')
     print('x_grid_position = "{}"'.format(x_grid_position))
     print('y_grid_position = "{}"'.format(y_grid_position))
-    print('frequency = "{}"'.format(frequency))
+    print('vibration_frequency = "{}"'.format(vibration_frequency))
     print('n_cycles = "{}"'.format(n_cycles))
 
     # Grid spacing between each section
@@ -31,22 +31,25 @@ def fluent_setup(file_name = 'fluent_model.cas.h5',
     Y_TRANSLATION = GRID_SPACING*(y_grid_position-3)
 
     # Calculate Total Time and other time stepping parameters
-    TOTAL_TIME = n_cycles / frequency
-    MINIMUM_STEP_SIZE = 1/(1000*frequency)
-    MAXIMUM_STEP_SIZE = 1/(20*frequency)
-    INITIAL_STEP_SIZE = 1/(50*frequency)
-    SAVE_FREQUENCY = 1/(10*frequency)
+    TOTAL_TIME = n_cycles / vibration_frequency
+    MINIMUM_STEP_SIZE = 1/(1000*vibration_frequency)
+    MAXIMUM_STEP_SIZE = 1/(50*vibration_frequency)
+    INITIAL_STEP_SIZE = 1/(50*vibration_frequency)
+    SAVE_FREQUENCY = 1/(10*vibration_frequency)
 
     # ----------------------------------------------------------------
     # Setup of Model
     # ----------------------------------------------------------------
 
     print('Instantiating Fluent session, Note: this can take a while.')
+    print('----------------------------------------------------------------')
     # Instantiate fluent launcher
     if fluent_wd:
         solver = pyfluent.launch_fluent(mode='solver', ui_mode='hidden_gui', precision='double', processor_count=16, cwd=fluent_wd, start_transcript=False)
     else:
         solver = pyfluent.launch_fluent(mode='solver', ui_mode='hidden_gui', precision='double', processor_count=16, start_transcript=False)
+
+    print('----------------------------------------------------------------')
     print('Fluent session instantiated')
 
     # Import mesh
@@ -93,7 +96,7 @@ def fluent_setup(file_name = 'fluent_model.cas.h5',
     solver.tui.define.dynamic_mesh.controls.remeshing_parameters.unified_remeshing('no')
     solver.tui.define.dynamic_mesh.controls.remeshing_parameters.remeshing_methods('yes', 'no', 'no', 'no')
     solver.tui.define.dynamic_mesh.controls.remeshing_parameters.length_min('5e-07')
-    solver.tui.define.dynamic_mesh.controls.remeshing_parameters.cell_skew_max('0.65')
+    solver.tui.define.dynamic_mesh.controls.remeshing_parameters.cell_skew_max('0.7')
     
     # Boundary Conditions 
     solver.setup.boundary_conditions.wall['solid_coupling'] = {"phase" : {"mixture" : {"multiphase" : {"contact_angles" : {"water-air" : {"value" : 1.5707961}}}}}}
@@ -119,6 +122,7 @@ def fluent_setup(file_name = 'fluent_model.cas.h5',
     solver.solution.monitor.residual.equations['z-velocity'].absolute_criteria = 1e-05
 
     # Translate to position
+    print('Translating Mesh by: [x = {}, y = {}, z = 0.0]'.format(X_TRANSLATION,Y_TRANSLATION))
     solver.mesh.translate(offset = [X_TRANSLATION, Y_TRANSLATION, 0])
 
     # Time stepping controls
