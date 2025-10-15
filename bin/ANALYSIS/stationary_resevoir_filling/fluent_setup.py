@@ -26,11 +26,13 @@ def fluent_setup(file_name = 'fluent_model.cas.h5',
     # ----------------------------------------------------------------
 
     print('Instantiating Fluent session, Note: this can take a while.')
+    print('----------------------------------------------------------------')
     # Instantiate fluent launcher
     if fluent_wd:
         solver = pyfluent.launch_fluent(mode='solver', ui_mode='hidden_gui', precision='double', processor_count=16, cwd=fluent_wd, start_transcript=False)
     else:
         solver = pyfluent.launch_fluent(mode='solver', ui_mode='hidden_gui', precision='double', processor_count=16, start_transcript=False)
+    print('----------------------------------------------------------------')
     print('Fluent session instantiated')
 
     # Import mesh

@@ -12,6 +12,8 @@ from importlib.util import module_from_spec
 import ansys.fluent.core as pyfluent
 import sys
 import xml.etree.ElementTree as ET
+from HazelsAwesomeTheme import HazelsAwesomeTheme as Theme
+import sys
 
 
 class Model:
@@ -476,7 +478,7 @@ class Model:
             
         # Query user to pick which parameters they would like to edit the values of for use in this model
         questions = [inquirer.Checkbox('chosen_parameters', 'Pick the parameters that you would like to change the values of for this model', choices = list(self.parameters.keys()), carousel = True)]
-        answers = inquirer.prompt(questions)
+        answers = inquirer.prompt(questions , theme=Theme())
         print('---------------------------------------------------')
 
         # Loop over parameters that user would like to change the values of
@@ -580,9 +582,6 @@ class Model:
                     print('File: "{}", copied to model path'.format(requirement_name+'.inp'))
 
 
-        
-
-
         # Add parameter values to main abaqus input file
         with open(os.path.join(self.solver_fpaths['abaqus'],'main.inp'),'r') as inp_read, open(os.path.join(self.solver_fpaths['abaqus'],'temp.inp'),'w') as inp_write:
 
@@ -601,14 +600,11 @@ class Model:
             copyfileobj(inp_read,inp_write)
 
 
+        # Save modified main input file
         if self.solver_fpaths['mpcci']:
-            
-            # Overwrite old main.inp
             os.replace(os.path.join(self.solver_fpaths['abaqus'],'temp.inp'),os.path.join(self.solver_fpaths['abaqus'],'main.inp'))
             
         else: 
-            
-            # Delete old main input file and rename temp file
             os.remove(os.path.join(self.solver_fpaths['abaqus'],'main.inp'))
             os.rename(os.path.join(self.solver_fpaths['abaqus'],'temp.inp'),os.path.join(self.solver_fpaths['abaqus'],self.name+'.inp'))
 
@@ -681,16 +677,38 @@ class Model:
                              fluent_wd = os.path.join(os.getcwd(),self.solver_fpaths['fluent']),
                              parameters = self.parameters)
                 
-                print('---------------------------------------------------')
-                print('Assembly of Fluent model successful')
-                print('---------------------------------------------------')
-                return
+                sys.dont_write_bytecode = False
+                
+                break
+        
+        # Edit journal file
+        if not self.solver_fpaths['mpcci']:
+            with open(os.path.join(self.solver_fpaths['fluent'],'journal.jou'),'r') as old_file, open(os.path.join(self.solver_fpaths['fluent'],'temp.jou'),'w') as new_file:
+
+                # Write new first two lines
+                new_file.write('\t; Read the case file\n')
+                new_file.write('\t/rc {}\n'.format(fluent_name))
+
+                # Delete first two lines of old journal file
+                old_file.readline()
+                old_file.readline()
+
+                # Copy rest of journal file
+                copyfileobj(old_file,new_file)
+                
+            os.replace(os.path.join(self.solver_fpaths['fluent'],'temp.jou'),os.path.join(self.solver_fpaths['fluent'],'journal.jou'))
+
+        
+        print('---------------------------------------------------')
+        print('Assembly of Fluent model successful')
+        print('---------------------------------------------------')
 
 
     def get_fluent_script(self):
         '''
         
         '''
+        sys.dont_write_bytecode = True
 
         # Get setup python script
         spec = spec_from_file_location('fluent_setup',os.path.join(self.solver_fpaths['fluent'],'fluent_setup.py'))
@@ -705,6 +723,7 @@ class Model:
         '''
         
         '''
+        sys.dont_write_bytecode = True
 
         # Get setup python script
         spec = spec_from_file_location('mpcci_setup',os.path.join(self.solver_fpaths['mpcci'],'mpcci_setup.py'))
@@ -740,6 +759,8 @@ class Model:
 
         # Edit mpcci .csp file via script, depending on parameters set for the analysis.
         mpcci_setup(fpath = self.solver_fpaths['mpcci'], name = self.name, parameters = self.parameters, fluent_cpus = answers['fluent_cpus'], abaqus_cpus = answers['abaqus_cpus'])
+
+        sys.dont_write_bytecode = False
 
         # Delete old main.csp
         os.remove(os.path.join(self.solver_fpaths['mpcci'],'main.csp'))

@@ -465,56 +465,35 @@ class Analysis_Object:
             self.set_requirements()
         
         
-    def set_requirements(self):
+    def set_requirements(self, reset_requirements = False):
         '''
         ---------------------------------------------------
         Prompts the user to set the requirements for this Analysis object
         ---------------------------------------------------
         '''
         # Set the default requirement dict if it does not exist
-        if not hasattr(self, 'requirements'):
-            self.requirements = {"softwares": {
-                                    "abaqus": False,
-                                    "fluent": False,
-                                    "mpcci": False
-                                },
-                                "geometries": {
-                                    "abaqus_whole-chip_solid": False,
-                                    "abaqus_whole-chip_acoustic": False,
-                                    "abaqus_submodel_solid": False,
-                                    "abaqus_submodel_acoustic": False,
-                                    "fluent_whole-chip_fluid": False,
-                                    "fluent_submodel_fluid": False
-                                },
-                                "materials": {
-                                    "abaqus_solid": False,
-                                    "abaqus_acoustic": False
-                                },
-                                "analysis": {
-                                    "abaqus_global_odb": False,
-                                    "abaqus_global_prt": False
-                                }}
+        if (not hasattr(self, 'requirements')) or reset_requirements:
+            self.requirements = self.builder.requirements
         
-
         # Build questions object
         questions = [inquirer.Checkbox('softwares',
                                        message = 'Please choose the softwares required for this analysis',
-                                       choices = ['abaqus','fluent','mpcci'],
+                                       choices = list(self.builder.requirements['softwares'].keys()),
                                        carousel = True,
                                        default = [key for key in self.requirements['softwares'].keys() if self.requirements['softwares'][key]]),
                      inquirer.Checkbox('geometries',
                                        message = 'Please enter the geometries required for this analysis',
-                                       choices = ["abaqus_whole-chip_solid", "abaqus_whole-chip_acoustic", "abaqus_submodel_solid", "abaqus_submodel_acoustic", "fluent_whole-chip_fluid", "fluent_submodel_fluid"],
+                                       choices = list(self.builder.requirements['geometries'].keys()),
                                        carousel = True,
                                        default = [key for key in self.requirements['geometries'].keys() if self.requirements['geometries'][key]]),
                      inquirer.Checkbox('materials',
                                        message = 'Please choose the materials required for this analysis',
-                                       choices = ['abaqus_solid', 'abaqus_acoustic'],
+                                       choices = list(self.builder.requirements['materials'].keys()),
                                        carousel = True,
                                        default = [key for key in self.requirements['materials'].keys() if self.requirements['materials'][key]]),
                      inquirer.Checkbox('analysis',
                                        message = 'Please choose the additional components required for this analysis',
-                                       choices = ['abaqus_global_odb', 'abaqus_global_prt'],
+                                       choices = list(self.builder.requirements['analysis'].keys()),
                                        carousel = True,
                                        default = [key for key in self.requirements['analysis'].keys() if self.requirements['analysis'][key]])]
         

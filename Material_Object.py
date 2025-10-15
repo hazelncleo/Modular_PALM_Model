@@ -448,16 +448,14 @@ class Material_Object:
             self.set_requirements()
         
         
-    def set_requirements(self):
+    def set_requirements(self, reset_requirements = False):
         '''
         
         '''
         # Set the default requirement dict if it does not exist
-        if not hasattr(self, 'requirements'):
-            self.requirements = {"materials": {
-                                    "abaqus_solid": False,
-                                    "abaqus_acoustic": False
-                                }}
+        if (not hasattr(self, 'requirements')) or reset_requirements:
+            self.requirements = {}
+            self.requirements['materials'] = self.builder.requirements['materials']
             
         
         # Check if files exist in directory

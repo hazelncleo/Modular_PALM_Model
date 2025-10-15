@@ -10,6 +10,9 @@ from Analysis_Object import Analysis_Object
 from Geometry_Object import Geometry_Object
 from Material_Object import Material_Object
 from Model import Model
+import json
+from shutil import copyfileobj
+
 
 
 class Modular_Abaqus_Builder:
@@ -86,34 +89,90 @@ class Modular_Abaqus_Builder:
         ---------------------------------------------------
         '''
 
-        # Set filepaths
-        objectfiles_fpath = 'object_files'
-        self.fpaths = {'object_files' : objectfiles_fpath,
-                    'analysis' : os.path.join(objectfiles_fpath, 'analysis'),
-                    'geometry' : os.path.join(objectfiles_fpath, 'geometry'),
-                    'material': os.path.join(objectfiles_fpath, 'materials'),
-                    'model_files': 'model_files',
-                    'data': 'data.pickle'}
+        # Try to load the base_data .json
+        try:
+            with open('base_data.json') as f_load:
+                base_data = json.load(f_load)
 
-        # Set allowed characters
-        self.allowed_characters = {'Name' : set(string.ascii_lowercase + string.digits + '_-'),
-                                'Model' : set(string.ascii_letters + string.digits + '_-!()[]'),
-                                'Description' : set(string.ascii_letters + string.digits + '_-,.?! ()[]"')}
+            self.fpaths = base_data['fpaths']
+
+            self.requirements = base_data['requirements']
+
+            self.allowed_characters = {key : set(value) for key, value in base_data['allowed_characters'].items()}
+
+            self.inquirer_dialogs = base_data['inquirer_dialogs']
+
+            self.data = base_data['data']
+
+
+        except:
+
+            print('Loading the base database information failed, using base information in program instead')
+            print('Note, that preferably a "base_data.json" should be created by the user.')
+
+            # Set filepaths
+            objectfiles_fpath = 'object_files'
+            self.fpaths = {'object_files' : objectfiles_fpath,
+                        'analysis' : os.path.join(objectfiles_fpath, 'analysis'),
+                        'geometry' : os.path.join(objectfiles_fpath, 'geometry'),
+                        'material': os.path.join(objectfiles_fpath, 'material'),
+                        'model_files': 'model_files',
+                        'data': 'data.pickle'}
+            
+            # Set requirements
+            self.requirements = {"softwares": {
+                                    "abaqus": False,
+                                    "fluent": False,
+                                    "mpcci": False
+                                },
+                                "geometries": {
+                                    "assembly" : False,
+                                    "abaqus_whole-chip_solid": False,
+                                    "abaqus_whole-chip_acoustic": False,
+                                    "abaqus_submodel_solid": False,
+                                    "abaqus_submodel_acoustic": False,
+                                    "fluent_whole-chip_fluid": False,
+                                    "fluent_submodel_fluid": False
+                                },
+                                "materials": {
+                                    "abaqus_solid": False,
+                                    "abaqus_acoustic": False
+                                },
+                                "analysis": {
+                                    "abaqus_global_odb": False,
+                                    "abaqus_global_prt": False}}
+
+            # Set allowed characters
+            self.allowed_characters = {'Name' : set(string.ascii_lowercase + string.digits + '_-'),
+                                    'Model' : set(string.ascii_letters + string.digits + '_-!()[]'),
+                                    'Description' : set(string.ascii_letters + string.digits + '_-,.?! ()[]"')}
+            
+            # Set inquirer dialog lists
+            self.inquirer_dialogs = {'Object_Types' : ['analysis','geometry','material'],
+                                    'Main_Loop' : ['edit_objects', 'edit_models', 'save_database', 'validate_database', 'help', 'exit'],
+                                    'Object_Loop' : ['create', 'modify', 'duplicate', 'delete', 'help', 'back'],
+                                    'Model_Loop' : ['create', 'modify', 'duplicate', 'delete', 'post_process', 'run', 'help', 'back']}
         
-        # Set inquirer dialog lists
-        self.inquirer_dialogs = {'Object_Types' : ['analysis','geometry','material'],
-                                'Main_Loop' : ['edit_objects', 'edit_models', 'save_database', 'help', 'exit', 'force_exit'],
-                                'Object_Loop' : ['create', 'modify', 'duplicate', 'delete', 'help', 'back'],
-                                'Model_Loop' : ['create', 'modify', 'duplicate', 'delete', 'post_process', 'run', 'help', 'back']}
-    
-        self.data = {'analysis': {}, 'geometry': {}, 'material': {}, 'model': {}}
+            self.data = {'analysis': {}, 'geometry': {}, 'material': {}, 'model': {}}
+
 
         # Make storage folders if they dont exist
-        os.makedirs(self.fpaths['analysis'], exist_ok=True)
-        os.makedirs(self.fpaths['geometry'], exist_ok=True)
-        os.makedirs(self.fpaths['material'], exist_ok=True)
-        os.makedirs(self.fpaths['model_files'], exist_ok=True)
+        if not os.path.exists(self.fpaths['analysis']):
+            os.makedirs(self.fpaths['analysis'], exist_ok=True)
+            print('Analysis objects fpath did not exist, one has been created')
+        
+        if not os.path.exists(self.fpaths['geometry']):
+            os.makedirs(self.fpaths['geometry'], exist_ok=True)
+            print('Geometry objects fpath did not exist, one has been created')
 
+        if not os.path.exists(self.fpaths['material']):
+            os.makedirs(self.fpaths['material'], exist_ok=True)
+            print('Material objects fpath did not exist, one has been created')
+
+        if not os.path.exists(self.fpaths['model_files']):
+            os.makedirs(self.fpaths['model_files'], exist_ok=True)
+            print('Model fpath did not exist, one has been created')
+        
 
     def overwrite_database(self):
         '''
@@ -227,8 +286,8 @@ class Modular_Abaqus_Builder:
 
         while True:
             
-            # Commands = ['edit_objects', 'edit_models', 'save_database', 'help', 'exit', 'force_exit']
-            command = inquirer.list_input('Pick Command: ', choices=self.inquirer_dialogs['Main_Loop'], carousel = True, default = command)
+            # Commands = ['edit_objects', 'edit_models', 'save_database', 'validate_database', 'help', 'exit']
+            command = inquirer.list_input('Pick Command: ', choices=self.inquirer_dialogs['Main_Loop'], carousel=True, default=command)
 
             if command == 'exit':
                 if self.yes_no_question('Are you sure you would like to exit?'):
@@ -252,9 +311,8 @@ class Modular_Abaqus_Builder:
             elif command == 'edit_objects':
                 self.edit_objects()
 
-            elif command == 'force_exit':
-                if self.yes_no_question('Are you sure you would like to force exit without saving?'):
-                    break
+            elif command == 'validate_database':
+                self.validate_database()
 
 
         print('-----------------------------------------------')
@@ -453,7 +511,7 @@ class Modular_Abaqus_Builder:
             object_type = self.select_object_type()
 
         # Get available choices
-        choices = [x for x in self.data[object_type].keys()]
+        choices = list(self.data[object_type].keys())
 
         # Check there are choices available
         if len(choices):
@@ -875,6 +933,206 @@ class Modular_Abaqus_Builder:
             print('-----------------------------------------------')
 
 
+    def validate_database(self):
+        '''
+        
+        '''
+        print('-----------------------------------------------')
+        print('Validating the Database to ensure no corruption has occured.')
+        print('-----------------------------------------------')
+
+        # Validate Analyses
+        print('Validating Analyses...')
+        for analysis_name in list(self.data['analysis'].keys()):
+            
+            print('Validating Analysis: "{}"'.format(analysis_name))
+
+            # Check fpath matches path + name
+            fpath_matches = os.path.join(self.fpaths['analysis'],analysis_name) == self.data['analysis'][analysis_name].fpath
+
+
+            # Check directory exists
+            directory_exists = os.path.exists(os.path.join(self.fpaths['analysis'],analysis_name))
+
+
+            # Check all files exist in object folder
+            all_files_exist = all([os.path.exists(os.path.join(self.fpaths['analysis'],analysis_name,file_to_check)) for file_to_check in self.data['analysis'][analysis_name].files])
+
+
+            # Check requirements match database requirements
+            if (self.requirements.keys() != self.data['analysis'][analysis_name].requirements.keys()) or any([self.requirements[key].keys() != self.data['analysis'][analysis_name].requirements[key].keys() for key in self.requirements.keys()]):
+
+                print('The requirements for the Analysis object: "{}" do not match the default requirements of the database. Please select new requirements.'.format(analysis_name))
+                self.data['analysis'][analysis_name].set_requirements(reset_requirements = True)
+
+
+            # Check all validations passed
+            if fpath_matches and directory_exists and all_files_exist:
+                print('Analysis: "{}", validated successfully'.format(analysis_name))
+
+            else:
+                self.data['analysis'].pop(analysis_name)
+                print('Analysis: "{}", was found to be not valid. Deleting from database'.format(analysis_name))
+
+        print('Analyses Validated.')
+
+
+        # Validate Geometries
+        print('Validating Geometries...')
+        for geometry_name in list(self.data['geometry'].keys()):
+            
+            print('Validating Geometry: "{}"'.format(geometry_name))
+
+            # Check fpath matches path + name
+            fpath_matches = os.path.join(self.fpaths['geometry'],geometry_name) == self.data['geometry'][geometry_name].fpath
+
+
+            # Check directory exists
+            directory_exists = os.path.exists(os.path.join(self.fpaths['geometry'],geometry_name))
+
+
+            # Check all files exist in object folder
+            all_files_exist = all([os.path.exists(os.path.join(self.fpaths['geometry'],geometry_name,file_to_check)) for file_to_check in self.data['geometry'][geometry_name].files])
+
+
+            # Check requirements match database requirements
+            if self.requirements['geometries'].keys() != self.data['geometry'][geometry_name].requirements['geometries'].keys():
+
+                print('The requirements for the Geometry object: "{}" do not match the default requirements of the database.'.format(geometry_name))
+                self.data['geometry'][geometry_name].set_requirements(reset_requirements = True)
+
+
+            # Check all validations passed
+            if fpath_matches and directory_exists and all_files_exist:
+                print('Geometry: "{}", validated successfully'.format(geometry_name))
+
+            else:
+                self.data['geometry'].pop(geometry_name)
+                print('Geometry: "{}", was found to be not valid. Deleting from database'.format(geometry_name))
+
+        print('Geometries Validated.')
+
+
+        # Validate Materials
+        print('Validating Materials...')
+        for material_name in list(self.data['material'].keys()):
+            
+            print('Validating Material: "{}"'.format(material_name))
+
+
+            # Check fpath matches path + name
+            fpath_matches = os.path.join(self.fpaths['material'],material_name) == self.data['material'][material_name].fpath
+
+
+            # check directory exists
+            directory_exists = os.path.exists(os.path.join(self.fpaths['material'],material_name))
+
+
+            # check all files exist in object folder
+            all_files_exist = all([os.path.exists(os.path.join(self.fpaths['material'],material_name,file_to_check)) for file_to_check in self.data['material'][material_name].files])
+
+
+            # check requirements match database requirements
+            if self.requirements['materials'].keys() != self.data['material'][material_name].requirements['materials'].keys():
+
+                print('The requirements for the Material object: "{}" do not match the default requirements of the database.'.format(material_name))
+                self.data['material'][material_name].set_requirements(reset_requirements = True)
+
+            # Check all validations passed
+            if fpath_matches and directory_exists and all_files_exist:
+                print('Material: "{}", validated successfully'.format(material_name))
+
+            else:
+                self.data['material'].pop(material_name)
+                print('Material: "{}", was found to be not valid. Deleting from database'.format(material_name))
+
+        print('Materials Validated.')
+
+
+        # Validate Models
+        print('Validating Models...')
+        for model_name in list(self.data['model'].keys()):
+
+
+            # Check fpath matches path + name
+            fpath_matches = os.path.join(self.fpaths['model_files'],model_name) == self.data['model'][model_name].fpath
+
+
+            # check directory exists
+            directory_exists = os.path.exists(os.path.join(self.fpaths['model_files'],model_name))
+
+
+            # Check objects exist
+            analysis_exists = self.data['model'][model_name].analysis.name in self.data['analysis']
+            geometry_exists = self.data['model'][model_name].geometry.name in self.data['geometry'] 
+            materials_exists = all([material_name in self.data['material'] for material_name in self.data['model'][model_name].materials.keys()])
+            objects_exist = analysis_exists and geometry_exists and materials_exists
+            
+            if not objects_exist:
+                objects_exist = not self.yes_no_question('One or more objects used in the model: "{}", no longer exist, Delete the model? (Note: keeping the model may cause an error in the future)'.format(model_name))
+
+
+            # Check requirements match database requirements
+            if (self.requirements.keys() != self.data['model'][model_name].requirements.keys()) or any([self.requirements[key].keys() != self.data['model'][model_name].requirements[key].keys() for key in self.requirements.keys()]):
+
+                print('The requirements for the Model: "{}" do not match the default requirements of the database.'.format(model_name))
+
+                if analysis_exists:
+                    self.data['model'][model_name].requirements = self.data['model'][model_name].analysis.requirements
+                    requirements_valid = True
+                else:
+                    requirements_valid = False
+            else:
+                requirements_valid = True
+
+
+            # Check all validations passed
+            if fpath_matches and directory_exists and objects_exist and requirements_valid:
+                print('Model: "{}", validated successfully'.format(model_name))
+
+            else:
+                self.data['model'].pop(model_name)
+                print('Model: "{}", was found to be not valid. Deleting from database'.format(model_name))
+
+        print('Models Validated.')
+
+
+        # Delete any folders not connected to objects in the database
+        for analysis_fpath in glob.glob(os.path.join(self.fpaths['analysis'],'*',''), recursive=False):
+            if analysis_fpath not in [os.path.join(analysis.fpath,'') for analysis in self.data['analysis'].values()]:
+                rmtree(analysis_fpath)
+                print('Deleted Folder: "{}", that did not exist in the database.'.format(analysis_fpath))
+                
+        
+        for geometry_fpath in glob.glob(os.path.join(self.fpaths['geometry'],'*',''), recursive=False):
+            if geometry_fpath not in [os.path.join(geometry.fpath,'') for geometry in self.data['geometry'].values()]:
+                rmtree(geometry_fpath)
+                print('Deleted Folder: "{}", that did not exist in the database.'.format(geometry_fpath))
+
+
+        for material_fpath in glob.glob(os.path.join(self.fpaths['material'],'*',''), recursive=False):
+            if material_fpath not in [os.path.join(material.fpath,'') for material in self.data['material'].values()]:
+                rmtree(material_fpath)
+                print('Deleted Folder: "{}", that did not exist in the database.'.format(material_fpath))
+
+
+        for model_fpath in glob.glob(os.path.join(self.fpaths['model_files'],'*',''), recursive=False):
+            if model_fpath not in [os.path.join(model.fpath,'') for model in self.data['model'].values()]:
+                rmtree(model_fpath)
+                print('Deleted Folder: "{}", that did not exist in the database.'.format(model_fpath))
+
+        
+        for extra_object_fpath in glob.glob(os.path.join(self.fpaths['object_files'],'*',''), recursive=False):
+            if extra_object_fpath not in [os.path.join(self.fpaths["analysis"],''),os.path.join(self.fpaths['geometry'],''),os.path.join(self.fpaths['material'],'')]:
+                rmtree(extra_object_fpath)
+                print('Deleted Folder: "{}", that did not exist in the database.'.format(extra_object_fpath))
+
+
+        print('-----------------------------------------------')
+        print('Database Validation Complete')
+        print('-----------------------------------------------')
+    
+
     def yes_no_question(self, message):
         '''
         -----------------------------------------------
@@ -932,10 +1190,9 @@ class Modular_Abaqus_Builder:
 
             try:
                 # Delete folder
-                fpath = self.data['model'][answer].fpath
-                rmtree(fpath)
+                rmtree(self.data['model'][answer].fpath)
                 print('-----------------------------------------------')
-                print('Deleted Folder: "{}"'.format(fpath))
+                print('Deleted Folder: "{}"'.format(self.data['model'][answer].fpath))
 
                 # Delete from database
                 self.data['model'].pop(answer)
@@ -945,6 +1202,7 @@ class Modular_Abaqus_Builder:
             except:
                 print('-----------------------------------------------')
                 print('Tried to delete the model: "{}", but could not. Check if the directory is open in another application.'.format(answer))
+                print('Try running the validate database command once the error has been rectified to ensure corruption does not occur.')
                 print('-----------------------------------------------')
 
         else:
@@ -953,10 +1211,7 @@ class Modular_Abaqus_Builder:
             print('-----------------------------------------------')   
         
 
-
-
-
-    def create_model(self): # update
+    def create_model(self):
         '''
         Build model
         '''
@@ -966,25 +1221,10 @@ class Modular_Abaqus_Builder:
             self.data['model'][model.name] = model
         except:
             print('-----------------------------------------------')
-            print('Create Model Failed, returning to Model loop.')
-            print('-----------------------------------------------')
+            print('Create Model Failed, validating database to ensure corruption does not occur.')
 
-            # DELETE FAILED MODEL FILES AND REMOVE FROM DATABASE
-            return
+            self.validate_database()
         
-
-        
-        
-        
-        
-
-
-    def modify_model(self):
-        '''
-        
-        '''
-        pass
-    
 
     def duplicate_model(self):
         '''
@@ -1003,26 +1243,139 @@ class Modular_Abaqus_Builder:
 
             print('Model: "{}", chosen to be duplicated'.format(answer))
 
+            # Try to copy the chosen model and then rebuild it from its base objects
             try:
                 analysis_name = self.data['model'][answer].analysis.name
                 geometry_name = self.data['model'][answer].geometry.name
                 material_names = list(self.data['model'][answer].materials.keys())
 
-                duplicate_model = Model(self, analysis_name, geometry_name, material_names)
+                # Check that all the objects used to build the model to be duplicated still exist
+                analysis_exists = analysis_name in self.data['analysis']
+                geometry_exists = geometry_name in self.data['geometry'] 
+                materials_exists = all([material_name in self.data['material'] for material_name in material_names])
 
-                self.data['model'][duplicate_model.name] = duplicate_model
+                if analysis_exists and geometry_exists and materials_exists:
 
-                
+                    duplicate_model = Model(self, analysis_name, geometry_name, material_names)
+
+                    self.data['model'][duplicate_model.name] = duplicate_model
+
+                else:
+                    print('-----------------------------------------------')
+                    print('Tried to duplicate the model: "{}", and failed due to the previously used objects no longer existing.'.format(answer))
+                    print('-----------------------------------------------')
 
             except:
                 print('-----------------------------------------------')
                 print('Tried to duplicate the model: "{}", but could not. Check if the directory is open in another application.'.format(answer))
+                print('Validating database to ensure corruption does not occur.')
                 print('-----------------------------------------------')
+
+                self.validate_database()
+
 
         else:
             print('-----------------------------------------------')
             print('No models in database to duplicate, returning to edit model loop')
             print('-----------------------------------------------')
+        
+        
+
+
+
+
+
+
+    def modify_model(self):
+        '''
+        
+        '''
+        model_names = list(self.data['model'].keys())
+
+        if model_names:
+        
+            name = inquirer.list_input('Please select the model you would like to modify', choices = model_names+['cancel'], carousel = True)
+
+            if name == 'cancel':
+                print('-----------------------------------------------')
+                print('Modify model operation cancelled, returning to edit model loop')
+                print('-----------------------------------------------')
+                return
+
+            possible_changes = ['name', 'description', 'parameters', 'cancel']
+        
+            # Get Model changes
+            modifications = inquirer.checkbox('What would you like to change about the model: "{}".'.format(name), choices = possible_changes, carousel = True)
+            
+            if ('cancel' in modifications) or not modifications:
+                print('-----------------------------------------------')
+                print('Modify model operation cancelled, returning to edit model loop')
+                print('-----------------------------------------------')
+                return
+
+            model_to_modify = self.data['model'].pop(name)
+
+            if 'name' in modifications:
+
+                # Set new name
+                model_to_modify.new_model_name()
+                old_name = name
+                name = model_to_modify.name
+
+                # Change fpath name
+                try:
+                    old_fpath = model_to_modify.fpath
+                    new_fpath = os.path.join(self.fpaths['model_files'],name)
+                    os.rename(old_fpath,new_fpath)
+                    model_to_modify.fpath = new_fpath
+                    model_to_modify.set_fpaths()
+                except:
+                    raise FileExistsError('Renaming the filepath: "{}" to "{}" has failed.'.format(old_fpath,new_fpath))
+                
+                # Change name of main sim file (and journal file contents for just fluent run)
+                if all(model_to_modify.requirements['softwares'].values()):
+                    os.rename(os.path.join(model_to_modify.solver_fpaths['mpcci'],old_name+'.csp'),os.path.join(model_to_modify.solver_fpaths['mpcci'],name+'.csp'))
+                
+                elif model_to_modify.requirements['softwares']['abaqus']:
+                    os.rename(os.path.join(model_to_modify.solver_fpaths['abaqus'],old_name+'.inp'),os.path.join(model_to_modify.solver_fpaths['abaqus'],name+'.inp'))
+
+                elif model_to_modify.requirements['softwares']['fluent']:
+                    os.rename(os.path.join(model_to_modify.solver_fpaths['fluent'],old_name+'.cas.h5'),os.path.join(model_to_modify.solver_fpaths['fluent'],name+'.cas.h5'))
+
+                    # Edit journal file to reference new .cas.h5 file
+                    with open(os.path.join(model_to_modify.solver_fpaths['fluent'],'journal.jou'),'r') as old_file, open(os.path.join(model_to_modify.solver_fpaths['fluent'],'temp.jou'),'w') as new_file:
+
+                        # Write new first two lines
+                        new_file.write('\t; Read the case file\n')
+                        new_file.write('\t/rc {}\n'.format(name+'.cas.h5'))
+
+                        # Delete first two lines of old journal file
+                        old_file.readline()
+                        old_file.readline()
+
+                        # Copy rest of journal file
+                        copyfileobj(old_file,new_file)
+
+                    # Overwrite old journal file
+                    os.replace(os.path.join(model_to_modify.solver_fpaths['fluent'],'temp.jou'),os.path.join(model_to_modify.solver_fpaths['fluent'],'journal.jou'))
+
+
+            if 'description' in modifications:
+                model_to_modify.new_description()
+
+            if 'parameters' in modifications:
+                pass # change parameter values and then rebuild model
+
+            self.data['model'][name] = model_to_modify 
+
+        else:
+            print('-----------------------------------------------')
+            print('No models in database to modify, returning to edit model loop')
+            print('-----------------------------------------------')   
+            return
+    
+
+
     
     
 
@@ -1038,13 +1391,6 @@ class Modular_Abaqus_Builder:
         
         '''
         pass 
-
-
-    def validate(self):
-        '''
-        
-        '''
-        pass
 
 
     def __repr__(self):

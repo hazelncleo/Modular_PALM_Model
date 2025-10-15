@@ -450,20 +450,14 @@ class Geometry_Object:
             self.set_requirements()
         
         
-    def set_requirements(self):
+    def set_requirements(self, reset_requirements = False):
         '''
         
         '''
         # Set the default requirement dict if it does not exist
-        if not hasattr(self, 'requirements'):
-            self.requirements = {"geometries": {
-                                    "abaqus_whole-chip_solid": False,
-                                    "abaqus_whole-chip_acoustic": False,
-                                    "abaqus_submodel_solid": False,
-                                    "abaqus_submodel_acoustic": False,
-                                    "fluent_whole-chip_fluid": False,
-                                    "fluent_submodel_fluid": False
-                                }}
+        if (not hasattr(self, 'requirements')) or reset_requirements:
+            self.requirements = {}
+            self.requirements['geometries'] = self.builder.requirements['geometries']
             
         # Check if files exist in directory
         change_made = False

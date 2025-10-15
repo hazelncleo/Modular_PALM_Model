@@ -1,0 +1,55 @@
+{
+    "requirements" :
+    {
+        "softwares": {
+            "abaqus": false,
+            "fluent": false,
+            "mpcci": false
+        },
+        "geometries": {
+            "assembly" : false,
+            "abaqus_whole-chip_solid": false,
+            "abaqus_whole-chip_acoustic": false,
+            "abaqus_submodel_solid": false,
+            "abaqus_submodel_acoustic": false,
+            "fluent_whole-chip_fluid": false,
+            "fluent_submodel_fluid": false
+        },
+        "materials": {
+            "abaqus_solid": false,
+            "abaqus_acoustic": false
+        },
+        "analysis": {
+            "abaqus_global_odb": false,
+            "abaqus_global_prt": false
+        }
+    },
+    "fpaths" : 
+    {
+        "object_files" : "object_files",
+        "analysis" : "object_files\\analysis",
+        "geometry" : "object_files\\geometry",
+        "material": "object_files\\material",
+        "model_files": "model_files",
+        "data": "data.pickle"
+    },
+    "allowed_characters" : 
+    {
+        "Name" : "abcdefghijklmnopqrstuvwxyz1234567890_-",
+        "Description" : "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890_-!()[]"
+    },
+    "inquirer_dialogs" : 
+    {
+        "Object_Types" : ["analysis","geometry","material"],
+        "Main_Loop" : ["edit_objects", "edit_models", "save_database", "validate_database" ,"help", "exit"],
+        "Object_Loop" : ["create", "modify", "duplicate", "delete", "help", "back"],
+        "Model_Loop" : ["create", "modify", "duplicate", "delete", "post_process", "run", "help", "back"]
+    },
+    "data" : 
+    {
+        "analysis": {},
+        "geometry": {}, 
+        "material": {}, 
+        "model": {}
+    }
+}

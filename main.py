@@ -1,7 +1,8 @@
 from Modular_Abaqus_Builder import Modular_Abaqus_Builder
 
+
 def main():
-    
+
     # Instantiate class
     builder = Modular_Abaqus_Builder(overwrite=False, overwrite_models=False)
     
@@ -16,12 +17,14 @@ def main():
 IMPORTANT STUFF
 --------------------------
 
+- create small commandline launcher for script
+- look at better way to layout imports
+- suppress warnings on pyfluent import
+- verbose database print and non verbose
+- interpreter themes
 - validate functions for interpreters
 - if cant delete directories on reset prompt user
-- validate database
-- model class (pogging off)
-- model loop
-- parameters
+- modify model parameters
 - postprocess model
 - run postprocessing python scripts
 - run model
