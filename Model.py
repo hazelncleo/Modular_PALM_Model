@@ -9,7 +9,12 @@ from copy import deepcopy
 from shutil import copyfileobj
 from importlib.util import spec_from_file_location
 from importlib.util import module_from_spec
-import ansys.fluent.core as pyfluent
+import warnings
+
+with warnings.catch_warnings():
+    warnings.simplefilter('ignore')
+    import ansys.fluent.core as pyfluent
+    
 import sys
 import xml.etree.ElementTree as ET
 from HazelsAwesomeTheme import HazelsAwesomeTheme as Theme

@@ -1,10 +1,9 @@
 from Modular_Abaqus_Builder import Modular_Abaqus_Builder
 
-
 def main():
 
     # Instantiate class
-    builder = Modular_Abaqus_Builder(overwrite=False, overwrite_models=False)
+    builder = Modular_Abaqus_Builder(delete_database=False, delete_all_models=True)
     
     builder.main_loop()
 
@@ -17,11 +16,11 @@ def main():
 IMPORTANT STUFF
 --------------------------
 
+- help method
+- look at inquirer path selector
 - create small commandline launcher for script
 - look at better way to layout imports
-- suppress warnings on pyfluent import
-- verbose database print and non verbose
-- interpreter themes
+- interpreter themes ***IN PROGRESS***
 - validate functions for interpreters
 - if cant delete directories on reset prompt user
 - modify model parameters

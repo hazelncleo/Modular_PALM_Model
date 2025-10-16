@@ -7,6 +7,9 @@ import inquirer
 import json
 from glob import glob
 
+from HazelsAwesomeTheme import red_text,green_text,blue_text,yellow_text
+from HazelsAwesomeTheme import HazelsAwesomeTheme as Theme
+
 class Analysis_Object:
     '''
     ---------------------------------------------------
@@ -33,20 +36,24 @@ class Analysis_Object:
         ---------------------------------------------------
         '''
         
-        print('-----------------------------------------------')
+        print('-'*60)
         print('Create Analysis Object operation started.')
-        print('-----------------------------------------------')
+        print('-'*60)
         
         # Modular_Abaqus_Builder class containing this object 
         self.builder = builder
         
         # Specify allowed characters for certain attributes
-        self.allowed_characters = {'Name' : set(string.ascii_lowercase + string.digits + '_-'), 'Description' : set(string.ascii_letters + string.digits + '_-,.?! ()[]"'), 'Parameter_Name' : set(string.ascii_letters + string.digits + '-_')}
+        self.allowed_characters = self.builder.allowed_characters
         
         self.new_object_name()
 
+        if not self.name:
+            return
+
         # Set destination fpath
         self.fpath = os.path.join(self.builder.fpaths['analysis'],self.name)
+        print('File path set to "{}".'.format(blue_text(self.fpath)))
 
         self.new_description()
         
@@ -54,7 +61,17 @@ class Analysis_Object:
         
         # Return error if fpath not specified
         if not source_fpath:
-            raise FileNotFoundError('A file path was not selected.')
+            print(red_text('ERROR: A valid file path was not selected.'))
+            print(red_text('Returning to edit objects loop.'))
+            raise FileNotFoundError
+        
+        self.validate_fpath(source_fpath)
+        
+        if len(source_fpath) < 35:
+            print('The file path: "{}" to source files from was successfully chosen.'.format(blue_text(source_fpath)))
+        else:
+            shortened_fpath = os.path.join('...',os.path.join('',*source_fpath.split('/')[-4:]))
+            print('The file path: "{}" to source files from was successfully chosen.'.format(blue_text(shortened_fpath)))
 
         self.move_folder(source_fpath, self.fpath)
         
@@ -64,9 +81,9 @@ class Analysis_Object:
         self.load_parameters() 
         
         
-        print('-----------------------------------------------')
-        print('Create Analysis object operation successful.')
-        print('-----------------------------------------------')
+        print('-'*60)
+        print(green_text('Create Analysis object operation successful.'))
+        print('-'*60)
     
 
     def move_folder(self, source_fpath, destination_fpath):
@@ -77,6 +94,11 @@ class Analysis_Object:
         '''
         copytree(source_fpath, destination_fpath, symlinks=True)
 
+        if os.path.isabs(source_fpath):
+            source_fpath = os.path.join('...',os.path.join('',*source_fpath.split('/')[-4:]))
+
+        print(green_text('Successfully copied files from:\n\t"{}" -> "{}"'.format(source_fpath, destination_fpath)))
+
     
     def new_object_name(self):
         '''
@@ -85,46 +107,36 @@ class Analysis_Object:
         ---------------------------------------------------
         '''
         # Get current names
-        current_names = [name for name in self.builder.data['analysis'].keys()]
+        current_names = list(self.builder.data['analysis'].keys())
 
-        name = ''
-
-        # Loop until new name is unique
-        while True:
-            print('---------------------------------------------------')
-            print('Please enter a new name for the Analysis Object to be created: ')
-            print('Note: ')
-            print('- It must only use letters, numbers, underscores and hyphens.')
-            print('- It must be lowercase.')
-            print('- It must be unique.')
-            print('---------------------------------------------------')
+        print('Please enter a new name for the Analysis Object to be created: ')
+        print('Note: ')
+        print('- It must only use lowercase letters, numbers, underscores and hyphens.')
+        print('- It must have fewer than 30 characters')
+        print('- It must be unique.')
+        print('- To cancel the create object process, enter nothing.')
+        print('-'*60)
+        if len(current_names):
             print('The Analysis names currently in use are listed below: ')
-            print(current_names)
-            print('---------------------------------------------------')
-            
-            name = input('Please enter a new name for the object to be created: ')
+            print('"'+'", "'.join([blue_text(name) for name in current_names])+'"')
+            print('-'*60)
+        else:
+            print('No Analysis names currently in use.')
+        
+        questions = [inquirer.Text('object_name', 'Enter the name of the new object', validate = self.validate_name)]
+        object_name = inquirer.prompt(questions, theme=Theme())['object_name']
 
-            if not name:
-                print('---------------------------------------------------')
-                print('ERROR: The name provided was an empty string')
-                print('---------------------------------------------------')
+        if not object_name:
+            print('-'*60)
+            print(yellow_text('Cancel command given.'))
+            print('-'*60)
+        
+        else: 
+            print('-'*60)
+            print(green_text('The name: "{}" for the new object has been selected.'.format(object_name)))
 
-            elif not (set(name) <= self.allowed_characters['Name']):
-                print('---------------------------------------------------')
-                print('ERROR: The name: "{}", is not entirely lowercase, numbers or underscores and hyphens.'.format(name))
-                print('---------------------------------------------------')
-            
-            elif name in current_names:
-                print('---------------------------------------------------')
-                print('ERROR: The name: "{}", already exists in the database.'.format(name))
-                print('---------------------------------------------------')
-            
-            else: 
-                print('---------------------------------------------------')
-                print('The name: "{}", for the new object has been selected.'.format(name))
-                print('---------------------------------------------------')
-                self.name = name
-                return
+        self.name = object_name
+        return
                 
                 
     def new_description(self):
@@ -134,29 +146,22 @@ class Analysis_Object:
         ---------------------------------------------------
         '''
 
-        description = ''
+        print('-'*60)
+        print('Please enter a short description of the new object:')
+        print('Note: ')
+        print('- It must only use letters, numbers, or the following symbols (not including single quotes): \'_-,.! ()[]\'')
+        print('- It must have fewer than 100 characters')
+        print('- It must be unique.')
+        print('-'*60)
+        
+        questions = [inquirer.Text('description', 'Please enter a short description of the new object', validate = self.validate_description)]
+        description = inquirer.prompt(questions, theme=Theme())['description']
 
-        # Loop until new description entered
-        while True:
-            print('---------------------------------------------------')
-            print('Please enter a description for the object to be created: ')
-            print('Note: ')
-            print('- It must only use letters, numbers, or the following symbols (not including single quotes): \'_-,.?! ()[]"\'')
-            print('---------------------------------------------------')
-            
-            description = input('Please enter a description for the Analysis Object to be created: ')
-
-            if not (set(description) <= self.allowed_characters['Description']):
-                print('---------------------------------------------------')
-                print('ERROR: The description: "{}", does not meet the requirements.'.format(description))
-                print('---------------------------------------------------')
-            
-            else:
-                print('---------------------------------------------------')
-                print('The description: "{}", for the new object has been selected.'.format(description))
-                print('---------------------------------------------------')
-                self.description = description
-                return
+        print('-'*60)
+        print(green_text('The description: "{}" for the new object has been selected.'.format(description)))
+        print('-'*60)
+        self.description = description
+        return
             
     
     def get_file_path(self):
@@ -270,7 +275,7 @@ class Analysis_Object:
                 print('---------------------------------------------------')
 
             # Check name only uses allowed characters
-            elif not (set(answers['name']) <= self.allowed_characters['Parameter_Name']):
+            elif not (set(answers['name']) <= self.allowed_characters['Name']):
                 print('---------------------------------------------------')
                 print('ERROR: The name: "{}", is not entirely letters, numbers or underscores and hyphens.'.format(answers['name']))
                 print('---------------------------------------------------')
@@ -381,7 +386,7 @@ class Analysis_Object:
                 print('---------------------------------------------------')
 
             # Check name only uses allowed characters
-            elif not (set(answers['name']) <= self.allowed_characters['Parameter_Name']):
+            elif not (set(answers['name']) <= self.allowed_characters['Name']):
                 print('---------------------------------------------------')
                 print('ERROR: The name: "{}", is not entirely letters, numbers or underscores and hyphens.'.format(answers['name']))
                 print('---------------------------------------------------')
@@ -428,18 +433,18 @@ class Analysis_Object:
         Try to load the parameters for the analysis from a file, if it does not exist prompt the user to specify the parameters.
         ---------------------------------------------------
         '''
-        try:
+        if os.path.exists(os.path.join(self.fpath,'parameters.json')):
             # Read parameters
             with open(os.path.join(self.fpath,'parameters.json'),'r') as f:
                 self.parameters = json.load(f)
+                print(green_text('Loaded parameters from "parameters.json".'))
                 
             # Delete file from directory
             os.remove(os.path.join(self.fpath,'parameters.json'))
 
             self.get_all_files()
-            
-                
-        except:
+                  
+        else:
             # If no file to read have the user set the parameters
             self.get_all_files()
 
@@ -456,12 +461,14 @@ class Analysis_Object:
             # Read requirements
             with open(os.path.join(self.fpath,'requirements.json'),'r') as f:
                 self.requirements = json.load(f)
+                print(green_text('Loaded requirements from "requirements.json".'))
                 
             # Delete file from directory
             os.remove(os.path.join(self.fpath,'requirements.json'))
                 
         except:
             # If no file to read have the user set the requirements
+            print(yellow_text('No "requirements.json" in directory.\nPlease enter the requirements.'))
             self.set_requirements()
         
         
@@ -520,3 +527,70 @@ class Analysis_Object:
         object_files = glob(os.path.join(self.fpath,'**','*.*'), recursive=True)
         
         self.files = [self.builder.get_relative_fpath(file,self.fpath) for file in object_files]
+
+    
+    def validate_name(self, _, name):
+        '''
+        
+        '''
+
+        current_names = list(self.builder.data['analysis'].keys())
+
+        # Cancel command given
+        if not name:
+            return True
+        
+        # If name meets requirements
+        if (len(name) < 30):
+            if (set(name) <= self.allowed_characters['Name']):
+                if (name not in current_names):
+                    return True
+                else:
+                    print(red_text('\nName: "{}" is already in use in the database.'.format(name)))
+                    return False
+            else:
+                print(red_text('\nEntered name contains non-valid characters.'.format(name)))
+                return False
+        else:
+            print(red_text('\nEntered name has a length of {} which is greater than the max length of 30.'.format(len(name))))
+            return False
+
+
+    def validate_fpath(self, fpath):
+        '''
+
+        '''
+        files_in_path = glob(os.path.join(fpath,'**','*.*'), recursive=True)
+        extensions = set([os.path.split(file)[1].split('.')[1] for file in files_in_path if os.path.split(file)[1]])
+
+        allowed_extensions = set(['inp','msh','json','jou','csp','py'])
+
+        if extensions >= allowed_extensions:
+            print(red_text('The filepath chosen was not valid as it contains unsupported file extensions.'))
+            raise FileExistsError()
+        
+        return
+    
+
+    def validate_description(self, _, description):
+
+        # If description meets requirements
+        if (len(description) < 100):
+            if (set(description) <= self.allowed_characters['Description']):
+                return True
+            else:
+                print(red_text('\nEntered description contains non-valid characters.'))
+                return False
+        else:
+            print(red_text('\nEntered description has a length of {} which is greater than the max length of 100.'.format(len(description))))
+            return False
+
+    
+    def validate_parameter_name(self, name):
+
+        pass
+
+
+    def validate_parameter_value(self, value, type):
+
+        pass

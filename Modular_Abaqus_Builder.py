@@ -6,17 +6,22 @@ from shutil import rmtree
 import pickle as pkl
 from copy import deepcopy
 from sys import exit
+import json
+from shutil import copyfileobj
+
 from Analysis_Object import Analysis_Object
 from Geometry_Object import Geometry_Object
 from Material_Object import Material_Object
 from Model import Model
-import json
-from shutil import copyfileobj
+
+from HazelsAwesomeTheme import red_text,green_text,blue_text,yellow_text
+from HazelsAwesomeTheme import HazelsAwesomeTheme as Theme
+
 
 
 
 class Modular_Abaqus_Builder:
-    def __init__(self, overwrite=False, overwrite_models=False):
+    def __init__(self, delete_database=False, delete_all_models=False):
         '''
         ---------------------------------------------------
         Initialise the class and load the data from the .pkl file.
@@ -26,58 +31,60 @@ class Modular_Abaqus_Builder:
         # Create base database
         self.instantiate_database()
         
-        # If overwrite flag set to true, delete all files
-        if overwrite:
-            print('-----------------------------------------------')
-            print('OVERWRITE FLAG SET TO TRUE')
-            print('-----------------------------------------------')
+        # If delete_database flag set to true, delete all files
+        if delete_database:
+            print(red_text('DELETE DATABASE FLAG SET TO TRUE'))
+            print('-'*60)
 
-            if self.yes_no_question('Are you sure you would like to overwrite the database? (This will delete all object, model and .pkl files)'):
-                self.overwrite_database()
+            if self.yes_no_question('Are you sure you would like to delete the' + red_text(' entire ') + 'database'):
+                self.delete_database()
 
             else:
-                print('-----------------------------------------------')
-                print('The overwrite flag was set to true, but the overwrite was denied. Closing the database.')
-                print('-----------------------------------------------')
+                print('-'*60)
+                print(yellow_text('The delete flag was set to true, but the delete was denied. Closing the database.'))
+                print('-'*60)
 
                 exit(0)
 
-        # If overwrite models flag set to true, delete all model files
-        elif overwrite_models:
-            print('-----------------------------------------------')
-            print('OVERWRITE MODELS FLAG SET TO TRUE')
-            print('-----------------------------------------------')
+        # If delete_all_models flag set to true, delete all model files
+        elif delete_all_models:
+            print(red_text('DELETE MODELS FLAG SET TO TRUE'))
+            print('-'*60)
 
-            if self.yes_no_question('Are you sure you would like to overwrite the models of the database? (This will delete all model files and their database entries)'):
+            if self.yes_no_question('Are you sure you would like to delete ' + red_text('all models') + ' in the database?'):
+                print('-'*60)
 
                 try:
                     self.load_database()
                 except:
-                    print('-----------------------------------------------')
-                    print('The data.pkl file: "{}" does not exist. An empty Modular_Abaqus_Builder has been loaded.'.format(self.fpaths['data']))
-                    print('-----------------------------------------------')
+                    print(yellow_text('The data.pkl file: "{}" does not exist. An empty Modular_Abaqus_Builder has been loaded.'.format(self.fpaths['data'])))
+                    print('-'*60)
 
-                self.overwrite_models()
+                self.delete_all_models()
+                self.print_database(False)
+                print('-'*60)
             
             else:
-                print('-----------------------------------------------')
-                print('The overwrite models flag was set to true, but the overwrite was denied. Closing the database.')
-                print('-----------------------------------------------')
+                print(yellow_text('The delete models flag was set to true, but the delete was denied. Closing the database.'))
+                print('-'*60)
 
                 exit(0)
 
+        # Otherwise load database as usual
         else:
 
             # Load data from data.pickle
             try:
                 self.load_database()
 
+                self.print_database(False)
+                print('-'*60)
+
             # If it doesnt exist load an empty Modular_Abaqus_Builder
             except:
                 
-                print('-----------------------------------------------')
-                print('The data.pkl file: "{}" does not exist. An empty Modular_Abaqus_Builder has been loaded.'.format(self.fpaths['data']))
-                print('-----------------------------------------------')        
+                print(yellow_text('The data.pkl file: "{}" does not exist. An empty Modular_Abaqus_Builder has been loaded.'.format(self.fpaths['data'])))
+                print('-'*60)        
 
         self.save_database()
     
@@ -88,6 +95,9 @@ class Modular_Abaqus_Builder:
         Instantiate an empty database
         ---------------------------------------------------
         '''
+        print('-'*60)
+        print(green_text('Instantiating the Database'))
+        print('-'*60)
 
         # Try to load the base_data .json
         try:
@@ -104,11 +114,13 @@ class Modular_Abaqus_Builder:
 
             self.data = base_data['data']
 
+            print(green_text('Database Instantiated from "base_data.json".'))
+
 
         except:
 
-            print('Loading the base database information failed, using base information in program instead')
-            print('Note, that preferably a "base_data.json" should be created by the user.')
+            print(red_text('Loading the base database information failed, using base information in program instead'))
+            print(red_text('Note, that preferably a "base_data.json" should be created by the user.'))
 
             # Set filepaths
             objectfiles_fpath = 'object_files'
@@ -144,8 +156,7 @@ class Modular_Abaqus_Builder:
 
             # Set allowed characters
             self.allowed_characters = {'Name' : set(string.ascii_lowercase + string.digits + '_-'),
-                                    'Model' : set(string.ascii_letters + string.digits + '_-!()[]'),
-                                    'Description' : set(string.ascii_letters + string.digits + '_-,.?! ()[]"')}
+                                       'Description' : set(string.ascii_letters + string.digits + '_-,.! ()[]')}
             
             # Set inquirer dialog lists
             self.inquirer_dialogs = {'Object_Types' : ['analysis','geometry','material'],
@@ -172,69 +183,91 @@ class Modular_Abaqus_Builder:
         if not os.path.exists(self.fpaths['model_files']):
             os.makedirs(self.fpaths['model_files'], exist_ok=True)
             print('Model fpath did not exist, one has been created')
+
+        print(green_text('Instantiated the Database Successfully.'))
+        print('-'*60)
         
 
-    def overwrite_database(self):
+    def delete_database(self):
         '''
         ---------------------------------------------------
         Delete all objects and models in the relevant filepaths
         ---------------------------------------------------
         '''
+        print('-'*60)
+        print(green_text('Deleting the Database'))
+        print('-'*60)
         
         try:
             # Delete all analysis object files
             for analysis in glob.glob(os.path.join(self.fpaths['analysis'], '*', ''), recursive=False):
                 rmtree(analysis)
-                print('Deleted: "{}"'.format(analysis))
+                print(red_text('Deleted: "{}"'.format(analysis)))
 
             # Delete all geometry object files
             for geometry in glob.glob(os.path.join(self.fpaths['geometry'], '*', ''), recursive=False):
                 rmtree(geometry)
-                print('Deleted: "{}"'.format(geometry))
+                print(red_text('Deleted: "{}"'.format(geometry)))
 
             # Delete all material object files
             for material in glob.glob(os.path.join(self.fpaths['material'], '*', ''), recursive=False):
                 rmtree(material)
-                print('Deleted: "{}"'.format(material))
+                print(red_text('Deleted: "{}"'.format(material)))
 
             # Delete all model files
             for model in glob.glob(os.path.join(self.fpaths['model_files'], '*', ''), recursive=False):
                 rmtree(model)
-                print('Deleted: "{}"'.format(model))
+                print(red_text('Deleted: "{}"'.format(model)))
 
             if os.path.exists(self.fpaths['data']):
                 # Delete pickle storage file
                 os.remove(self.fpaths['data'])
+                print(red_text('Deleted: "{}"'.format(self.fpaths['data'])))
+
+            print('-'*60)
+            print(green_text('The Database was successfully deleted.'))
+            print('-'*60)
 
         except:
-            print('-----------------------------------------------')
-            print('ERROR: The program cannot delete a file due to another program using a directory.')
-            print('-----------------------------------------------')
+            print(red_text('ERROR: The program cannot delete a file due to another program using a directory.'))
+            print(red_text('Closing the Database.'))
+            print('-'*60)
 
             exit(0)
 
 
-    def overwrite_models(self):
+    def delete_all_models(self):
         '''
         ---------------------------------------------------
         Delete all models in the relevant filepaths and removes their entries from the database
         ---------------------------------------------------
         '''
+        directories = glob.glob(os.path.join(self.fpaths['model_files'], '*', ''), recursive=False)
+        model_names = self.data['model'].keys()
+
+        print(green_text('Deleting all models in the database'))
+
+        if not (len(directories) or len(model_names)):
+            print(green_text('No Models to delete'))
+            print('-'*60)
+            return
+        
+        print('-'*60)
 
         try:
-            for model in glob.glob(os.path.join(self.fpaths['model_files'], '*', ''), recursive=False):
+            for model in directories:
                 rmtree(model)
-                print('Deleted Directory: "{}"'.format(model))
+                print(red_text('Deleted directory: "{}"'.format(model)))
 
-            for model in self.data['model'].keys():
-                print('Deleted Model: "{}", from the database.'.format(model))
+            for model in model_names:
+                print(red_text('Deleted Model: "{}", from the database.'.format(model)))
 
             self.data['model'] = {}
 
         except:
-            print('-----------------------------------------------')
-            print('ERROR: The program cannot delete a file due to another program using a directory.')
-            print('-----------------------------------------------')
+            print(red_text('ERROR: The program cannot delete a file due to another program using a directory.'))
+            print(red_text('Closing the Database.'))
+            print('-'*60)
 
             exit(0)
 
@@ -250,12 +283,8 @@ class Modular_Abaqus_Builder:
 
             self.data = pkl.load(df).data
 
-            print('-----------------------------------------------')
-            print('Loading from: "{}" was successful.'.format(self.fpaths['data']))
-            print('The following data was imported into the database: ')
-            print('-----------------------------------------------')
-
-        self.print_database()
+            print(green_text('Loading from: "{}" was successful.'.format(self.fpaths['data'])))
+            print('-'*60)
 
 
     def save_database(self):
@@ -265,15 +294,18 @@ class Modular_Abaqus_Builder:
         ---------------------------------------------------
         '''
 
-        print('-----------------------------------------------')
-        print('Saving the Database')
-        print('-----------------------------------------------')
+        if not os.path.exists(self.fpaths['data']):
+            print(yellow_text('New "{}" file created'.format(self.fpaths['data'])))
+
         # Save data
-        with open(self.fpaths['data'], 'wb') as df:
-            pkl.dump(self, df)
-            print('-----------------------------------------------')
-            print('Save to: "{}" was successful.'.format(self.fpaths['data']))
-            print('-----------------------------------------------')
+        try:
+            with open(self.fpaths['data'], 'wb') as df:
+                pkl.dump(self, df)
+                print(green_text('Save to: "{}" was successful.'.format(self.fpaths['data'])))
+
+        except:
+            print(red_text('ERROR: Save to: "{}" was unsuccessful.'.format(self.fpaths['data'])))
+            print('-'*60)
 
 
     def main_loop(self):
@@ -286,23 +318,43 @@ class Modular_Abaqus_Builder:
 
         while True:
             
+            print('-'*60)
             # Commands = ['edit_objects', 'edit_models', 'save_database', 'validate_database', 'help', 'exit']
-            command = inquirer.list_input('Pick Command: ', choices=self.inquirer_dialogs['Main_Loop'], carousel=True, default=command)
+            main_loop_questions = [inquirer.List('command', 
+                                       'Pick Command', 
+                                       choices=self.inquirer_dialogs['Main_Loop'], 
+                                       carousel=True, 
+                                       default=command)]
+            
+            command = inquirer.prompt(main_loop_questions, theme=Theme())['command']
 
             if command == 'exit':
+                print('-'*60)
                 if self.yes_no_question('Are you sure you would like to exit?'):
+                    print('-'*60)
                     self.save_database()
                     break
 
             elif command == 'help':
-                help_message = inquirer.list_input('Print database structure or Help menu? ', choices=['print','help'], carousel = True)
+                help_questions = [inquirer.List('help_command', 
+                                             'Select help option', 
+                                             choices=['print','verbose_print','help','cancel'], 
+                                             carousel = True)]
+                
+                print('-'*60)
+                help_command = inquirer.prompt(help_questions, theme=Theme())['help_command']
 
-                if help_message == 'print':
-                    self.print_database()
-                else:
-                    self.print_main_help_message()
+                if help_command != 'cancel':
+                    print('-'*60)
+                    if help_command == 'print':
+                        self.print_database()
+                    elif help_command == 'verbose_print':
+                        self.print_database(True)
+                    elif help_command == 'help':
+                        self.print_main_help_message()
 
             elif command == 'save_database':
+                print('-'*60)
                 self.save_database()
 
             elif command == 'edit_models':
@@ -315,9 +367,8 @@ class Modular_Abaqus_Builder:
                 self.validate_database()
 
 
-        print('-----------------------------------------------')
-        print('Exiting the interface :3')
-        print('-----------------------------------------------')
+        print(green_text('Exiting the interface'))
+        print('-'*60)
 
 
     def edit_objects(self):
@@ -327,39 +378,61 @@ class Modular_Abaqus_Builder:
         ---------------------------------------------------
         '''
 
-        print('-----------------------------------------------')
+        print('-'*60)
         print('Entering Edit Objects interface')
-        print('-----------------------------------------------')
+        print('-'*60)
 
         command = 'create'
 
         while command != 'back':
             
             # Commands = ['create', 'modify', 'duplicate', 'delete', 'help', 'back']
-            command = inquirer.list_input('Pick Edit Object Command', choices=self.inquirer_dialogs['Object_Loop'], carousel = True, default = command)
-
+            object_questions = [inquirer.List('command',
+                                       'Pick Edit Object Command', 
+                                       choices=self.inquirer_dialogs['Object_Loop'], 
+                                       carousel = True, 
+                                       default = command)]
+            
+            command = inquirer.prompt(object_questions, theme=Theme())['command']
 
             if command == 'help':
-                help_message = inquirer.list_input('Print database structure or Help menu? ', choices=['print','help'], carousel = True)
+                help_questions = [inquirer.List('help_command', 
+                                             'Select help option', 
+                                             choices=['print','verbose_print','help','cancel'], 
+                                             carousel = True)]
+                
+                print('-'*60)
+                help_command = inquirer.prompt(help_questions, theme=Theme())['help_command']
 
-                if help_message == 'print':
-                    self.print_database()
-                else:
-                    self.print_object_help_message()
+                if help_command != 'cancel':
+                    print('-'*60)
+
+                    if help_command == 'print':
+                        self.print_database()
+                        print('-'*60)
+
+                    elif help_command == 'verbose_print':
+                        self.print_database(True)
+                        print('-'*60)
+
+                    elif help_command == 'help':
+                        self.print_main_help_message()
 
 
             elif command == 'create':
-
+                
+                print('-'*60)
                 object_type = self.select_object_type()
 
                 self.create_object(object_type)
 
                 self.save_database()
+                print('-'*60)
 
 
             elif command == 'modify':
                 
-                # Select object to be modified
+                print('-'*60)
                 object_name, object_type = self.select_object()
                 
                 # Check if object was available
@@ -368,14 +441,15 @@ class Modular_Abaqus_Builder:
                     self.modify_object(object_name, object_type)
                     
                     self.save_database()
+                    print('-'*60)
 
                 else: 
                     print('Returning to object loop.')
-                    print('-----------------------------------------------')
+                    print('-'*60)
 
             elif command == 'duplicate':
 
-                # Select object to be duplicated
+                print('-'*60)
                 object_name, object_type = self.select_object()
 
                 # Check if object was available
@@ -385,15 +459,16 @@ class Modular_Abaqus_Builder:
                     self.duplicate_object(object_type, object_name)
 
                     self.save_database()
+                    print('-'*60)
 
                 else: 
                     print('Returning to object loop.')
-                    print('-----------------------------------------------')
+                    print('-'*60)
 
 
             elif command == 'delete':
                 
-                # Select object to be deleted
+                print('-'*60)
                 object_name, object_type = self.select_object(message = ' you would like to delete')
 
                 # Check if object was available
@@ -403,16 +478,15 @@ class Modular_Abaqus_Builder:
                     self.delete_object(object_type, object_name)
 
                     self.save_database()
+                    print('-'*60)
 
                 else: 
                     print('Returning to object loop.')
-                    print('-----------------------------------------------')
+                    print('-'*60)
 
-
-        print('-----------------------------------------------')
+        print('-'*60)
         print('Returning to the main loop')
-        print('-----------------------------------------------')
-
+        
 
     def edit_models(self):
         '''
@@ -421,54 +495,81 @@ class Modular_Abaqus_Builder:
         ---------------------------------------------------
         '''
 
-        print('-----------------------------------------------')
+        print('-'*60)
         print('Entering edit models interface')
-        print('-----------------------------------------------')
+        print('-'*60)
         
         command = 'create'
 
         while command != 'back':
             
             # Commands = ['create', 'modify', 'duplicate', 'delete', 'post_process', 'run', 'help', 'back']
-            command = inquirer.list_input('Pick Model Edit Command: ', choices=self.inquirer_dialogs['Model_Loop'], carousel = True, default = command)
+            model_questions = [inquirer.List('command',
+                                             'Pick Model Edit Command: ', 
+                                             choices=self.inquirer_dialogs['Model_Loop'], 
+                                             carousel = True, 
+                                             default = command)]
+            
+            command = inquirer.prompt(model_questions, theme=Theme())['command']
 
             if command == 'help':
-                help_message = inquirer.list_input('Print database structure or Help menu? ', choices=['print','help'], carousel = True)
+                help_questions = [inquirer.List('help_command', 
+                                             'Select help option', 
+                                             choices=['print','verbose_print','help','cancel'], 
+                                             carousel = True)]
+                
+                print('-'*60)
+                help_command = inquirer.prompt(help_questions, theme=Theme())['help_command']
 
-                if help_message == 'print':
-                    self.print_database()
-                else:
-                    self.print_model_help_message()
+                if help_command != 'cancel':
+                    print('-'*60)
+                    if help_command == 'print':
+                        self.print_database()
+                        print('-'*60)
+                    elif help_command == 'verbose_print':
+                        self.print_database(True)
+                        print('-'*60)
+                    elif help_command == 'help':
+                        self.print_main_help_message()
 
             elif command == 'create':
                 self.create_model()
 
                 self.save_database()
+                print('-'*60)
 
             elif command == 'modify':
                 self.modify_model()
 
                 self.save_database()
+                print('-'*60)
 
             elif command == 'duplicate':
                 self.duplicate_model()
 
                 self.save_database()
+                print('-'*60)
 
             elif command == 'delete':
                 self.delete_model()
 
                 self.save_database()
+                print('-'*60)
 
             elif command == 'post_process':
                 self.postprocess_model()
-
+                
                 self.save_database()
+                print('-'*60)
 
             elif command == 'run':
                 self.run_model()
 
                 self.save_database()
+                print('-'*60)
+
+        print('-'*60)
+        print('Returning to the main loop')
 
         
     def select_object_type(self):
@@ -482,12 +583,11 @@ class Modular_Abaqus_Builder:
             One of the three object types, chosen by the user.
         ---------------------------------------------------
         '''
+        questions = [inquirer.List('object_type','Pick Object Type: ', choices=self.inquirer_dialogs['Object_Types'], carousel = True)]
+        object_type = inquirer.prompt(questions, theme=Theme())['object_type']
 
-        object_type = inquirer.list_input('Pick Object Type: ', choices=self.inquirer_dialogs['Object_Types'], carousel = True)
-
-        print('-----------------------------------------------')
-        print('Object Type: "{}" was selected.'.format(object_type))
-        print('-----------------------------------------------')
+        print('-'*60)
+        print('Object Type: "{}" was selected.'.format(blue_text(object_type)))
 
         return object_type
     
@@ -509,24 +609,28 @@ class Modular_Abaqus_Builder:
         '''
         if not object_type:
             object_type = self.select_object_type()
+            print('-'*60)
 
         # Get available choices
         choices = list(self.data[object_type].keys())
 
         # Check there are choices available
-        if len(choices):
-            selected_object = inquirer.list_input('Pick the {} object{}'.format(object_type,message), choices=choices, carousel = True)
+        if choices:
+            
+            questions = [inquirer.List('object','Pick the {} object{}'.format(object_type,message), choices=choices, carousel = True)]
+            selected_object = inquirer.prompt(questions, theme=Theme())['object']
+            
+            print('-'*60)
+            print('Object: "{}" of object type: "{}" was selected.'.format(blue_text(selected_object),blue_text(object_type)))
+            print('-'*60)
+            
+            return selected_object, object_type
 
         else:
-            print('-----------------------------------------------')
-            print('ERROR: no objects of type: "{}" to select.'.format(object_type))
+            print('-'*60)
+            print(red_text('ERROR: no objects of type: "{}" to select.'.format(object_type)))
+            print('-'*60)
             return '', object_type
-        
-        print('-----------------------------------------------')
-        print('Object: "{}" of object type: "{}" was selected.'.format(selected_object,object_type))
-        print('-----------------------------------------------')
-        
-        return selected_object, object_type
 
 
     def get_object_modifications(self, object_name, object_type):
@@ -546,21 +650,20 @@ class Modular_Abaqus_Builder:
         possible_changes = ['name', 'description', 'parameters', 'requirements', 'cancel']
         
         # Get objects to be changed
-        modifications = inquirer.checkbox('What would you like to change about the object: "{}", of type: "{}"'.format(object_name,object_type),
-                                        choices = possible_changes)
+        questions = [inquirer.Checkbox('modifications','What would you like to change about the object: "{}", of type: "{}"'.format(object_name,object_type), choices = possible_changes)]
+        modifications = inquirer.prompt(questions, theme=Theme())['modifications']
 
         # Create change dictionary
         object_modifications = {'name': False,
-                       'description' : False,
-                       'parameters' : False,
-                       'requirements' : False}
+                                'description' : False,
+                                'parameters' : False,
+                                'requirements' : False}
         
         # If no changes picked or cancelled return to main loop
         if (not modifications) or ('cancel' in modifications):
-            print('-----------------------------------------------')
-            print('No changes picked or cancel command picked')
-            print('Returning to main loop.')
-            print('-----------------------------------------------')
+            print('-'*60)
+            print(yellow_text('No changes picked or cancel command picked'))
+            print('-'*60)
             return object_modifications
 
         for modification_key in object_modifications.keys():
@@ -585,25 +688,39 @@ class Modular_Abaqus_Builder:
             if object_type == 'analysis':
                 
                 temp_object = Analysis_Object(self)
-
+                if not temp_object.name:
+                    return
+                
                 self.data['analysis'][temp_object.name] = temp_object
 
             elif object_type == 'geometry':
 
                 temp_object = Geometry_Object(self)
+                if not temp_object.name:
+                    return
 
                 self.data['geometry'][temp_object.name] = temp_object
 
             elif object_type == 'material':
 
                 temp_object = Material_Object(self)
-
+                if not temp_object.name:
+                    return
+                
                 self.data['material'][temp_object.name] = temp_object
 
+            print(green_text('Object: "{}" successfully added to the database.'.format(temp_object.name)))
+            print('-'*60)
+
         except:
-            print('-----------------------------------------------')
-            print('An error occurred while adding the object to the Database.')
-            print('-----------------------------------------------')
+
+            print(red_text('An error occurred while adding the object to the Database.'))
+            for object_fpath in glob.glob(os.path.join(self.fpaths[object_type],'*',''), recursive=False):
+                if object_fpath not in [os.path.join(object.fpath,'') for object in self.data[object_type].values()]:
+                    rmtree(object_fpath)
+                    print(red_text('\tDeleted Folder: "{}", that did not exist in the database.'.format(object_fpath)))
+
+            print('-'*60)
             
     
     def modify_object(self, object_name, object_type):
@@ -621,18 +738,16 @@ class Modular_Abaqus_Builder:
         ---------------------------------------------------
         '''
         # Check the user would like to delete the object
-        if not self.yes_no_question('Would you like to modify object: "{}" of type: "{}"? \nNOTE: The database will be saved automatically afterwards and the previous information will be LOST'.format(object_name, object_type)):
+        if not self.yes_no_question('Would you like to modify object: "{}" of type: "{}"'.format(object_name, object_type)):
             return
 
-        print('-----------------------------------------------')
         print('Modify object operation begun.')
-        print('-----------------------------------------------')
+        print('-'*60)
 
         object_modifications = self.get_object_modifications(object_name, object_type)
         
         # Change name/file directory
         if object_modifications['name']:
-
 
             # Pick new name
             self.data[object_type][object_name].new_object_name()
@@ -640,42 +755,49 @@ class Modular_Abaqus_Builder:
 
             self.data[object_type][new_name] = self.data[object_type].pop(object_name)
 
+            print(green_text('Object name successfully changed from: "{}" to "{}".'.format(object_name, new_name)))
 
             # Change folder name
             try:
                 fpath = os.path.join(self.fpaths[object_type], object_name)
                 new_fpath = os.path.join(self.fpaths[object_type], new_name)
                 os.rename(fpath, new_fpath)
-                print('Renaming the filepath: "{}" to "{}" was successful.'.format(fpath,new_fpath))
+                print(green_text('Renaming the filepath: "{}" to "{}" was successful.'.format(fpath,new_fpath)))
 
             except:
-                raise FileExistsError('Renaming the filepath: "{}" to "{}" has failed.'.format(fpath,new_fpath))
+                print('-'*60)
+                print(red_text('Renaming the filepath: "{}" to "{}" has failed.'.format(fpath,new_fpath)))
+
+                self.validate_database()
             
             # Change fpath
             self.data[object_type][new_name].fpath = new_fpath
-            print('The filepath for {} "{}" was successfully changed to "{}" in the local dictionary.'.format(object_type,new_name,new_fpath))
+            print(green_text('The filepath for {} "{}" was successfully changed to "{}" in the database.'.format(object_type,new_name,new_fpath)))
             
             object_name = new_name
 
-            print('Name modification was successful.')
+            print(green_text('Name modification was successful.'))
+
 
         # Change description
         if object_modifications['description']:
             self.data[object_type][object_name].new_description()
-            print('Description modification was successful.')
+            print(green_text('Description modification was successful.'))
+
 
         # Change parameters
         if object_modifications['parameters']:
             self.data[object_type][object_name].define_parameters()
-            print('Parameters modification was successful.')
+            print(green_text('Parameters modification was successful.'))
             
+        # Change requirements
         if object_modifications['requirements']:
             self.data[object_type][object_name].set_requirements()
+            print(green_text('Requirements modification was successful.'))
 
 
-        print('-----------------------------------------------')
-        print('Modify object operation successful.')
-        print('-----------------------------------------------')
+        print(green_text('Modify object operation successful.'))
+        print('-'*60)
 
 
     def duplicate_object(self, object_type, object_name):
@@ -692,9 +814,8 @@ class Modular_Abaqus_Builder:
             The name of the object to be duplicated, all of this *.inp files will be duplicated from the file path. If this does not match an object in the object type dictionary then an error will be thrown.
         ---------------------------------------------------
         '''
-        print('-----------------------------------------------')
-        print('Duplicate object operation begun.')
-        print('-----------------------------------------------')
+        print(green_text('Duplicate object operation begun.'))
+        print('-'*60)
 
         # Copy object and change its name
         duplicated_object = deepcopy(self.data[object_type][object_name])
@@ -703,24 +824,21 @@ class Modular_Abaqus_Builder:
         
         new_name = duplicated_object.name
 
-        # Get new fpath
+        # Get new and old fpaths
+        fpath = duplicated_object.fpath
         new_fpath = os.path.join(self.fpaths[object_type], new_name)
         duplicated_object.fpath = new_fpath
 
-        self.data[object_type][new_name] = duplicated_object
-
-        # Get old file path
-        fpath = os.path.join(self.fpaths[object_type], object_name)
-
         # Check file path does not already exist
         if os.path.exists(new_fpath):
-            raise FileExistsError('The file path: "{}" already exists.'.format(new_fpath))
+            print(red_text('ERROR: The filepath: "{}" already exists.'.format(new_fpath)))
+            self.validate_database()
+        else:
+            self.data[object_type][new_name] = duplicated_object
+            self.data[object_type][new_name].move_folder(fpath, new_fpath)  
 
-        self.data[object_type][new_name].move_folder(fpath, new_fpath)  
-
-        print('-----------------------------------------------')
-        print('Duplicate object operation successful.')
-        print('-----------------------------------------------')
+            print(green_text('Duplicate object operation successful.'))
+            print('-'*60)
 
 
     def delete_object(self, object_type, object_name):
@@ -739,213 +857,221 @@ class Modular_Abaqus_Builder:
         '''
 
         # Check the user would like to delete the object
-        if not self.yes_no_question('Would you like to delete object: "{}" of type: "{}"? \nNOTE: The database will be saved automatically afterwards and all related data will be LOST'.format(object_name, object_type)):
+        if not self.yes_no_question('Would you like to delete object: "{}" of type: "{}"'.format(object_name, object_type)):
             return
         
-        print('-----------------------------------------------')
-        print('Delete object operation begun.')
-        print('-----------------------------------------------')
+        print('-'*60)
+        print(green_text('Attempting to Delete {} object: "{}"'.format(object_type, object_name)))
 
         # Get file path of files
         fpath = os.path.join(self.fpaths[object_type], object_name)
-
+        
         # Delete files from filepath
-        rmtree(fpath)
-        print('The file path: "{}" and its contents have been successfully removed from the {} folder.'.format(fpath, object_type))
+        try:
+            rmtree(fpath)
+            print(green_text('The file path: "{}" and its contents have been successfully removed from the {} folder.'.format(fpath, object_type)))
+
+            # Then delete from local dictionary
+            self.data[object_type].pop(object_name)
+            print(green_text('The {}: "{}" has been successfully removed from the local dictionary.'.format(object_type,object_name)))     
+            
+            print(green_text('Delete object operation successful.'))
+            print('-'*60)
+        except:
+            print(red_text('ERROR: The object could not be deleted.'))
+            print('-'*60)
+            self.validate_database()
             
         
-        # Then delete from local dictionary
-        self.data[object_type].pop(object_name)
-        print('The {}: "{}" has been successfully removed from the local dictionary.'.format(object_type,object_name))     
-        
-        print('-----------------------------------------------')
-        print('Delete object operation successful.')
-        print('-----------------------------------------------')
-        
-
-    def print_database(self):
+    def print_database(self, verbose = False):
         '''
         ---------------------------------------------------
         Print Database in a cooler way than __str__. Hate that shit.
         ---------------------------------------------------
         '''
 
-        print('-----------------------------------------------')
-        print('The Analyses currently loaded are: ')
-        print('-----------------------------------------------')
+        print(blue_text('The Analyses currently loaded are: '))
+        print('-'*60)
         for analysis in self.data['analysis'].values():
 
-            print('Analysis Name: "{}"'.format(analysis.name))
-            print('\tPath: "{}"'.format(analysis.fpath))
+            print('Analysis Name: "{}"'.format(blue_text(analysis.name)))
+            verbose and print('\tPath: "{}"'.format(analysis.fpath))
             print('\tDescription: "{}"'.format(analysis.description))
-            print('\tFiles: ')
+            
+            if verbose:
+                print('\tFiles: ')
+                for file in analysis.files:
+                    print('\t\t"{}"'.format(file))
 
-            for file in analysis.files:
-                print('\t\t"{}"'.format(file))
+            if len(analysis.parameters):
+                print('\tParameters: ')
+                for parameter in analysis.parameters.keys():
+                    print('\t\tName: "{}"'.format(analysis.parameters[parameter]['name']))
+                    verbose and print('\t\t\tDescription: "{}"'.format(analysis.parameters[parameter]['description']))
+                    print('\t\t\tDefault Value: "{}"'.format(analysis.parameters[parameter]['default_value']))
+                    verbose and print('\t\t\tData-type: "{}"'.format(analysis.parameters[parameter]['dtype']))
 
-            print('\tParameters: ')
+                    if verbose:
+                        print('\t\t\tSolvers parameter modifies: ')
+                        for solver in analysis.parameters[parameter]['solvers']:
+                                print('\t\t\t\t"{}"'.format(solver))
 
-            for parameter in analysis.parameters.keys():
+            if verbose:
+                print('\tRequirements: ')
+                for requirement_type in analysis.requirements.keys():
+                    print('\t\t"{}"'.format(requirement_type))
+                    for requirement,requirement_value in analysis.requirements[requirement_type].items():
+                        print('\t\t\t"{}": "{}"'.format(requirement,requirement_value))
 
-                print('\t\tName: "{}"'.format(analysis.parameters[parameter]['name']))
-                print('\t\t\tDescription: "{}"'.format(analysis.parameters[parameter]['description']))
-                print('\t\t\tData-type: "{}"'.format(analysis.parameters[parameter]['dtype']))
-                print('\t\t\tDefault Value: "{}"'.format(analysis.parameters[parameter]['default_value']))
-
-                print('\t\t\tSolvers parameter modifies: ')
-                for solver in analysis.parameters[parameter]['solvers']:
-                        print('\t\t\t\t"{}"'.format(solver))
-
-
-            print('\tRequirements: ')
-
-            for requirement_type in analysis.requirements.keys():
-                
-                print('\t\t"{}"'.format(requirement_type))
-
-                for requirement,requirement_value in analysis.requirements[requirement_type].items():
-                    print('\t\t\t"{}": "{}"'.format(requirement,requirement_value))
-
-            print('-----------------------------------------------')
+            print('-'*60)
 
         
-        print('The Geometries currently loaded are: ')
-        print('-----------------------------------------------')
+        print(blue_text('The Geometries currently loaded are: '))
+        print('-'*60)
         for geometry in self.data['geometry'].values():
 
-            print('Geometry Name: "{}"'.format(geometry.name))
-            print('\tPath: "{}"'.format(geometry.fpath))
+            print('Geometry Name: "{}"'.format(blue_text(geometry.name)))
+            verbose and print('\tPath: "{}"'.format(geometry.fpath))
             print('\tDescription: "{}"'.format(geometry.description))
-            print('\tFiles: ')
 
-            for file in geometry.files:
-                print('\t\t"{}"'.format(file))
+            if verbose:
+                print('\tFiles: ')
+                for file in geometry.files:
+                    print('\t\t"{}"'.format(file))
 
-            print('\tParameters: ')
+            if len(geometry.parameters):
+                print('\tParameters: ')
+                for parameter in geometry.parameters.keys():
+                    print('\t\tName: "{}"'.format(geometry.parameters[parameter]['name']))
+                    verbose and print('\t\t\tDescription: "{}"'.format(geometry.parameters[parameter]['description']))
+                    print('\t\t\tDefault Value: "{}"'.format(geometry.parameters[parameter]['default_value']))
+                    verbose and print('\t\t\tData-type: "{}"'.format(geometry.parameters[parameter]['dtype']))
+                    
+                    if verbose:
+                        print('\t\t\tSolvers parameter modifies: ')
+                        for solver in geometry.parameters[parameter]['solvers']:
+                                print('\t\t\t\t"{}"'.format(solver))
 
-            for parameter in geometry.parameters.keys():
+            if verbose:
+                print('\tRequirements: ')
+                for requirement_type in geometry.requirements.keys():
+                    print('\t\t"{}"'.format(requirement_type))
+                    for requirement,requirement_value in geometry.requirements[requirement_type].items():
+                        print('\t\t\t"{}": "{}"'.format(requirement,requirement_value))
 
-                print('\t\tName: "{}"'.format(geometry.parameters[parameter]['name']))
-                print('\t\t\tDescription: "{}"'.format(geometry.parameters[parameter]['description']))
-                print('\t\t\tData-type: "{}"'.format(geometry.parameters[parameter]['dtype']))
-                print('\t\t\tDefault Value: "{}"'.format(geometry.parameters[parameter]['default_value']))
-
-                print('\t\t\tSolvers parameter modifies: ')
-                for solver in geometry.parameters[parameter]['solvers']:
-                        print('\t\t\t\t"{}"'.format(solver))
-
-
-            print('\tRequirements: ')
-
-            for requirement_type in geometry.requirements.keys():
-                
-                print('\t\t"{}"'.format(requirement_type))
-
-                for requirement,requirement_value in geometry.requirements[requirement_type].items():
-                    print('\t\t\t"{}": "{}"'.format(requirement,requirement_value))
-
-            print('-----------------------------------------------')
+            print('-'*60)
 
 
-        print('The Materials currently loaded are: ')
-        print('-----------------------------------------------')
+        print(blue_text('The Materials currently loaded are: '))
+        print('-'*60)
         for material in self.data['material'].values():
 
-            print('Material Name: "{}"'.format(material.name))
-            print('\tPath: "{}"'.format(material.fpath))
+            print('Material Name: "{}"'.format(blue_text(material.name)))
+            verbose and print('\tPath: "{}"'.format(material.fpath))
             print('\tDescription: "{}"'.format(material.description))
-            print('\tFiles: ')
 
-            for file in material.files:
-                print('\t\t"{}"'.format(file))
+            if verbose:
+                print('\tFiles: ')
+                for file in material.files:
+                    print('\t\t"{}"'.format(file))
 
-            print('\tParameters: ')
+            if len(material.parameters):
+                print('\tParameters: ')
+                for parameter in material.parameters.keys():
 
-            for parameter in material.parameters.keys():
+                    print('\t\tName: "{}"'.format(material.parameters[parameter]['name']))
+                    verbose and print('\t\t\tDescription: "{}"'.format(material.parameters[parameter]['description']))
+                    print('\t\t\tDefault Value: "{}"'.format(material.parameters[parameter]['default_value']))
+                    verbose and print('\t\t\tData-type: "{}"'.format(material.parameters[parameter]['dtype']))
+                    
+                    if verbose:
+                        print('\t\t\tSolvers parameter modifies: ')
+                        for solver in material.parameters[parameter]['solvers']:
+                                print('\t\t\t\t"{}"'.format(solver))
 
-                print('\t\tName: "{}"'.format(material.parameters[parameter]['name']))
-                print('\t\t\tDescription: "{}"'.format(material.parameters[parameter]['description']))
-                print('\t\t\tData-type: "{}"'.format(material.parameters[parameter]['dtype']))
-                print('\t\t\tDefault Value: "{}"'.format(material.parameters[parameter]['default_value']))
+            if verbose:
+                print('\tRequirements: ')
+                for requirement_type in material.requirements.keys():
+                    print('\t\t"{}"'.format(requirement_type))
+                    for requirement,requirement_value in material.requirements[requirement_type].items():
+                        print('\t\t\t"{}": "{}"'.format(requirement,requirement_value))
 
-                print('\t\t\tSolvers parameter modifies: ')
-                for solver in material.parameters[parameter]['solvers']:
-                        print('\t\t\t\t"{}"'.format(solver))
-
-
-            print('\tRequirements: ')
-
-            for requirement_type in material.requirements.keys():
-                
-                print('\t\t"{}"'.format(requirement_type))
-
-                for requirement,requirement_value in material.requirements[requirement_type].items():
-                    print('\t\t\t"{}": "{}"'.format(requirement,requirement_value))
-
-            print('-----------------------------------------------')
+            print('-'*60)
 
 
-        # ******************* WILL NEED TO BE UPDATED UPON ADDING MODEL CLASS *************************
+        # ******************* TODO WILL NEED TO BE UPDATED UPON ADDING MODEL CLASS *************************
 
-        print('The Models currently loaded are: ')
-        print('-----------------------------------------------')
+        print(blue_text('The Models currently loaded are: '))
+        print('-'*60)
         for model in self.data['model'].values():
 
-            print('Model Name: "{}"'.format(model.name))
+            print('Model Name: "{}"'.format(blue_text(model.name)))
             print('\tDescription: "{}"'.format(model.description))
-            print('\tPath: "{}"'.format(model.fpath))
-            print('\tSolver Fpaths: ')
+            verbose and print('\tPath: "{}"'.format(model.fpath))
 
-            for solver,fpath in model.solver_fpaths.items():
-                if fpath is not None:
-                    print('\t\t "{}": "{}"'.format(solver,fpath))
+            if verbose:
+                print('\tSolver Fpaths: ')
+                for solver,fpath in model.solver_fpaths.items():
+                    if fpath is not None:
+                        print('\t\t "{}": "{}"'.format(solver,fpath))
 
             print('\tAnalysis used: "{}"'.format(model.analysis.name))
-            print('\tWhich has requirements: ')
 
-            for requirement_type in model.requirements.keys():
-                
-                print('\t\t"{}"'.format(requirement_type))
-
-                for requirement,requirement_value in model.requirements[requirement_type].items():
-                    print('\t\t\t"{}": "{}"'.format(requirement,requirement_value))
+            if verbose:
+                print('\tWhich has requirements: ')
+                for requirement_type in model.requirements.keys():
+                    print('\t\t"{}"'.format(requirement_type))
+                    for requirement,requirement_value in model.requirements[requirement_type].items():
+                        print('\t\t\t"{}": "{}"'.format(requirement,requirement_value))
 
             print('\tGeometry used: "{}"'.format(model.geometry.name))
-            print('\tMaterials used: ')
 
-            for material in model.materials.keys():
-                print('\t\t"{}"'.format(model.materials[material].name))
+            if len(model.materials) > 1:
+                print('\tMaterials used: ')
+                for material in model.materials.keys():
+                    print('\t\t"{}"'.format(model.materials[material].name))
 
-            print('\tParameters: ')
+            elif len(model.materials) == 1:
+                for material in model.materials.keys():
+                    print('\tMaterial used: "{}"'.format(model.materials[material].name))
 
-            for parameter in model.parameters.keys():
+            if len(model.parameters):
+                print('\tParameters: ')
+                for parameter in model.parameters.keys():
 
-                print('\t\tName: "{}"'.format(model.parameters[parameter]['name']))
-                print('\t\t\tDescription: "{}"'.format(model.parameters[parameter]['description']))
-                print('\t\t\tData-type: "{}"'.format(model.parameters[parameter]['dtype']))
-                print('\t\t\tDefault Value: "{}"'.format(model.parameters[parameter]['default_value']))
+                    print('\t\tName: "{}"'.format(model.parameters[parameter]['name']))
+                    verbose and print('\t\t\tDescription: "{}"'.format(model.parameters[parameter]['description']))
+                    print('\t\t\tDefault Value: "{}"'.format(model.parameters[parameter]['default_value']))
+                    verbose and print('\t\t\tData-type: "{}"'.format(model.parameters[parameter]['dtype']))
+                    
 
-                print('\t\t\tSolvers parameter modifies: ')
-                for solver in model.parameters[parameter]['solvers']:
-                        print('\t\t\t\t"{}"'.format(solver))
+                    if verbose:
+                        print('\t\t\tSolvers parameter modifies: ')
+                        for solver in model.parameters[parameter]['solvers']:
+                                print('\t\t\t\t"{}"'.format(solver))
 
 
-            print('-----------------------------------------------')
+        print('Database contains:')
+        print('\t{} Analysis Objects'.format(blue_text(len(self.data['analysis']))))
+        print('\t{} Geometry Objects'.format(blue_text(len(self.data['geometry']))))
+        print('\t{} Material Objects'.format(blue_text(len(self.data['material']))))
+        print('\t{} Models'.format(blue_text(len(self.data['model']))))
 
 
     def validate_database(self):
         '''
         
         '''
-        print('-----------------------------------------------')
+        print('-'*60)
         print('Validating the Database to ensure no corruption has occured.')
-        print('-----------------------------------------------')
+        print('-'*60)
 
         # Validate Analyses
         print('Validating Analyses...')
+        print('-'*60)
         for analysis_name in list(self.data['analysis'].keys()):
             
-            print('Validating Analysis: "{}"'.format(analysis_name))
+            print('\tValidating Analysis: "{}"'.format(analysis_name))
 
             # Check fpath matches path + name
             fpath_matches = os.path.join(self.fpaths['analysis'],analysis_name) == self.data['analysis'][analysis_name].fpath
@@ -962,26 +1088,29 @@ class Modular_Abaqus_Builder:
             # Check requirements match database requirements
             if (self.requirements.keys() != self.data['analysis'][analysis_name].requirements.keys()) or any([self.requirements[key].keys() != self.data['analysis'][analysis_name].requirements[key].keys() for key in self.requirements.keys()]):
 
-                print('The requirements for the Analysis object: "{}" do not match the default requirements of the database. Please select new requirements.'.format(analysis_name))
+                print(yellow_text('\tThe requirements for the Analysis object: "{}" do not match the default requirements of the database. Please select new requirements.'.format(analysis_name)))
                 self.data['analysis'][analysis_name].set_requirements(reset_requirements = True)
 
 
             # Check all validations passed
             if fpath_matches and directory_exists and all_files_exist:
-                print('Analysis: "{}", validated successfully'.format(analysis_name))
+                print(green_text('\tAnalysis: "{}", validated successfully'.format(analysis_name)))
 
             else:
                 self.data['analysis'].pop(analysis_name)
-                print('Analysis: "{}", was found to be not valid. Deleting from database'.format(analysis_name))
+                print(red_text('\tAnalysis: "{}", was found to be not valid. Deleting from database'.format(analysis_name)))
 
-        print('Analyses Validated.')
+        bool(len(self.data['analysis'])) and print('-'*60)
+        print(green_text('Analyses Validated.'))
+        print('-'*60)
 
 
         # Validate Geometries
         print('Validating Geometries...')
+        print('-'*60)
         for geometry_name in list(self.data['geometry'].keys()):
             
-            print('Validating Geometry: "{}"'.format(geometry_name))
+            print('\tValidating Geometry: "{}"'.format(geometry_name))
 
             # Check fpath matches path + name
             fpath_matches = os.path.join(self.fpaths['geometry'],geometry_name) == self.data['geometry'][geometry_name].fpath
@@ -998,26 +1127,29 @@ class Modular_Abaqus_Builder:
             # Check requirements match database requirements
             if self.requirements['geometries'].keys() != self.data['geometry'][geometry_name].requirements['geometries'].keys():
 
-                print('The requirements for the Geometry object: "{}" do not match the default requirements of the database.'.format(geometry_name))
+                print(yellow_text('\tThe requirements for the Geometry object: "{}" do not match the default requirements of the database.'.format(geometry_name)))
                 self.data['geometry'][geometry_name].set_requirements(reset_requirements = True)
 
 
             # Check all validations passed
             if fpath_matches and directory_exists and all_files_exist:
-                print('Geometry: "{}", validated successfully'.format(geometry_name))
+                print(green_text('\tGeometry: "{}", validated successfully'.format(geometry_name)))
 
             else:
                 self.data['geometry'].pop(geometry_name)
-                print('Geometry: "{}", was found to be not valid. Deleting from database'.format(geometry_name))
+                print(red_text('\tGeometry: "{}", was found to be not valid. Deleting from database'.format(geometry_name)))
 
-        print('Geometries Validated.')
+        bool(len(self.data['geometry'])) and print('-'*60)
+        print(green_text('Geometries Validated.'))
+        print('-'*60)
 
 
         # Validate Materials
         print('Validating Materials...')
+        print('-'*60)
         for material_name in list(self.data['material'].keys()):
             
-            print('Validating Material: "{}"'.format(material_name))
+            print('\tValidating Material: "{}"'.format(material_name))
 
 
             # Check fpath matches path + name
@@ -1035,24 +1167,28 @@ class Modular_Abaqus_Builder:
             # check requirements match database requirements
             if self.requirements['materials'].keys() != self.data['material'][material_name].requirements['materials'].keys():
 
-                print('The requirements for the Material object: "{}" do not match the default requirements of the database.'.format(material_name))
+                print(yellow_text('\tThe requirements for the Material object: "{}" do not match the default requirements of the database.'.format(material_name)))
                 self.data['material'][material_name].set_requirements(reset_requirements = True)
 
             # Check all validations passed
             if fpath_matches and directory_exists and all_files_exist:
-                print('Material: "{}", validated successfully'.format(material_name))
+                print(green_text('\tMaterial: "{}", validated successfully'.format(material_name)))
 
             else:
                 self.data['material'].pop(material_name)
-                print('Material: "{}", was found to be not valid. Deleting from database'.format(material_name))
+                print(red_text('\tMaterial: "{}", was found to be not valid. Deleting from database'.format(material_name)))
 
-        print('Materials Validated.')
+        bool(len(self.data['material'])) and print('-'*60)
+        print(green_text('Materials Validated.'))
+        print('-'*60)
 
 
         # Validate Models
         print('Validating Models...')
+        print('-'*60)
         for model_name in list(self.data['model'].keys()):
 
+            print('\tValidating Model: "{}"'.format(model_name))
 
             # Check fpath matches path + name
             fpath_matches = os.path.join(self.fpaths['model_files'],model_name) == self.data['model'][model_name].fpath
@@ -1075,7 +1211,7 @@ class Modular_Abaqus_Builder:
             # Check requirements match database requirements
             if (self.requirements.keys() != self.data['model'][model_name].requirements.keys()) or any([self.requirements[key].keys() != self.data['model'][model_name].requirements[key].keys() for key in self.requirements.keys()]):
 
-                print('The requirements for the Model: "{}" do not match the default requirements of the database.'.format(model_name))
+                print(yellow_text('\tThe requirements for the Model: "{}" do not match the default requirements of the database.'.format(model_name)))
 
                 if analysis_exists:
                     self.data['model'][model_name].requirements = self.data['model'][model_name].analysis.requirements
@@ -1088,49 +1224,59 @@ class Modular_Abaqus_Builder:
 
             # Check all validations passed
             if fpath_matches and directory_exists and objects_exist and requirements_valid:
-                print('Model: "{}", validated successfully'.format(model_name))
+                print(green_text('\tModel: "{}", validated successfully'.format(model_name)))
 
             else:
                 self.data['model'].pop(model_name)
-                print('Model: "{}", was found to be not valid. Deleting from database'.format(model_name))
+                print(red_text('\tModel: "{}", was found to be not valid. Deleting from database'.format(model_name)))
 
-        print('Models Validated.')
+        bool(len(self.data['model'])) and print('-'*60)
+        print(green_text('Models Validated.'))
+        print('-'*60)
 
 
+        print('Validating File Paths...')
+        print('-'*60)
+        check_deleted = False
         # Delete any folders not connected to objects in the database
         for analysis_fpath in glob.glob(os.path.join(self.fpaths['analysis'],'*',''), recursive=False):
             if analysis_fpath not in [os.path.join(analysis.fpath,'') for analysis in self.data['analysis'].values()]:
                 rmtree(analysis_fpath)
-                print('Deleted Folder: "{}", that did not exist in the database.'.format(analysis_fpath))
+                print(red_text('\tDeleted Folder: "{}", that did not exist in the database.'.format(analysis_fpath)))
+                check_deleted = True
                 
         
         for geometry_fpath in glob.glob(os.path.join(self.fpaths['geometry'],'*',''), recursive=False):
             if geometry_fpath not in [os.path.join(geometry.fpath,'') for geometry in self.data['geometry'].values()]:
                 rmtree(geometry_fpath)
-                print('Deleted Folder: "{}", that did not exist in the database.'.format(geometry_fpath))
+                print(red_text('\tDeleted Folder: "{}", that did not exist in the database.'.format(geometry_fpath)))
+                check_deleted = True
 
 
         for material_fpath in glob.glob(os.path.join(self.fpaths['material'],'*',''), recursive=False):
             if material_fpath not in [os.path.join(material.fpath,'') for material in self.data['material'].values()]:
                 rmtree(material_fpath)
-                print('Deleted Folder: "{}", that did not exist in the database.'.format(material_fpath))
+                print(red_text('\tDeleted Folder: "{}", that did not exist in the database.'.format(material_fpath)))
+                check_deleted = True
 
 
         for model_fpath in glob.glob(os.path.join(self.fpaths['model_files'],'*',''), recursive=False):
             if model_fpath not in [os.path.join(model.fpath,'') for model in self.data['model'].values()]:
                 rmtree(model_fpath)
-                print('Deleted Folder: "{}", that did not exist in the database.'.format(model_fpath))
+                print(red_text('\tDeleted Folder: "{}", that did not exist in the database.'.format(model_fpath)))
+                check_deleted = True
 
         
         for extra_object_fpath in glob.glob(os.path.join(self.fpaths['object_files'],'*',''), recursive=False):
             if extra_object_fpath not in [os.path.join(self.fpaths["analysis"],''),os.path.join(self.fpaths['geometry'],''),os.path.join(self.fpaths['material'],'')]:
                 rmtree(extra_object_fpath)
-                print('Deleted Folder: "{}", that did not exist in the database.'.format(extra_object_fpath))
+                print(red_text('\tDeleted Folder: "{}", that did not exist in the database.'.format(extra_object_fpath)))
+                check_deleted = True
 
-
-        print('-----------------------------------------------')
-        print('Database Validation Complete')
-        print('-----------------------------------------------')
+        check_deleted and print('-'*60)
+        print(green_text('File Paths Validated.'))
+        print('-'*60)
+        print(green_text('Database Validation Successful.'))
     
 
     def yes_no_question(self, message):
@@ -1139,15 +1285,10 @@ class Modular_Abaqus_Builder:
         Ask a yes/no question, "yes" returns True and "no" returns False
         -----------------------------------------------
         '''
-        # Splits the message into lines
-        strings = message.split('\n')
-
-        # prints all except the final line
-        for smaller_string in strings[:-1]:
-            print(smaller_string)
 
         # Enquire the yes and no question using the final line as the message
-        command = inquirer.list_input(strings[-1], choices=['yes','no'], carousel = True)
+        questions = [inquirer.List('yes_no',message, choices=['yes','no'], carousel = True)]
+        command = inquirer.prompt(questions, theme=Theme())['yes_no']
 
         if command == 'yes':
             return True 
@@ -1180,35 +1321,38 @@ class Modular_Abaqus_Builder:
         model_names = list(self.data['model'].keys())
 
         if model_names:
-        
-            answer = inquirer.list_input('Please select the model you would like to delete from the database', choices = model_names+['cancel'], carousel = True)
+            
+            print('-'*60)
+            questions = [inquirer.List('model_to_delete','Please select the model you would like to delete from the database', choices = model_names+['cancel'], carousel = True)]
+            model_to_delete = inquirer.prompt(questions, theme=Theme())['model_to_delete']
 
-            if answer == 'cancel':
-                print('-----------------------------------------------')
+            if model_to_delete == 'cancel':
+                print('-'*60)
                 print('Delete model operation cancelled, returning to edit model loop')
-                print('-----------------------------------------------')
+                print('-'*60)
 
             try:
                 # Delete folder
-                rmtree(self.data['model'][answer].fpath)
-                print('-----------------------------------------------')
-                print('Deleted Folder: "{}"'.format(self.data['model'][answer].fpath))
+                rmtree(self.data['model'][model_to_delete].fpath)
+                print('-'*60)
+                print(green_text('Deleted Folder: "{}"'.format(self.data['model'][model_to_delete].fpath)))
 
                 # Delete from database
-                self.data['model'].pop(answer)
-                print('Deleted model: "{}", from the database.'.format(answer))
-                print('-----------------------------------------------')
+                self.data['model'].pop(model_to_delete)
+                print(green_text('Deleted model: "{}", from the database.'.format(model_to_delete)))
+                print(green_text('{} Model Successfully Deleted.'.format(model_to_delete)))
+                print('-'*60)
 
             except:
-                print('-----------------------------------------------')
-                print('Tried to delete the model: "{}", but could not. Check if the directory is open in another application.'.format(answer))
-                print('Try running the validate database command once the error has been rectified to ensure corruption does not occur.')
-                print('-----------------------------------------------')
+                print('-'*60)
+                print(red_text('ERROR: Tried to delete the model: "{}", but could not. Check if the directory is open in another application.'.format(model_to_delete)))
+                print(red_text('Try running the validate database command once the error has been rectified to ensure corruption does not occur.'))
+                print('-'*60)
 
         else:
-            print('-----------------------------------------------')
-            print('No models in database to delete, returning to edit model loop')
-            print('-----------------------------------------------')   
+            print('-'*60)
+            print(red_text('No models in database to delete, returning to edit model loop'))
+            print('-'*60)   
         
 
     def create_model(self):
@@ -1219,9 +1363,10 @@ class Modular_Abaqus_Builder:
             model = Model(self)
             
             self.data['model'][model.name] = model
+
         except:
-            print('-----------------------------------------------')
-            print('Create Model Failed, validating database to ensure corruption does not occur.')
+            print('-'*60)
+            print(red_text('Create Model Failed, validating database to ensure corruption does not occur.'))
 
             self.validate_database()
         
@@ -1233,21 +1378,22 @@ class Modular_Abaqus_Builder:
         model_names = list(self.data['model'].keys())
 
         if model_names:
-        
-            answer = inquirer.list_input('Please select the model you would like to duplicate from the database', choices = model_names+['cancel'], carousel = True)
+            
+            questions = [inquirer.List('model_to_duplicate','Please select the model you would like to duplicate from the database', choices = model_names+['cancel'], carousel = True)]
+            model_to_duplicate = inquirer.prompt(questions, theme=Theme())['model_to_duplicate']
 
-            if answer == 'cancel':
-                print('-----------------------------------------------')
-                print('Duplicate model operation cancelled, returning to edit model loop')
-                print('-----------------------------------------------')
+            if model_to_duplicate == 'cancel':
+                print('-'*60)
+                print(yellow_text('Duplicate model operation cancelled, returning to edit model loop'))
+                print('-'*60)
 
-            print('Model: "{}", chosen to be duplicated'.format(answer))
+            print('Model: "{}", chosen to be duplicated'.format(model_to_duplicate))
 
             # Try to copy the chosen model and then rebuild it from its base objects
             try:
-                analysis_name = self.data['model'][answer].analysis.name
-                geometry_name = self.data['model'][answer].geometry.name
-                material_names = list(self.data['model'][answer].materials.keys())
+                analysis_name = self.data['model'][model_to_duplicate].analysis.name
+                geometry_name = self.data['model'][model_to_duplicate].geometry.name
+                material_names = list(self.data['model'][model_to_duplicate].materials.keys())
 
                 # Check that all the objects used to build the model to be duplicated still exist
                 analysis_exists = analysis_name in self.data['analysis']
@@ -1256,27 +1402,31 @@ class Modular_Abaqus_Builder:
 
                 if analysis_exists and geometry_exists and materials_exists:
 
+                    print(green_text('The Model: "{}", meets all the requirements for duplication.'.format(model_to_duplicate)))
+
                     duplicate_model = Model(self, analysis_name, geometry_name, material_names)
 
                     self.data['model'][duplicate_model.name] = duplicate_model
 
+                    print(green_text('The Model: "{}", was successfully duplicated to the new Model: "{}".'.format(model_to_duplicate, duplicate_model.name)))
+                    print('-'*60)
+
                 else:
-                    print('-----------------------------------------------')
-                    print('Tried to duplicate the model: "{}", and failed due to the previously used objects no longer existing.'.format(answer))
-                    print('-----------------------------------------------')
+                    print('-'*60)
+                    print(red_text('Tried to duplicate the model: "{}", and failed due to the previously used objects no longer existing.'.format(model_to_duplicate)))
+                    print('-'*60)
 
             except:
-                print('-----------------------------------------------')
-                print('Tried to duplicate the model: "{}", but could not. Check if the directory is open in another application.'.format(answer))
-                print('Validating database to ensure corruption does not occur.')
-                print('-----------------------------------------------')
+                print('-'*60)
+                print(red_text('Tried to duplicate the model: "{}", but could not. Check if the directory is open in another application.'.format(model_to_duplicate)))
+                print(red_text('Validating database to ensure corruption does not occur.'))
 
                 self.validate_database()
 
 
         else:
             print('-----------------------------------------------')
-            print('No models in database to duplicate, returning to edit model loop')
+            print(red_text('No models in database to duplicate, returning to edit model loop'))
             print('-----------------------------------------------')
         
         
@@ -1293,24 +1443,26 @@ class Modular_Abaqus_Builder:
         model_names = list(self.data['model'].keys())
 
         if model_names:
-        
-            name = inquirer.list_input('Please select the model you would like to modify', choices = model_names+['cancel'], carousel = True)
 
-            if name == 'cancel':
-                print('-----------------------------------------------')
-                print('Modify model operation cancelled, returning to edit model loop')
-                print('-----------------------------------------------')
+            questions = [inquirer.List('model_name', 'Please select the model you would like to modify', choices = model_names+['cancel'], carousel = True)]
+            model_name = inquirer.prompt(questions, theme=Theme())['model_name']
+
+            if model_name == 'cancel':
+                print('-'*60)
+                print(yellow_text('Modify model operation cancelled, returning to edit model loop'))
+                print('-'*60)
                 return
 
             possible_changes = ['name', 'description', 'parameters', 'cancel']
         
             # Get Model changes
-            modifications = inquirer.checkbox('What would you like to change about the model: "{}".'.format(name), choices = possible_changes, carousel = True)
+            questions = [inquirer.Checkbox('modifications','What would you like to change about the model: "{}".'.format(model_name), choices = possible_changes, carousel = True)]
+            modifications = inquirer.prompt(questions, theme=Theme())['modifications']
             
             if ('cancel' in modifications) or not modifications:
-                print('-----------------------------------------------')
-                print('Modify model operation cancelled, returning to edit model loop')
-                print('-----------------------------------------------')
+                print('-'*60)
+                print(yellow_text('Modify model operation cancelled, returning to edit model loop'))
+                print('-'*60)
                 return
 
             model_to_modify = self.data['model'].pop(name)
@@ -1329,50 +1481,109 @@ class Modular_Abaqus_Builder:
                     os.rename(old_fpath,new_fpath)
                     model_to_modify.fpath = new_fpath
                     model_to_modify.set_fpaths()
+
+                    print(green_text('Renaming the filepath: "{}" to "{}" was successful.'.format(old_fpath,new_fpath)))
+
                 except:
-                    raise FileExistsError('Renaming the filepath: "{}" to "{}" has failed.'.format(old_fpath,new_fpath))
+                    print('-'*60)
+                    print(red_text('Renaming the filepath: "{}" to "{}" has failed.'.format(old_fpath,new_fpath)))
+
+                    self.validate_database()
+                    return
                 
                 # Change name of main sim file (and journal file contents for just fluent run)
                 if all(model_to_modify.requirements['softwares'].values()):
-                    os.rename(os.path.join(model_to_modify.solver_fpaths['mpcci'],old_name+'.csp'),os.path.join(model_to_modify.solver_fpaths['mpcci'],name+'.csp'))
+
+                    # Rename mpcci model file
+                    try:
+                        os.rename(os.path.join(model_to_modify.solver_fpaths['mpcci'],old_name+'.csp'),os.path.join(model_to_modify.solver_fpaths['mpcci'],name+'.csp'))
+                        print(green_text('Renaming the file: "{}" to "{}" was successful.'.format(old_name+'.csp',name+'.csp')))
+                    except:
+                        print('-'*60)
+                        print(red_text('Renaming the file: "{}" to "{}" has failed.'.format(old_name+'.csp',name+'.csp')))
+                        print(red_text('Please check the database entries and the files themselves to ensure corruption does not occur.'))
+
+                        self.validate_database()
+                        return
                 
                 elif model_to_modify.requirements['softwares']['abaqus']:
-                    os.rename(os.path.join(model_to_modify.solver_fpaths['abaqus'],old_name+'.inp'),os.path.join(model_to_modify.solver_fpaths['abaqus'],name+'.inp'))
+
+                    # Rename abaqus model file
+                    try:
+                        os.rename(os.path.join(model_to_modify.solver_fpaths['abaqus'],old_name+'.inp'),os.path.join(model_to_modify.solver_fpaths['abaqus'],name+'.inp'))
+                        print(green_text('Renaming the file: "{}" to "{}" was successful.'.format(old_name+'.inp',name+'.inp')))
+                    except:
+                        print('-'*60)
+                        print(red_text('Renaming the file: "{}" to "{}" has failed.'.format(old_name+'.inp',name+'.inp')))
+                        print(red_text('Please check the database entries and the files themselves to ensure corruption does not occur.'))
+
+                        self.validate_database()
+                        return
 
                 elif model_to_modify.requirements['softwares']['fluent']:
-                    os.rename(os.path.join(model_to_modify.solver_fpaths['fluent'],old_name+'.cas.h5'),os.path.join(model_to_modify.solver_fpaths['fluent'],name+'.cas.h5'))
+
+                    # Rename fluent model file
+                    try:
+                        os.rename(os.path.join(model_to_modify.solver_fpaths['fluent'],old_name+'.cas.h5'),os.path.join(model_to_modify.solver_fpaths['fluent'],name+'.cas.h5'))
+                        print(green_text('Renaming the file: "{}" to "{}" was successful.'.format(old_name+'.cas.h5',name+'.cas.h5')))
+                    except:
+                        print('-'*60)
+                        print(red_text('Renaming the file: "{}" to "{}" has failed.'.format(old_name+'.cas.h5',name+'.cas.h5')))
+                        print(red_text('Please check the database entries and the files themselves to ensure corruption does not occur.'))
+
+                        self.validate_database()
+                        return
 
                     # Edit journal file to reference new .cas.h5 file
-                    with open(os.path.join(model_to_modify.solver_fpaths['fluent'],'journal.jou'),'r') as old_file, open(os.path.join(model_to_modify.solver_fpaths['fluent'],'temp.jou'),'w') as new_file:
+                    try:
+                        
+                        with open(os.path.join(model_to_modify.solver_fpaths['fluent'],'journal.jou'),'r') as old_file, open(os.path.join(model_to_modify.solver_fpaths['fluent'],'temp.jou'),'w') as new_file:
 
-                        # Write new first two lines
-                        new_file.write('\t; Read the case file\n')
-                        new_file.write('\t/rc {}\n'.format(name+'.cas.h5'))
+                            # Write new first two lines
+                            new_file.write('\t; Read the case file\n')
+                            new_file.write('\t/rc {}\n'.format(name+'.cas.h5'))
 
-                        # Delete first two lines of old journal file
-                        old_file.readline()
-                        old_file.readline()
+                            # Delete first two lines of old journal file
+                            old_file.readline()
+                            old_file.readline()
 
-                        # Copy rest of journal file
-                        copyfileobj(old_file,new_file)
+                            # Copy rest of journal file
+                            copyfileobj(old_file,new_file)
 
-                    # Overwrite old journal file
-                    os.replace(os.path.join(model_to_modify.solver_fpaths['fluent'],'temp.jou'),os.path.join(model_to_modify.solver_fpaths['fluent'],'journal.jou'))
+                        # Overwrite old journal file
+                        os.replace(os.path.join(model_to_modify.solver_fpaths['fluent'],'temp.jou'),os.path.join(model_to_modify.solver_fpaths['fluent'],'journal.jou'))
+                        print(green_text('Updating the fluent journal file was successful.'))
+
+                    except:
+                        print('-'*60)
+                        print(red_text('Updating the fluent journal file has failed.'))
+                        print(red_text('Please check the database entries and the files themselves to ensure corruption does not occur.'))
+
+                        self.validate_database()
+                        return
+
+                print(green_text('Name modification was successful.'))
 
 
             if 'description' in modifications:
                 model_to_modify.new_description()
+                print(green_text('Description modification was successful.'))
+
 
             if 'parameters' in modifications:
-                pass # change parameter values and then rebuild model
+                pass # *************** TODO
+                print(green_text('Parameter modification was successful.'))
 
+
+            # Update database
             self.data['model'][name] = model_to_modify 
+            print(green_text('Model: "{}", successfully modified.'.format(name)))
+            print('-'*60)
+
 
         else:
-            print('-----------------------------------------------')
-            print('No models in database to modify, returning to edit model loop')
-            print('-----------------------------------------------')   
-            return
+            print(yellow_text('No models in database to modify, returning to edit model loop'))
+            print('-'*60)   
     
 
 

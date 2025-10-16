@@ -36,7 +36,7 @@
     "allowed_characters" : 
     {
         "Name" : "abcdefghijklmnopqrstuvwxyz1234567890_-",
-        "Description" : "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890_-!()[]"
+        "Description" : "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890_-!()[] ,."
     },
     "inquirer_dialogs" : 
     {

@@ -23,26 +23,34 @@ def mpcci_setup(fpath, name, parameters, fluent_cpus = 2, abaqus_cpus = 2):
     tree = ET.parse(os.path.join(fpath,'main.csp'))
     root = tree.getroot()
 
-    fluent_child = root.find('./code[@name="FLUENT"]')
-    abaqus_child = root.find('./code[@name="Abaqus"]')
-    mpcci_child = root.find('./mpcciserver')
-
     # Change fluent parameters
-    fluent_child.find('.//param[@name = "NumProcs"]').attrib['value'] = str(fluent_cpus)
-    print('Fluent CPUS changed to: "{}"'.format(fluent_cpus))
+    try:
+        fluent_child = root.find('./code[@name="FLUENT"]')
+        fluent_child.find('.//param[@name = "NumProcs"]').attrib['value'] = str(fluent_cpus)
+        print('Fluent CPUS changed to: "{}"'.format(fluent_cpus))
+    except:
+        print('Fluent Parameters could not be changed.')
 
     # Chanage abaqus parameters
-    abaqus_child.find('.//param[@name = "CouplingSteps"]/param[@name = "StepSize"]').attrib['value'] = str(abaqus_constant_step_size)
-    print('Abaqus constant step size changed to: "{}"'.format(abaqus_constant_step_size))
-    abaqus_child.find('.//param[@name = "NumProcs"]').attrib['value'] = str(abaqus_cpus)
-    abaqus_child.find('.//param[@name = "NumDomains"]').attrib['value'] = str(abaqus_cpus)
-    print('Abaqus CPUS changed to: "{}"'.format(abaqus_cpus))
+    try:
+        abaqus_child = root.find('./code[@name="Abaqus"]')
+        abaqus_child.find('.//param[@name = "CouplingSteps"]/param[@name = "StepSize"]').attrib['value'] = str(abaqus_constant_step_size)
+        print('Abaqus constant step size changed to: "{}"'.format(abaqus_constant_step_size))
+        abaqus_child.find('.//param[@name = "NumProcs"]').attrib['value'] = str(abaqus_cpus)
+        abaqus_child.find('.//param[@name = "NumDomains"]').attrib['value'] = str(abaqus_cpus)
+        print('Abaqus CPUS changed to: "{}"'.format(abaqus_cpus))
+    except:
+        print('Abaqus Parameters could not be changed.')
 
     # Change mpcci paramters
-    mpcci_child.find('.//param[@name = "TotalTime"]').attrib['value'] = str(total_time)
-    print('Total Coupling Time changed to "{}"'.format(total_time))
-    mpcci_child.find('.//param[@name = "Jobname"]').attrib['value'] = name
-    print('MPCCI Job Name changed to "{}"'.format(name))
+    try:
+        mpcci_child = root.find('./mpcciserver')
+        mpcci_child.find('.//param[@name = "TotalTime"]').attrib['value'] = str(total_time)
+        print('Total Coupling Time changed to "{}"'.format(total_time))
+        mpcci_child.find('.//param[@name = "Jobname"]').attrib['value'] = name
+        print('MPCCI Job Name changed to "{}"'.format(name))
+    except:
+        print('MPCCI Parameters could not be changed.')
 
     # Write updated file
     tree.write(os.path.join(fpath, name+'.csp'))

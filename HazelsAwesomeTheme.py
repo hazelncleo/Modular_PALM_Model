@@ -1,6 +1,19 @@
 from inquirer.themes import Default
 from blessed import Terminal
+
 term = Terminal()
+
+def green_text(text):
+    return term.green3(str(text))
+
+def red_text(text):
+    return term.firebrick1(str(text))
+
+def blue_text(text):
+    return term.deepskyblue(str(text))
+
+def yellow_text(text):
+    return term.gold(str(text))
 
 class HazelsAwesomeTheme(Default):
     def __init__(self):
@@ -12,7 +25,7 @@ class HazelsAwesomeTheme(Default):
         self.Checkbox.selection_color = term.deepskyblue
         self.Checkbox.selection_icon = ">"
         self.Checkbox.selected_icon = "[X]"
-        self.Checkbox.selected_color = term.yellow + term.bold
+        self.Checkbox.selected_color = term.gold + term.bold
         self.Checkbox.unselected_color = term.normal
         self.Checkbox.unselected_icon = "[ ]"
         self.Checkbox.locked_option_color = term.gray50
