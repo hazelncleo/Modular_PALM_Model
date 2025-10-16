@@ -16,12 +16,11 @@ def main():
 IMPORTANT STUFF
 --------------------------
 
-- help method
-- look at inquirer path selector
+- help/print/verbose print method so same code not repeated 3 times in diff loops
 - create small commandline launcher for script
 - look at better way to layout imports
 - interpreter themes ***IN PROGRESS***
-- validate functions for interpreters
+- validate functions for interpreters ***IN PROGRESS***
 - if cant delete directories on reset prompt user
 - modify model parameters
 - postprocess model
