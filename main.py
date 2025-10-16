@@ -16,6 +16,7 @@ def main():
 IMPORTANT STUFF
 --------------------------
 
+- licence shit guhh
 - help/print/verbose print method so same code not repeated 3 times in diff loops
 - create small commandline launcher for script
 - look at better way to layout imports

@@ -65,6 +65,7 @@ class Modular_Abaqus_Builder:
                 print('-'*60)
             
             else:
+                print('-'*60)
                 print(yellow_text('The delete models flag was set to true, but the delete was denied. Closing the database.'))
                 print('-'*60)
 
@@ -170,19 +171,19 @@ class Modular_Abaqus_Builder:
         # Make storage folders if they dont exist
         if not os.path.exists(self.fpaths['analysis']):
             os.makedirs(self.fpaths['analysis'], exist_ok=True)
-            print('Analysis objects fpath did not exist, one has been created')
+            print(yellow_text('Analysis objects fpath did not exist, one has been created'))
         
         if not os.path.exists(self.fpaths['geometry']):
             os.makedirs(self.fpaths['geometry'], exist_ok=True)
-            print('Geometry objects fpath did not exist, one has been created')
+            print(yellow_text('Geometry objects fpath did not exist, one has been created'))
 
         if not os.path.exists(self.fpaths['material']):
             os.makedirs(self.fpaths['material'], exist_ok=True)
-            print('Material objects fpath did not exist, one has been created')
+            print(yellow_text('Material objects fpath did not exist, one has been created'))
 
         if not os.path.exists(self.fpaths['model_files']):
             os.makedirs(self.fpaths['model_files'], exist_ok=True)
-            print('Model fpath did not exist, one has been created')
+            print(yellow_text('Model fpath did not exist, one has been created'))
 
         print(green_text('Instantiated the Database Successfully.'))
         print('-'*60)
@@ -627,7 +628,7 @@ class Modular_Abaqus_Builder:
             return selected_object, object_type
 
         else:
-            print('-'*60)
+
             print(red_text('ERROR: no objects of type: "{}" to select.'.format(object_type)))
             print('-'*60)
             return '', object_type
@@ -1287,8 +1288,7 @@ class Modular_Abaqus_Builder:
         '''
 
         # Enquire the yes and no question using the final line as the message
-        questions = [inquirer.List('yes_no',message, choices=['yes','no'], carousel = True)]
-        command = inquirer.prompt(questions, theme=Theme())['yes_no']
+        command = inquirer.prompt([inquirer.List('yes_no', message, choices=['yes','no'], carousel = True)], theme=Theme())['yes_no']
 
         if command == 'yes':
             return True 
