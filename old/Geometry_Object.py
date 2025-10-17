@@ -103,7 +103,7 @@ class Geometry_Object:
                 print('ERROR: The name provided was an empty string')
                 print('---------------------------------------------------')
 
-            elif not (set(name) <= self.allowed_characters['Name']):
+            elif not (set(name) <= self.allowed_characters['name']):
                 print('---------------------------------------------------')
                 print('ERROR: The name: "{}", is not entirely lowercase, numbers or underscores and hyphens.'.format(name))
                 print('---------------------------------------------------')
@@ -140,7 +140,7 @@ class Geometry_Object:
             
             description = input('Please enter a description for the Geometry Object to be created: ')
 
-            if not (set(description) <= self.allowed_characters['Description']):
+            if not (set(description) <= self.allowed_characters['description']):
                 print('---------------------------------------------------')
                 print('ERROR: The description: "{}", does not meet the requirements.'.format(description))
                 print('---------------------------------------------------')
@@ -280,7 +280,7 @@ class Geometry_Object:
                 print('---------------------------------------------------')
 
             # Check description only uses allowed characters
-            elif not (set(answers['description']) <= self.allowed_characters['Description']):
+            elif not (set(answers['description']) <= self.allowed_characters['description']):
                 print('---------------------------------------------------')
                 print('ERROR: The description: "{}", does not meet the requirements.'.format(answers['description']))
                 print('---------------------------------------------------')
@@ -382,7 +382,7 @@ class Geometry_Object:
                 print('---------------------------------------------------')
 
             # Check description only uses allowed characters
-            elif not (set(answers['description']) <= self.allowed_characters['Description']):
+            elif not (set(answers['description']) <= self.allowed_characters['description']):
                 print('---------------------------------------------------')
                 print('ERROR: The description: "{}", does not meet the requirements.'.format(answers['description']))
                 print('---------------------------------------------------')
@@ -457,24 +457,24 @@ class Geometry_Object:
         # Set the default requirement dict if it does not exist
         if (not hasattr(self, 'requirements')) or reset_requirements:
             self.requirements = {}
-            self.requirements['geometries'] = self.builder.requirements['geometries']
+            self.requirements['geometry'] = self.builder.requirements['geometry']
             
         # Check if files exist in directory
         change_made = False
-        for requirement_name in self.requirements['geometries'].keys():
+        for requirement_name in self.requirements['geometry'].keys():
             if 'abaqus' in requirement_name:
                 if os.path.exists(os.path.join(self.fpath,requirement_name+'.inp')):
-                    self.requirements['geometries'][requirement_name] = True
+                    self.requirements['geometry'][requirement_name] = True
                     change_made = True
             else:
                 if os.path.exists(os.path.join(self.fpath,requirement_name+'.msh')):
-                    self.requirements['geometries'][requirement_name] = True
+                    self.requirements['geometry'][requirement_name] = True
                     change_made = True
         
         # If file names dont match then prompt user
         if not change_made:
             # Build questions object
-            questions = [inquirer.Checkbox('geometries',
+            questions = [inquirer.Checkbox('geometry',
                                         message = 'Please choose the Geometries included in this object',
                                         choices = ["abaqus_whole-chip_solid", 
                                                     "abaqus_whole-chip_acoustic", 
@@ -483,7 +483,7 @@ class Geometry_Object:
                                                     "fluent_whole-chip_fluid",
                                                     "fluent_submodel_fluid"],
                                         carousel = True,
-                                        default = [key for key in self.requirements['geometries'].keys() if self.requirements['geometries'][key]])]
+                                        default = [key for key in self.requirements['geometry'].keys() if self.requirements['geometry'][key]])]
             
 
             # Get answers to questions

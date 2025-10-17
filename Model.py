@@ -46,7 +46,7 @@ class Model:
         self.new_model_name()
 
         # Set destination fpath
-        self.fpath = os.path.join(self.builder.fpaths['model_files'],self.name)
+        self.fpath = os.path.join(self.builder.fpaths['model'],self.name)
 
         self.new_description()
 
@@ -57,7 +57,7 @@ class Model:
         self.select_geometry(geometry_name) if geometry_name else self.select_geometry()
 
         # Add Materials
-        if any(self.requirements['materials'].values()):
+        if any(self.requirements['material'].values()):
             self.select_materials(material_names) if material_names else self.select_materials()
         else:
             print('-----------------------------------------------')
@@ -114,7 +114,7 @@ class Model:
                 print('ERROR: The name provided was an empty string')
                 print('---------------------------------------------------')
 
-            elif not (set(name) <= self.allowed_characters['Name']):
+            elif not (set(name) <= self.allowed_characters['name']):
                 print('---------------------------------------------------')
                 print('ERROR: The name: "{}", is not entirely lowercase, numbers or underscores and hyphens.'.format(name))
                 print('---------------------------------------------------')
@@ -156,7 +156,7 @@ class Model:
             
             description = input('Please enter a description for the Model to be created: ')
 
-            if not (set(description) <= self.allowed_characters['Description']):
+            if not (set(description) <= self.allowed_characters['description']):
                 print('---------------------------------------------------')
                 print('ERROR: The description: "{}", does not meet the requirements.'.format(description))
                 print('---------------------------------------------------')
@@ -217,7 +217,7 @@ class Model:
         for geometry_name,geometry_object in self.builder.data['geometry'].items():
             
             # Check that the selected geometry fulfills all of the requirements of the analysis
-            are_requirements_fulfilled = [fulfilled_requirement[1] for requirement_to_fulfill, fulfilled_requirement in zip(self.requirements['geometries'].items(),geometry_object.requirements['geometries'].items()) if requirement_to_fulfill[1]]
+            are_requirements_fulfilled = [fulfilled_requirement[1] for requirement_to_fulfill, fulfilled_requirement in zip(self.requirements['geometry'].items(),geometry_object.requirements['geometry'].items()) if requirement_to_fulfill[1]]
 
             # Add name if all requirements fulfilled
             if all(are_requirements_fulfilled):
@@ -247,7 +247,7 @@ class Model:
             print('The Chosen Analysis: "{}".'.format(self.analysis.name))
             print('Description: "{}"'.format(self.analysis.description))
             print('Has the following Geometry requirements: ')
-            for requirement, is_required in self.requirements['geometries'].items():
+            for requirement, is_required in self.requirements['geometry'].items():
                 if is_required:
                     print('\t{}'.format(requirement))
 
@@ -284,7 +284,7 @@ class Model:
         for material_name,material_object in self.builder.data['material'].items():
             
             # Check that the selected material fulfills a requirement of the analysis
-            are_requirements_fulfilled = [fulfilled_requirement[1] for requirement_to_fulfill, fulfilled_requirement in zip(self.requirements['materials'].items(),material_object.requirements['materials'].items()) if requirement_to_fulfill[1]]
+            are_requirements_fulfilled = [fulfilled_requirement[1] for requirement_to_fulfill, fulfilled_requirement in zip(self.requirements['material'].items(),material_object.requirements['material'].items()) if requirement_to_fulfill[1]]
 
             # Add name if all requirements fulfilled
             if any(are_requirements_fulfilled):
@@ -316,7 +316,7 @@ class Model:
             print('The Chosen Analysis: "{}".'.format(self.analysis.name))
             print('Description: "{}"'.format(self.analysis.description))
             print('Has the following Material requirements: ')
-            for requirement, is_required in self.requirements['materials'].items():
+            for requirement, is_required in self.requirements['material'].items():
                 if is_required:
                     print('\t{}'.format(requirement))
                     requirements_to_be_fulfilled[requirement] = is_required
@@ -328,7 +328,7 @@ class Model:
             for material in potential_materials:
                 print('Name: "{}"'.format(material))
                 print('Description: "{}"'.format(self.builder.data['material'][material].description))
-                requirement_fulfilled = [requirement[0] for requirement in self.builder.data['material'][material].requirements['materials'].items() if requirement[1]]
+                requirement_fulfilled = [requirement[0] for requirement in self.builder.data['material'][material].requirements['material'].items() if requirement[1]]
                 print('Requirement Fulfilled: {}'.format(requirement_fulfilled[0]))
                 print('---------------------------------------------------')
 
@@ -349,7 +349,7 @@ class Model:
                     raise NameError('Select Material cancelled')
 
 
-                requirement_fulfilled = [fulfilled[0] for fulfilled in self.builder.data['material'][material_name].requirements['materials'].items() if fulfilled[1]][0]
+                requirement_fulfilled = [fulfilled[0] for fulfilled in self.builder.data['material'][material_name].requirements['material'].items() if fulfilled[1]][0]
                 
                 
                 try:
@@ -378,21 +378,21 @@ class Model:
         '''
         
         # If all softwares required set solver fpaths accordingly.
-        if all(self.requirements['softwares'].values()):
+        if all(self.requirements['software'].values()):
             self.solver_fpaths = {'abaqus' : os.path.join(self.fpath,'abaqus'),
                                   'fluent' : os.path.join(self.fpath,'fluent'),
                                   'mpcci' : os.path.join(self.fpath,'mpcci')}
             return
             
         # If only abaqus
-        elif self.requirements['softwares']['abaqus']:
+        elif self.requirements['software']['abaqus']:
             self.solver_fpaths = {'abaqus' : self.fpath,
                                   'fluent' : None,
                                   'mpcci' : None}
             return
         
         # If only fluent
-        elif self.requirements['softwares']['fluent']:
+        elif self.requirements['software']['fluent']:
             self.solver_fpaths = {'abaqus' : None,
                                   'fluent' : self.fpath,
                                   'mpcci' : None}
@@ -445,13 +445,13 @@ class Model:
         self.parameters.update(deepcopy(self.geometry.parameters))
         
         # Check if materials required
-        if any(self.requirements['materials'].values()):
+        if any(self.requirements['material'].values()):
 
             # Print parameters for all of the materials
             for material_name in self.materials.keys():
                 print('---------------------------------------------------')
                 print('The Chosen Material: "{}".'.format(material_name))
-                requirement_fulfilled = [requirement[0] for requirement in self.materials[material_name].requirements['materials'].items() if requirement[1]][0]
+                requirement_fulfilled = [requirement[0] for requirement in self.materials[material_name].requirements['material'].items() if requirement[1]][0]
                 print('Material Type: "{}"'.format(requirement_fulfilled))
                 print('Has the following Parameters that can be used: ')
                 for parameter_name,parameter in self.materials[material_name].parameters.items():
@@ -515,15 +515,15 @@ class Model:
         print('---------------------------------------------------')
         
         # If mpcci abaqus-fluent coupled analysis
-        if all(self.requirements['softwares'].values()):
+        if all(self.requirements['software'].values()):
             self.build_mpcci_model()
            
         # If just abaqus analysis
-        elif self.requirements['softwares']['abaqus']:
+        elif self.requirements['software']['abaqus']:
             self.build_abaqus_model()
 
         # If just fluent analysis
-        elif self.requirements['softwares']['fluent']:
+        elif self.requirements['software']['fluent']:
             self.build_fluent_model()
 
         else:
@@ -542,18 +542,18 @@ class Model:
         print('---------------------------------------------------')
 
         # Satisfy geometry requirements
-        for requirement_name,requirement_value in self.requirements['geometries'].items():
+        for requirement_name,requirement_value in self.requirements['geometry'].items():
             if requirement_value and (('abaqus' in requirement_name) or ('assembly' in requirement_name)):
                 copyfile(os.path.join(self.geometry.fpath,requirement_name+'.inp'), os.path.join(self.solver_fpaths['abaqus'],requirement_name+'.inp'))
                 print('File: "{}", copied to model path'.format(requirement_name+'.inp'))
                 
         
         # Modify assembly.inp based on geometry requirements       
-        if self.requirements['geometries']['assembly']:
+        if self.requirements['geometry']['assembly']:
             with open(os.path.join(self.solver_fpaths['abaqus'],'assembly.inp'),'r') as inp_read, open(os.path.join(self.solver_fpaths['abaqus'],'temp.inp'),'w') as inp_write:
                 
                 # get the names of the geometry requirements
-                abaqus_reqs = [requirement_name for requirement_name,requirement_value in self.requirements['geometries'].items() if requirement_value and (('abaqus' in requirement_name) or ('assembly' in requirement_name))]
+                abaqus_reqs = [requirement_name for requirement_name,requirement_value in self.requirements['geometry'].items() if requirement_value and (('abaqus' in requirement_name) or ('assembly' in requirement_name))]
                 
                 line = inp_read.readline()
                 
@@ -581,7 +581,7 @@ class Model:
 
         # Satisfy material requirements
         for material_name in self.materials.keys():
-            for requirement_name, requirement_value in self.materials[material_name].requirements['materials'].items():
+            for requirement_name, requirement_value in self.materials[material_name].requirements['material'].items():
                 if requirement_value:
                     copyfile(os.path.join(self.materials[material_name].fpath,requirement_name+'.inp'), os.path.join(self.solver_fpaths['abaqus'],requirement_name+'.inp'))
                     print('File: "{}", copied to model path'.format(requirement_name+'.inp'))
@@ -662,7 +662,7 @@ class Model:
 
         
         # Satisfy geometry requirements
-        for requirement_name,requirement_value in self.requirements['geometries'].items():
+        for requirement_name,requirement_value in self.requirements['geometry'].items():
             if requirement_value and ('fluent' in requirement_name):
                 copyfile(os.path.join(self.geometry.fpath,requirement_name+'.msh'), os.path.join(self.solver_fpaths['fluent'],requirement_name+'.msh'))
                 print('File: "{}", copied to model path'.format(requirement_name+'.msh'))

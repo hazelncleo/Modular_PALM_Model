@@ -1,10 +1,10 @@
 {
-    "softwares": {
+    "software": {
         "abaqus": false,
         "fluent": true,
         "mpcci": false
     },
-    "geometries": {
+    "geometry": {
         "assembly" : false,
         "abaqus_whole-chip_solid": false,
         "abaqus_whole-chip_acoustic": false,
@@ -13,7 +13,7 @@
         "fluent_whole-chip_fluid": true,
         "fluent_submodel_fluid": false
     },
-    "materials": {
+    "material": {
         "abaqus_solid": false,
         "abaqus_acoustic": false
     },

@@ -1,12 +1,12 @@
 {
     "requirements" :
     {
-        "softwares": {
+        "software": {
             "abaqus": false,
             "fluent": false,
             "mpcci": false
         },
-        "geometries": {
+        "geometry": {
             "assembly" : false,
             "abaqus_whole-chip_solid": false,
             "abaqus_whole-chip_acoustic": false,
@@ -15,7 +15,7 @@
             "fluent_whole-chip_fluid": false,
             "fluent_submodel_fluid": false
         },
-        "materials": {
+        "material": {
             "abaqus_solid": false,
             "abaqus_acoustic": false
         },
@@ -26,24 +26,24 @@
     },
     "fpaths" : 
     {
-        "object_files" : "object_files",
-        "analysis" : "object_files\\analysis",
-        "geometry" : "object_files\\geometry",
-        "material": "object_files\\material",
-        "model_files": "model_files",
+        "object" : "object_files",
+        "analysis" : "analysis",
+        "geometry" : "geometry",
+        "material": "material",
+        "model": "model_files",
         "data": "data.pickle"
     },
     "allowed_characters" : 
     {
-        "Name" : "abcdefghijklmnopqrstuvwxyz1234567890_-",
-        "Description" : "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890_-!()[] ,."
+        "name" : "abcdefghijklmnopqrstuvwxyz1234567890_-",
+        "description" : "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890_-!()[] ,."
     },
     "inquirer_dialogs" : 
     {
-        "Object_Types" : ["analysis","geometry","material"],
-        "Main_Loop" : ["edit_objects", "edit_models", "save_database", "validate_database" ,"help", "exit"],
-        "Object_Loop" : ["create", "modify", "duplicate", "delete", "help", "back"],
-        "Model_Loop" : ["create", "modify", "duplicate", "delete", "post_process", "run", "help", "back"]
+        "object_types" : ["analysis","geometry","material"],
+        "main_loop" : ["edit_objects", "edit_models", "save_database", "validate_database" ,"help", "exit"],
+        "edit_object_loop" : ["create_object", "modify_object", "duplicate_object", "delete_object", "help", "back_to_main"],
+        "edit_model_loop" : ["create_model", "modify_model", "duplicate_model", "delete_model", "post_process_model", "run_model", "help", "back_to_main"]
     },
     "data" : 
     {

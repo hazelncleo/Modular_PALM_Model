@@ -1,11 +1,14 @@
 from Modular_Abaqus_Builder import Modular_Abaqus_Builder
 
+
 def main():
 
     # Instantiate class
-    builder = Modular_Abaqus_Builder(delete_database=False, delete_all_models=True)
+    builder = Modular_Abaqus_Builder(delete_database=True, delete_all_models=False)
     
     builder.main_loop()
+
+
 
 
 ''' 
@@ -16,8 +19,11 @@ def main():
 IMPORTANT STUFF
 --------------------------
 
+- print_database causing double line on different loops
+- clean up new classes to make them neater
+- parameter storage class and paramter class, requirements class etc.
+- make print database use print methods for each class
 - licence shit guhh
-- help/print/verbose print method so same code not repeated 3 times in diff loops
 - create small commandline launcher for script
 - look at better way to layout imports
 - interpreter themes ***IN PROGRESS***
