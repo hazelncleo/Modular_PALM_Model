@@ -108,18 +108,19 @@ class Parent_Object:
 
         print('-'*60)
         print('Create {} Object operation started.'.format(blue_text(self.object_type)))
-        print('-'*60)
         
         # Modular_Abaqus_Builder class containing this object 
         self.builder = builder
         
         self.new_object_name()
 
-        if not self.name:
-            return
-
         # Set destination fpath
         self.fpath = os.path.join(self.builder.fpaths[object_type],self.name)
+        
+        if os.path.exists(self.fpath):
+            print(red_text('File path "{}", already exists.'.format(self.fpath)))
+            raise FileExistsError
+        
         print('File path set to "{}".'.format(blue_text(self.fpath)))
 
         self.new_description()
@@ -127,12 +128,10 @@ class Parent_Object:
         source_fpath = self.get_file_path()
         
         # Return error if fpath not specified
-        if not source_fpath:
+        if (not source_fpath) or (not self.validate_fpath(source_fpath)):
             print(red_text('ERROR: A valid file path was not selected.'))
             print(red_text('Returning to edit objects loop.'))
             raise FileNotFoundError
-        
-        self.validate_fpath(source_fpath)
         
         if len(source_fpath) < 35:
             print('The file path: "{}" to source files from was successfully chosen.'.format(blue_text(source_fpath)))
@@ -145,10 +144,6 @@ class Parent_Object:
         self.load_parameters() 
 
         self.get_all_files()
-        
-        '''
-        
-        '''
     
     '''
     ----------------------------------------
@@ -165,7 +160,8 @@ class Parent_Object:
         # Get current names
         current_names = list(self.builder.data[self.object_type].keys())
         if hasattr(self, 'name'): current_names.remove(self.name)
-
+        
+        print('-'*60)
         print('Please enter a new ' + blue_text('name') + ' for the ' + blue_text(self.object_type) + ' Object to be created: ')
         print('Note: ')
         print('- It must only use lowercase letters, numbers, underscores and hyphens.')
@@ -189,7 +185,7 @@ class Parent_Object:
         if not object_name:
             print('-'*60)
             print(yellow_text('Cancel command given.'))
-            print('-'*60)
+            raise NameError
         
         else: 
             print('-'*60)
@@ -220,7 +216,6 @@ class Parent_Object:
 
         print('-'*60)
         print(green_text('The description: "{}" for the new object has been selected.'.format(description)))
-        print('-'*60)
         self.description = description
         return
             
@@ -236,6 +231,7 @@ class Parent_Object:
             A string containing the filepath the user selected. If the user clicked cancel, an empty string will be returned
         ---------------------------------------------------
         '''
+        print('-'*60)
         # Create window and remove from view
         root = Tk()
         root.iconbitmap('cade.ico')
@@ -259,6 +255,7 @@ class Parent_Object:
         Try to load the parameters for the object from a file, if it does not exist prompt the user to specify the parameters.
         ---------------------------------------------------
         '''
+        print('-'*60)
         self.parameters = {}
         if os.path.exists(os.path.join(self.fpath,'parameters.json')):
             # Read parameters
@@ -280,20 +277,19 @@ class Parent_Object:
         Used to add, modify and delete parameters from the object
         ---------------------------------------------------
         '''
-        commands = ['add', 'modify', 'delete', 'exit']
         command = 'add'
-
+        
         while command != 'exit':
-
+            
+            print('-'*60)
             # Get parameter type or exit choosing parameter command
             command = inquirer.prompt([inquirer.List('command',
                                                      'Add more '+ blue_text('parameters') + ' or exit dialog', 
-                                                     choices=commands, 
+                                                     choices=['add', 'modify', 'delete', 'exit'], 
                                                      carousel = True,
                                                      default=command)], theme=Theme())['command']
             
             if command == 'add':
-                print('-'*60)
                 self.add_parameter()
 
             elif command == 'modify':
@@ -309,7 +305,7 @@ class Parent_Object:
         print('-'*60)
         print(green_text('Exiting Choose parameter dialog.'))
         print('-'*60)
-        print(green_text('Parameters chosen for the {} are: '.format(self.object_type)))
+        print(green_text('Parameters chosen for the {}, "{}" are: '.format(self.object_type, self.name))) if len(self.parameters.keys()) else print('No parameters chosen.')
 
         # Print all parameters added
         for parameter in self.parameters.keys():
@@ -321,8 +317,6 @@ class Parent_Object:
             print('\tSolvers: ')
             for solver in self.parameters[parameter]['solvers']:
                 print('\t\t"{}"'.format(solver))
-
-        print('-'*60)
 
 
     def choose_parameter(self, command):
@@ -338,11 +332,10 @@ class Parent_Object:
         '''
         # Get parameter names
         parameters = [params for params in self.parameters.keys()]
+        print('-'*60)
 
         # Check if empty
-        if parameters:
-
-            print('-'*60)
+        if parameters: 
             parameters.append('cancel')
             # Ask user which parameter to select
             chosen_parameter = inquirer.prompt([inquirer.List('parameter','Choose parameter to {}'.format(blue_text(command)), choices=parameters, carousel = True)], theme=Theme())['parameter']
@@ -350,19 +343,15 @@ class Parent_Object:
             if chosen_parameter == 'cancel':
                 print('-'*60)
                 print(yellow_text('Parameter {} command cancelled, returning to loop.'.format(command)))
-                print('-'*60)
                 return ''
             
             else:
                 print('-'*60)
-                print(green_text('Parameter "{}" chosen for {} command, returning to loop.'.format(chosen_parameter, command)))
-                print('-'*60)
+                print(green_text('Parameter "{}" chosen to {}, returning to loop.'.format(chosen_parameter, command)))
                 return chosen_parameter
                     
         else:
-            print('-'*60)
             print(red_text('No parameters to pick, returning to loop.'))
-            print('-'*60)
             return ''
 
 
@@ -375,7 +364,8 @@ class Parent_Object:
 
         # Get current names
         current_names = list(self.parameters.keys())
-
+        
+        print('-'*60)   
         print('Please enter a new ' + blue_text('parameter name') + '.')
         print('Note: ')
         print('- It must only use lowercase letters, numbers, underscores and hyphens.')
@@ -420,7 +410,6 @@ class Parent_Object:
         answers = inquirer.prompt(questions, theme=Theme())
         print('-'*60)
         print(green_text('Solvers chosen: "'+'", "'.join(answers['solvers'])+'"'))
-        print('-'*60)
 
         answers['default_value'] = float(answers['default_value']) if answers['dtype'] == 'float' else int(answers['default_value'])
         self.parameters[answers['name']] = answers
@@ -432,7 +421,9 @@ class Parent_Object:
         Delete a parameter from the parameter dictionary
         ---------------------------------------------------
         '''
+        print('-'*60)
         _ = self.parameters.pop(parameter_to_delete)
+        print(green_text('Successfully deleted parameter "{}".'.format(parameter_to_delete)))
 
     '''
     ----------------------------------------
@@ -492,9 +483,9 @@ class Parent_Object:
 
         if extensions >= allowed_extensions:
             print(red_text('The filepath chosen was not valid as it contains unsupported file extensions.'))
-            raise FileExistsError()
+            return False
         
-        return
+        return True
 
     
     def validate_parameter_name(self, _, name):
@@ -576,6 +567,12 @@ class Parent_Object:
         print(red_text('At least one solver must be chosen\n\n\n\n'))
         raise inquirer.errors.ValidationError([], reason=' ')
 
+    
+    def validate_requirements(self, _, notused):
+        print('\n'+'-'*60)
+        return True
+        
+        
     '''
     ----------------------------------------
         Other
@@ -593,7 +590,7 @@ class Parent_Object:
         if os.path.isabs(source_fpath):
             source_fpath = os.path.join('...',os.path.join('',*source_fpath.split('/')[-4:]))
 
-        print(green_text('Successfully copied files from:\n\t"{}" -> "{}"'.format(source_fpath, destination_fpath)))
+        print(green_text('Successfully copied files from:\n"{}" -> "{}"'.format(source_fpath, destination_fpath)))
 
     
     def get_all_files(self):
@@ -617,7 +614,6 @@ class Analysis_Object(Parent_Object):
 
         print('-'*60)
         print(green_text('Create Analysis object operation successful.'))
-        print('-'*60)
 
     
     def load_requirements(self):
@@ -657,17 +653,20 @@ class Analysis_Object(Parent_Object):
                                        message = 'Please choose the ' + blue_text('softwares') + ' required for this analysis',
                                        choices = list(self.builder.requirements['software'].keys()),
                                        carousel = True,
-                                       default = [key for key in self.requirements['software'].keys() if self.requirements['software'][key]]),
+                                       default = [key for key in self.requirements['software'].keys() if self.requirements['software'][key]],
+                                       validate = self.validate_requirements),
                      inquirer.Checkbox('geometry',
                                        message = 'Please enter the ' + blue_text('geometry types') + ' required for this analysis',
                                        choices = list(self.builder.requirements['geometry'].keys()),
                                        carousel = True,
-                                       default = [key for key in self.requirements['geometry'].keys() if self.requirements['geometry'][key]]),
+                                       default = [key for key in self.requirements['geometry'].keys() if self.requirements['geometry'][key]],
+                                       validate = self.validate_requirements),
                      inquirer.Checkbox('material',
                                        message = 'Please choose the ' + blue_text('materials') + ' required for this analysis',
                                        choices = list(self.builder.requirements['material'].keys()),
                                        carousel = True,
-                                       default = [key for key in self.requirements['material'].keys() if self.requirements['material'][key]]),
+                                       default = [key for key in self.requirements['material'].keys() if self.requirements['material'][key]],
+                                       validate = self.validate_requirements),
                      inquirer.Checkbox('analysis',
                                        message = 'Please choose the ' + blue_text('additional analysis components') + ' required for this analysis',
                                        choices = list(self.builder.requirements['analysis'].keys()),
@@ -677,7 +676,6 @@ class Analysis_Object(Parent_Object):
         print('-'*60)
         # Get answers to questions
         answers = inquirer.prompt(questions, theme=Theme())
-        print('-'*60)
 
 
         # Set requirements according to answers
@@ -695,7 +693,6 @@ class Geometry_Object(Parent_Object):
 
         print('-'*60)
         print(green_text('Create Geometry object operation successful.'))
-        print('-'*60)
 
     
     def load_requirements(self):
@@ -743,10 +740,10 @@ class Geometry_Object(Parent_Object):
         
         # If file names dont match then prompt user
         if change_made:
-            print(green_text('Automatically Detected the requirements based on the files.'))
+            print(green_text('Automatically Detected the requirements based on files in the selected folder.'))
         else:
             print('-'*60)
-            print(red_text('No requirements automatically detected, you can select a requirement. But it is probable it will not work.'))
+            print(red_text('No requirements automatically detected, you can select the requirements, but it is recommended to use a "requirements.json" file.'))
             print('-'*60)
             # Build questions object
             questions = [inquirer.Checkbox('geometry',
@@ -755,16 +752,12 @@ class Geometry_Object(Parent_Object):
                                         carousel = True,
                                         default = [key for key in self.requirements[self.object_type].keys() if self.requirements[self.object_type][key]])]
             
-
             # Get answers to questions
             answers = inquirer.prompt(questions, Theme())
 
-
             # Set requirements according to answers
             for requirement_type in self.requirements.keys():
-
                 for requirement in self.requirements[requirement_type].keys():
-
                     self.requirements[requirement_type][requirement] = requirement in answers[requirement_type]
 
 
@@ -777,7 +770,6 @@ class Material_Object(Parent_Object):
 
         print('-'*60)
         print(green_text('Create Material object operation successful.'))
-        print('-'*60)
 
 
     def load_requirements(self):
@@ -820,10 +812,10 @@ class Material_Object(Parent_Object):
                 change_made = True
 
         if change_made:
-            print(green_text('Automatically Detected the requirements based on the files.'))
+            print(green_text('Automatically Detected the requirements based on files in the selected folder.'))
         else:
             print('-'*60)
-            print(red_text('No requirements automatically detected, you can select a requirement. But it is probable it will not work.'))
+            print(red_text('No requirements automatically detected, you can select the requirements, but it is recommended to use a "requirements.json" file.'))
             print('-'*60)
             questions = [inquirer.List('material',
                                         message = 'Please choose the valid material type',

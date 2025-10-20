@@ -10,15 +10,16 @@ from shutil import copyfileobj
 from importlib.util import spec_from_file_location
 from importlib.util import module_from_spec
 import warnings
+import sys
+import xml.etree.ElementTree as ET
 
 with warnings.catch_warnings():
     warnings.simplefilter('ignore')
     import ansys.fluent.core as pyfluent
     
-import sys
-import xml.etree.ElementTree as ET
+from HazelsAwesomeTheme import red_text,green_text,blue_text,yellow_text
 from HazelsAwesomeTheme import HazelsAwesomeTheme as Theme
-import sys
+
 
 
 class Model:
@@ -33,36 +34,37 @@ class Model:
         ---------------------------------------------------
         '''
         
-        print('-----------------------------------------------')
-        print('Create Model Started')
-        print('-----------------------------------------------')
+        print('-'*60)
+        print('Create ' + blue_text('model') + ' operation started')
         
         # Modular_Abaqus_Builder class containing this object 
         self.builder = builder
         
-        # Specify allowed characters for certain attributes
-        self.allowed_characters = {'Name' : set(string.ascii_lowercase + string.digits + '_-'), 'Description' : set(string.ascii_letters + string.digits + '_-,.?! ()[]"')}
-        
         self.new_model_name()
 
         # Set destination fpath
-        self.fpath = os.path.join(self.builder.fpaths['model'],self.name)
+        self.fpath = os.path.join(self.builder.fpaths['model'], self.name)
+        
+        if os.path.exists(self.fpath):
+            print(red_text('File path "{}", already exists.'.format(self.fpath)))
+            raise FileExistsError
+        
+        print('File path set to "{}".'.format(blue_text(self.fpath)))
 
         self.new_description()
 
         # Select Analysis
-        self.select_analysis(analysis_name) if analysis_name else self.select_analysis()
+        self.select_analysis(analysis_name)
 
         # Select Geometry
-        self.select_geometry(geometry_name) if geometry_name else self.select_geometry()
+        self.select_geometry(geometry_name)
 
         # Add Materials
         if any(self.requirements['material'].values()):
-            self.select_materials(material_names) if material_names else self.select_materials()
+            self.select_materials(material_names)
         else:
-            print('-----------------------------------------------')
-            print('No Abaqus Materials required, skipping select materials')
-            print('-----------------------------------------------')
+            print('-'*60)
+            print(yellow_text('No material objects required for analysis: "{}", skipping select materials'.format(self.analysis.name)))
             self.materials = {}
 
         # Get solver fpaths
@@ -74,101 +76,92 @@ class Model:
         # Move files from object fpaths to the solver fpaths
         self.move_files_from_objects()
         
-        print('-----------------------------------------------')
-        print('Create Model operation successful.')
-        print('-----------------------------------------------')
+        print('-'*60)
+        print(green_text('Create model operation successful.'))
     
 
     def move_object_folder(self, source_fpath, destination_fpath, dirs_exist_ok=False):
+        '''
+        
+        '''
         copytree(source_fpath, destination_fpath, symlinks=True, dirs_exist_ok=dirs_exist_ok)
+        
+        if os.path.isabs(source_fpath):
+            source_fpath = os.path.join('...',os.path.join('',*source_fpath.split('/')[-4:]))
+            
+        print('-'*60)
+        print(green_text('Successfully copied files from:\n"{}" -> "{}"'.format(source_fpath, destination_fpath)))
 
     
     def new_model_name(self):
         '''
         ---------------------------------------------------
-        Gets a new Model name, ensures that no model with that name exists
+        Gets a new model name, ensures that no model already exists of that type
         ---------------------------------------------------
         '''
         # Get current names
-        current_names = [name for name in self.builder.data['model'].keys()]
+        current_names = list(self.builder.data['model'].keys())
+        if hasattr(self, 'name'): current_names.remove(self.name)
+        
+        print('-'*60)
+        print('Please enter a new ' + blue_text('name') + ' for the model to be created: ')
+        print('Note: ')
+        print('- It must only use lowercase letters, numbers, underscores and hyphens.')
+        print('- It must have fewer than 30 characters')
+        print('- It must be unique.')
+        print('- To cancel the create model process, enter nothing.')
+        print('-'*60)
+        if len(current_names):
+            print('The model names currently in use are listed below: ')
+            print('"'+'", "'.join([blue_text(name) for name in current_names])+'"')
+            print('-'*60)
+        else:
+            print('No model names currently in use.')
+            print('-'*60)
+        
+        model_name = inquirer.prompt([inquirer.Text('model_name', 
+                                                     'Enter the ' + blue_text('name') + ' of the new model', 
+                                                     validate = self.validate_name)], 
+                                                     theme=Theme())['model_name']
 
-        name = ''
+        if not model_name:
+            print('-'*60)
+            print(yellow_text('Cancel command given.'))
+            raise NameError
+        
+        else: 
+            print('-'*60)
+            print(green_text('The name: "{}" for the new model has been selected.'.format(model_name)))
 
-        # Loop until new name is unique
-        while True:
-            print('---------------------------------------------------')
-            print('Please enter a new name for the Model to be created: ')
-            print('Note: ')
-            print('- It must only use letters, numbers, underscores and hyphens.')
-            print('- It must be lowercase.')
-            print('- It must be unique.')
-            print('---------------------------------------------------')
-            print('The Model names currently in use are listed below: ')
-            print(current_names)
-            print('---------------------------------------------------')
-            
-            name = input('Please enter a new name for the model to be created: ')
-
-            if not name:
-                print('---------------------------------------------------')
-                print('ERROR: The name provided was an empty string')
-                print('---------------------------------------------------')
-
-            elif not (set(name) <= self.allowed_characters['name']):
-                print('---------------------------------------------------')
-                print('ERROR: The name: "{}", is not entirely lowercase, numbers or underscores and hyphens.'.format(name))
-                print('---------------------------------------------------')
-            
-            elif name in current_names:
-                print('---------------------------------------------------')
-                print('ERROR: The name: "{}", already exists in the database.'.format(name))
-                print('---------------------------------------------------')
-            
-            else: 
-                print('---------------------------------------------------')
-                print('The name: "{}", for the new object has been selected.'.format(name))
-                print('---------------------------------------------------')
-                self.name = name
-                return
+        self.name = model_name
+        return
                 
                 
     def new_description(self):
         '''
         ---------------------------------------------------
-        Provide a description for the Model added to the database.
-        ---------------------------------------------------
-        RETURNS
-        ---------------------------------------------------
-        description : str
-            A string typed by the user that describes the new object that only has characters from "allowed_characters_description".
+        Provide a description for the model added to the database.
         ---------------------------------------------------
         '''
 
-        description = ''
+        print('-'*60)
+        print('Please enter a short ' + blue_text('description') + ' of the new model:')
+        print('Note: ')
+        print('- It must only use letters, numbers, or the following symbols (not including single quotes): \'_-,.! ()[]\'')
+        print('- It must have fewer than 100 characters')
+        print('- It must be unique.')
+        print('-'*60)
+        
+        description = inquirer.prompt([inquirer.Text('description', 
+                                                     'Please enter a short ' + blue_text('description') + ' of the new model', 
+                                                     validate = self.validate_description)], theme=Theme())['description']
 
-        # Loop until new description entered
-        while True:
-            print('---------------------------------------------------')
-            print('Please enter a description for the Model to be created: ')
-            print('Note: ')
-            print('- It must only use letters, numbers, or the following symbols (not including single quotes): \'_-,.?! ()[]"\'')
-            print('---------------------------------------------------')
+        print('-'*60)
+        print(green_text('The description: "{}" for the new model has been selected.'.format(description)))
+        self.description = description
+        return
             
-            description = input('Please enter a description for the Model to be created: ')
-
-            if not (set(description) <= self.allowed_characters['description']):
-                print('---------------------------------------------------')
-                print('ERROR: The description: "{}", does not meet the requirements.'.format(description))
-                print('---------------------------------------------------')
-            
-            else:
-                print('---------------------------------------------------')
-                print('The description: "{}", for the new Model has been selected.'.format(description))
-                print('---------------------------------------------------')
-                self.description = description
-                return
-            
-    
+ 
     def select_analysis(self, analysis_name = None):
         '''
         ---------------------------------------------------
@@ -179,49 +172,51 @@ class Model:
         if not analysis_name:
 
             # Get the Analysis objects loaded in the database
-            potential_analyses = [analysis for analysis in self.builder.data['analysis'].keys()]
+            potential_analyses = list(self.builder.data['analysis'].keys())
 
-            # THIS NEEDS TO BE CAUGHT IN THE MODULAR ABAQUS BUILDER CLASS
             if not potential_analyses:
-                raise FileExistsError('No analysis objects available in the database')
+                raise FileExistsError
 
-            print('---------------------------------------------------')
-            print('Analyses Available for use:')
-            print('---------------------------------------------------')
+            print('-'*60)
+            print(blue_text('Analyses') + ' available for use:')
+            print('-'*60)
             for analysis in potential_analyses:
-                print('Name: "{}"'.format(analysis))
-                print('Description: "{}"'.format(self.builder.data['analysis'][analysis].description))
-                print('---------------------------------------------------')
+                print('Name: "{}"'.format(blue_text(analysis)))
+                print('Description:\n"{}"'.format(self.builder.data['analysis'][analysis].description))
+                print('-'*60)
 
             potential_analyses.append('cancel')
 
             # Prompt user to pick an analysis
-            analysis_name = inquirer.list_input('Pick Analysis to use', choices=potential_analyses, carousel = True)
+            analysis_name = inquirer.prompt([inquirer.List('analysis_name','Pick Analysis to use', choices=potential_analyses, carousel = True)], theme=Theme())['analysis_name']
 
-            if (not analysis_name) or (analysis_name == 'cancel'):
-                raise NameError('Select Analysis cancelled')
+            if analysis_name == 'cancel':
+                raise NameError
 
+        print('-'*60)
+        print(green_text('The analysis: "{}" was chosen for the current model.'.format(analysis_name)))
         self.analysis = self.builder.data['analysis'][analysis_name]
-
         self.requirements = self.analysis.requirements
 
 
     def get_potential_geometries(self):
         '''
         ---------------------------------------------------
-        Get a list of all the potential geometries that fulfill the requirements
+        Get a list of all the potential geometries that fulfill the analysis requirements
         ---------------------------------------------------
         '''
         potential_geometries = []
 
         for geometry_name,geometry_object in self.builder.data['geometry'].items():
-            
             # Check that the selected geometry fulfills all of the requirements of the analysis
             are_requirements_fulfilled = [fulfilled_requirement[1] for requirement_to_fulfill, fulfilled_requirement in zip(self.requirements['geometry'].items(),geometry_object.requirements['geometry'].items()) if requirement_to_fulfill[1]]
 
-            # Add name if all requirements fulfilled
             if all(are_requirements_fulfilled):
                 potential_geometries.append(geometry_name)
+                
+        if not potential_geometries:
+            print(red_text('No geometry objects that meet the requirements available in the database'))
+            raise FileExistsError
 
         return potential_geometries
 
@@ -232,46 +227,41 @@ class Model:
         Select a Geometry object from the database for this model
         ---------------------------------------------------
         '''
-
-        if not geometry_name:
         
+        if not geometry_name:
+                        
             # Get the Geometry objects loaded in the database
             potential_geometries = self.get_potential_geometries()
             
-
-            # THIS NEEDS TO BE CAUGHT IN THE MODULAR ABAQUS BUILDER CLASS
-            if not potential_geometries:
-                raise FileExistsError('No Geometry objects that meet the requirements available in the database')
-            
-            print('---------------------------------------------------')
-            print('The Chosen Analysis: "{}".'.format(self.analysis.name))
-            print('Description: "{}"'.format(self.analysis.description))
-            print('Has the following Geometry requirements: ')
+            print('-'*60)
+            print('The chosen analysis: "{}".'.format(blue_text(self.analysis.name)))
+            print('Description:\n"{}"'.format(self.analysis.description))
+            print('Has the following geometry requirements:')
             for requirement, is_required in self.requirements['geometry'].items():
                 if is_required:
-                    print('\t{}'.format(requirement))
+                    print(blue_text(requirement))
 
-
-            print('---------------------------------------------------')
-            print('The following Geometries meet the requirements: ')
-            print('---------------------------------------------------')
+            print('-'*60)
+            print('The following geometries meet these requirements:')
+            print('-'*60)
             for geometry in potential_geometries:
-                print('Name: "{}"'.format(geometry))
-                print('Description: "{}"'.format(self.builder.data['geometry'][geometry].description))
-                print('---------------------------------------------------')
+                print('Name: "{}"'.format(blue_text(geometry)))
+                print('Description:\n"{}"'.format(self.builder.data['geometry'][geometry].description))
+                print('-'*60)
 
             potential_geometries.append('cancel')
 
             # Prompt user to pick a Geometry
-            geometry_name = inquirer.list_input('Pick Geometry to use', choices=potential_geometries, carousel = True)
+            geometry_name = inquirer.prompt([inquirer.List('geometry_name', 'Pick Geometry to use', choices=potential_geometries, carousel = True)], theme=Theme())['geometry_name']
 
             # If cancel chosen, or no geometry name given
-            if (not geometry_name) or (geometry_name == 'cancel'):
-                raise NameError('Select Geometry cancelled')
-
-        # Set as model geometry
+            if geometry_name == 'cancel':
+                raise NameError
+            
+        print('-'*60)
+        print(green_text('The geometry: "{}" was chosen for the current model.'.format(geometry_name)))
         self.geometry = self.builder.data['geometry'][geometry_name]
-
+        
     
     def get_potential_materials(self):
         '''
@@ -279,19 +269,14 @@ class Model:
         Get a list of all the potential materials that fulfill a requirement
         ---------------------------------------------------
         '''
-        potential_materials = []
+        potential_materials = {key : [name for name,obj in self.builder.data['material'].items() if obj.requirements['material'][key]] for key,value in self.requirements['material'].items() if value}
 
-        for material_name,material_object in self.builder.data['material'].items():
-            
-            # Check that the selected material fulfills a requirement of the analysis
-            are_requirements_fulfilled = [fulfilled_requirement[1] for requirement_to_fulfill, fulfilled_requirement in zip(self.requirements['material'].items(),material_object.requirements['material'].items()) if requirement_to_fulfill[1]]
-
-            # Add name if all requirements fulfilled
-            if any(are_requirements_fulfilled):
-                potential_materials.append(material_name)
-
-        return potential_materials
-
+        if len(potential_materials) and all([len(mats) for mats in potential_materials.values()]):
+            return potential_materials
+        else:
+            print(red_text('No Material objects that meet all the requirements of the analysis.'))
+            raise FileExistsError
+        
 
     def select_materials(self, material_names = None):
         '''
@@ -300,88 +285,73 @@ class Model:
         ---------------------------------------------------
         '''
         self.materials = {}
-
-        if not material_names:
+        print('-'*60)
         
-            # Get the Material objects loaded in the database
-            potential_materials = self.get_potential_materials()
+        if material_names:
             
-            # THIS NEEDS TO BE CAUGHT IN THE MODULAR ABAQUS BUILDER CLASS
-            if not potential_materials:
-                raise FileExistsError('No Material objects that meet the requirements available in the database')
-
-            requirements_to_be_fulfilled = {}
-            
-            print('---------------------------------------------------')
-            print('The Chosen Analysis: "{}".'.format(self.analysis.name))
-            print('Description: "{}"'.format(self.analysis.description))
-            print('Has the following Material requirements: ')
-            for requirement, is_required in self.requirements['material'].items():
-                if is_required:
-                    print('\t{}'.format(requirement))
-                    requirements_to_be_fulfilled[requirement] = is_required
-
-
-            print('---------------------------------------------------')
-            print('The following Materials meet at least one of the requirements: ')
-            print('---------------------------------------------------')
-            for material in potential_materials:
-                print('Name: "{}"'.format(material))
-                print('Description: "{}"'.format(self.builder.data['material'][material].description))
-                requirement_fulfilled = [requirement[0] for requirement in self.builder.data['material'][material].requirements['material'].items() if requirement[1]]
-                print('Requirement Fulfilled: {}'.format(requirement_fulfilled[0]))
-                print('---------------------------------------------------')
-
-            potential_materials.append('cancel')
-            
-            # Loop until all requirements have been met
-            while len(requirements_to_be_fulfilled):
-                print('Requirements still to be fulfilled: ')
-                for requirement, is_required in requirements_to_be_fulfilled.items():
-                    print('\t{}'.format(requirement))
-                print('---------------------------------------------------')
-                
-                # Prompt user to pick a Material
-                material_name = inquirer.list_input('Pick a Material to use', choices=potential_materials, carousel = True)
-
-                # If cancel chosen, or no material name given
-                if (not material_name) or (material_name == 'cancel'):
-                    raise NameError('Select Material cancelled')
-
-
-                requirement_fulfilled = [fulfilled[0] for fulfilled in self.builder.data['material'][material_name].requirements['material'].items() if fulfilled[1]][0]
-                
-                
-                try:
-                    requirements_to_be_fulfilled.pop(requirement_fulfilled)
-                except:
-                    print('---------------------------------------------------')
-                    print('The Material: "{}", fulfills a requirement that has already been fulfilled by a previously chosen material.'.format(material_name))
-                    print('---------------------------------------------------')
-                    continue
-                
-                potential_materials.remove(material_name)
-                
-                # Append to Materials
-                self.materials[material_name] = self.builder.data['material'][material_name]
-
-
-        # If material names provided
-        else:
             for material_name in material_names:
                 self.materials[material_name] = self.builder.data['material'][material_name]
-            
+                print(green_text('The material: "{}" has been added to the model.'.format(material_name)))
+                return
+        else:
+            # Get the material objects loaded in the database
+            potential_materials = self.get_potential_materials()
+
+            print('The chosen analysis: "{}".'.format(blue_text(self.analysis.name)))
+            print('Description:\n{}'.format(self.analysis.description))
+            print('Has the following material requirements:')
+            for requirement, is_required in self.requirements['material'].items():
+                if is_required:
+                    print(blue_text(requirement))
+
+
+            print('-'*60)
+            print('The following Materials meet each of the requirements:')
+            print('-'*60)
+            for requirement,materials in potential_materials.items():
+                print('Requirement: "{}"'.format(blue_text(requirement)))
+                print('-'*60)
+                for material in materials:
+                    print('Name: "{}"'.format(blue_text(material)))
+                    print('Description:\n"{}"'.format(self.builder.data['material'][material].description))
+                print('-'*60)
+                materials.append('cancel')
+
+            for requirement,materials in potential_materials.items():
+
+                material_name = inquirer.prompt([inquirer.List('material_name',
+                                                               'Choose a material to fulfill the requirement: "{}"'.format(blue_text(requirement)), 
+                                                               choices=materials, 
+                                                               carousel=True)], theme=Theme())['material_name']
+                
+                if material_name == 'cancel':
+                    raise NameError
+
+                self.materials[material_name] = self.builder.data['material'][material_name]
+                print('-'*60)
+                print(green_text('The material: "{}", that satisfies the requirement: "{}", has been added to the model.'.format(material_name, requirement)))
+                print('-'*60)
+                
+            print(green_text('The following materials were chosen for the current model:'))
+            for material in self.materials.keys():
+                print(green_text('"{}"'.format(material)))
+                    
 
     def set_fpaths(self):
         '''
         
         '''
-        
+        print('-'*60)
         # If all softwares required set solver fpaths accordingly.
         if all(self.requirements['software'].values()):
             self.solver_fpaths = {'abaqus' : os.path.join(self.fpath,'abaqus'),
                                   'fluent' : os.path.join(self.fpath,'fluent'),
                                   'mpcci' : os.path.join(self.fpath,'mpcci')}
+            print('Analysis is an MPCCI analysis, setting fpaths accordingly.')
+            print('-'*60)
+            print(green_text('abaqus fpath set to: "{}"'.format(self.solver_fpaths['abaqus'])))
+            print(green_text('FLUENT fpath set to: "{}"'.format(self.solver_fpaths['fluent'])))
+            print(green_text('MPCCI fpath set to: "{}"'.format(self.solver_fpaths['mpcci'])))
             return
             
         # If only abaqus
@@ -389,6 +359,9 @@ class Model:
             self.solver_fpaths = {'abaqus' : self.fpath,
                                   'fluent' : None,
                                   'mpcci' : None}
+            print('Analysis is an abaqus analysis, setting fpaths accordingly.')
+            print('-'*60)
+            print(green_text('abaqus fpath set to: "{}"'.format(self.solver_fpaths['abaqus'])))
             return
         
         # If only fluent
@@ -396,13 +369,15 @@ class Model:
             self.solver_fpaths = {'abaqus' : None,
                                   'fluent' : self.fpath,
                                   'mpcci' : None}
+            print('Analysis is a FLUENT analysis, setting fpaths accordingly.')
+            print('-'*60)
+            print(green_text('FLUENT fpath set to: "{}"'.format(self.solver_fpaths['fluent'])))
             return
         
         else:
-            print('---------------------------------------------------')
+            print('-'*60)
             print('Software Requirements are not valid.')
-            print('---------------------------------------------------')
-            raise ValueError('Software Requirements are not valid.')
+            raise FileExistsError
 
 
     def print_model_parameter_info(self):
@@ -413,65 +388,48 @@ class Model:
         self.parameters = {}
 
         # Print parameters of the analysis object
-        print('---------------------------------------------------')
-        print('The Chosen Analysis: "{}".'.format(self.analysis.name))
-        print('Has the following Parameters that can be changed: ')
+        print('-'*60)
+        print('The chosen analysis: "{}".'.format(blue_text(self.analysis.name)))
+        print('Has the following parameters that can alter the current analysis') if self.analysis.parameters else print('Has no parameters that can be used.')
         for parameter_name,parameter in self.analysis.parameters.items():
-                    print('---------------------------------------------------')
-                    print('Name: {}'.format(parameter_name))
-                    print('\tDescription: {}'.format(parameter['description']))
-                    print('\tData-type: {}'.format(parameter['dtype']))
-                    print('\tDefault Value: {}'.format(parameter['default_value']))
-                    print('\tSolvers: ')
-                    for solver in parameter['solvers']:
-                        print('\t\t"{}"'.format(solver))
-                        
-        self.parameters.update(deepcopy(self.analysis.parameters))
+            if any([self.requirements['software'][solver] for solver in parameter['solvers']]):
+                print('-'*60)
+                print('Name: "{}"'.format(blue_text(parameter_name)))
+                print('\tDescription: {}'.format(parameter['description']))
+                print('\tData-type: {}'.format(parameter['dtype']))
+                print('\tDefault value: {}'.format(blue_text(parameter['default_value'])))  
+                self.parameters[parameter_name] = deepcopy(self.analysis.parameters[parameter_name])
         
         # Print parameters of the geometry object
-        print('---------------------------------------------------')
-        print('The Chosen Geometry: "{}".'.format(self.geometry.name))
-        print('Has the following Parameters that can be changed: ')
+        print('-'*60)
+        print('The chosen geometry: "{}".'.format(blue_text(self.geometry.name)))
+        print('Has the following parameters that can be changed: ') if self.geometry.parameters else print('Has no parameters that can be used.')
         for parameter_name,parameter in self.geometry.parameters.items():
-                    print('---------------------------------------------------')
-                    print('Name: {}'.format(parameter_name))
-                    print('\tDescription: {}'.format(parameter['description']))
-                    print('\tData-type: {}'.format(parameter['dtype']))
-                    print('\tDefault Value: {}'.format(parameter['default_value']))
-                    print('\tSolvers: ')
-                    for solver in parameter['solvers']:
-                        print('\t\t"{}"'.format(solver))
-        
-        self.parameters.update(deepcopy(self.geometry.parameters))
-        
-        # Check if materials required
-        if any(self.requirements['material'].values()):
+            if any([self.requirements['software'][solver] for solver in parameter['solvers']]):
+                print('-'*60)
+                print('Name: {}'.format(blue_text(parameter_name)))
+                print('\tDescription: {}'.format(parameter['description']))
+                print('\tData-type: {}'.format(parameter['dtype']))
+                print('\tDefault value: {}'.format(blue_text(parameter['default_value'])))
+                self.parameters[parameter_name] = deepcopy(self.geometry.parameters[parameter_name])
 
+        if not len(self.materials):
+            print('-'*60)
+            print('No materials required for the analysis.')
+        else:
             # Print parameters for all of the materials
             for material_name in self.materials.keys():
-                print('---------------------------------------------------')
-                print('The Chosen Material: "{}".'.format(material_name))
-                requirement_fulfilled = [requirement[0] for requirement in self.materials[material_name].requirements['material'].items() if requirement[1]][0]
-                print('Material Type: "{}"'.format(requirement_fulfilled))
-                print('Has the following Parameters that can be used: ')
+                print('-'*60)
+                print('The chosen material: "{}" of material type: "{}".'.format(blue_text(material_name),blue_text([requirement[0] for requirement in self.materials[material_name].requirements['material'].items() if requirement[1]][0])))
+                print('Has the following parameters that can be used: ') if self.materials[material_name].parameters else print('Has no parameters that can be used.')
                 for parameter_name,parameter in self.materials[material_name].parameters.items():
-                            print('---------------------------------------------------')
-                            print('Name: {}'.format(parameter_name))
-                            print('\tDescription: {}'.format(parameter['description']))
-                            print('\tData-type: {}'.format(parameter['dtype']))
-                            print('\tDefault Value: {}'.format(parameter['default_value']))
-                            print('\tSolvers: ')
-                            for solver in parameter['solvers']:
-                                print('\t\t"{}"'.format(solver))
-                
-                self.parameters.update(deepcopy(self.materials[material_name].parameters))
-
-        else:
-            print('---------------------------------------------------')
-            print('No materials chosen for this model')
-
-
-        print('---------------------------------------------------')
+                    if any([self.requirements['software'][solver] for solver in parameter['solvers']]):
+                        print('-'*60)
+                        print('Name: {}'.format(blue_text(parameter_name)))
+                        print('\tDescription: {}'.format(parameter['description']))
+                        print('\tData-type: {}'.format(parameter['dtype']))
+                        print('\tDefault Value: {}'.format(blue_text(parameter['default_value'])))
+                        self.parameters[parameter_name] = deepcopy(self.materials[material_name].parameters[parameter_name])
 
     
     def copy_and_modify_parameters(self):
@@ -481,26 +439,27 @@ class Model:
         
         self.print_model_parameter_info()
             
-        # Query user to pick which parameters they would like to edit the values of for use in this model
-        questions = [inquirer.Checkbox('chosen_parameters', 'Pick the parameters that you would like to change the values of for this model', choices = list(self.parameters.keys()), carousel = True)]
-        answers = inquirer.prompt(questions , theme=Theme())
-        print('---------------------------------------------------')
+        print('-'*60)
+        answers = inquirer.prompt([inquirer.Checkbox('chosen_parameters', 
+                                                     'Pick the parameters that you would like to change the values of for this model', 
+                                                     choices = list(self.parameters.keys()), 
+                                                     carousel = True)] , theme=Theme())['chosen_parameters']
+        print('-'*60)
 
         # Loop over parameters that user would like to change the values of
-        for chosen_parameter in answers['chosen_parameters']:
+        for chosen_parameter in answers:
 
-            value = inquirer.text('What value would you like to assign to: "{}", Note: dtype = "{}"'.format(chosen_parameter,self.parameters[chosen_parameter]['dtype']),
-                                  default = self.parameters[chosen_parameter]['default_value'])
+            value = inquirer.prompt([inquirer.Text('parameter_value',
+                                                   'What value would you like to assign to: "{}", Note: dtype = "{}"'.format(chosen_parameter,self.parameters[chosen_parameter]['dtype']),
+                                                   default = self.parameters[chosen_parameter]['default_value'],
+                                                   validate = lambda _,ans: self.validate_parameter_value(self.parameters[chosen_parameter]['dtype'], _, ans))], theme=Theme())['parameter_value']
 
-            if self.parameters[chosen_parameter]['dtype'] == 'int':
-                self.parameters[chosen_parameter]['default_value'] = int(value)
-                print('The value of Parameter "{}" was changed to: {}'.format(chosen_parameter,int(value)))
-
-            else:
-                self.parameters[chosen_parameter]['default_value'] = float(value)
-                print('The value of Parameter "{}" was changed to: {}'.format(chosen_parameter,float(value)))
-
-            print('---------------------------------------------------')
+            print('-'*60)
+            self.parameters[chosen_parameter]['default_value'] = int(value) if self.parameters[chosen_parameter]['dtype'] == 'int' else float(value)
+            print(green_text('The value of Parameter "{}" was changed to: {}'.format(chosen_parameter,int(value)))) if self.parameters[chosen_parameter]['dtype'] == 'int' else print(green_text('The value of Parameter "{}" was changed to: {}'.format(chosen_parameter,float(value))))
+            print('-'*60)
+            
+        print(green_text('The parameter values assigned to the model: "{}" have been successfully modified.'.format(self.name)))
         
 
     def move_files_from_objects(self):
@@ -509,10 +468,14 @@ class Model:
         '''
 
         # Copy analysis files to model directory
-        self.move_object_folder(self.analysis.fpath, self.fpath)
-        print('---------------------------------------------------')
-        print('Moved analysis files successfully')
-        print('---------------------------------------------------')
+        try:
+            self.move_object_folder(self.analysis.fpath, self.fpath)
+            print(green_text('Moved analysis files successfully'))
+        except:
+            print('-'*60)
+            print(red_text('Analysis files could not be moved from object folder to the new model folder.'))
+            raise FileNotFoundError
+        
         
         # If mpcci abaqus-fluent coupled analysis
         if all(self.requirements['software'].values()):
@@ -527,27 +490,26 @@ class Model:
             self.build_fluent_model()
 
         else:
-            print('---------------------------------------------------')
-            print('Software Requirements are not valid.')
-            print('---------------------------------------------------')
-            raise ValueError('Software Requirements are not valid.')
-        
+            print('-'*60)
+            print(red_text('Software Requirements are not valid.'))
+            raise ValueError
+ 
 
     def build_abaqus_model(self):
         '''
         
         '''
-        print('---------------------------------------------------')
-        print('Assembling Abaqus model')
-        print('---------------------------------------------------')
+        print('-'*60)
+        print('Assembling abaqus model')
+        print('-'*60)
 
         # Satisfy geometry requirements
         for requirement_name,requirement_value in self.requirements['geometry'].items():
             if requirement_value and (('abaqus' in requirement_name) or ('assembly' in requirement_name)):
                 copyfile(os.path.join(self.geometry.fpath,requirement_name+'.inp'), os.path.join(self.solver_fpaths['abaqus'],requirement_name+'.inp'))
-                print('File: "{}", copied to model path'.format(requirement_name+'.inp'))
+                print(green_text('File: "{}", copied to model path'.format(requirement_name+'.inp')))
                 
-        
+                
         # Modify assembly.inp based on geometry requirements       
         if self.requirements['geometry']['assembly']:
             with open(os.path.join(self.solver_fpaths['abaqus'],'assembly.inp'),'r') as inp_read, open(os.path.join(self.solver_fpaths['abaqus'],'temp.inp'),'w') as inp_write:
@@ -562,7 +524,6 @@ class Model:
                         
                     # if geometry is required then write its assembly lines
                     if '**' in line and any(req in line for req in abaqus_reqs):
-                        
                         line = inp_read.readline()
 
                         while '**' not in line:
@@ -576,7 +537,7 @@ class Model:
 
             # Replace old assembly.inp with modified version
             os.replace(os.path.join(self.solver_fpaths['abaqus'],'temp.inp'),os.path.join(self.solver_fpaths['abaqus'],'assembly.inp'))
-            print('File: "assembly.inp", modified to reflect requirements')
+            print(green_text('File: "assembly.inp", modified to reflect requirements'))
                                 
 
         # Satisfy material requirements
@@ -584,7 +545,7 @@ class Model:
             for requirement_name, requirement_value in self.materials[material_name].requirements['material'].items():
                 if requirement_value:
                     copyfile(os.path.join(self.materials[material_name].fpath,requirement_name+'.inp'), os.path.join(self.solver_fpaths['abaqus'],requirement_name+'.inp'))
-                    print('File: "{}", copied to model path'.format(requirement_name+'.inp'))
+                    print(green_text('File: "{}", copied to model path'.format(requirement_name+'.inp')))
 
 
         # Add parameter values to main abaqus input file
@@ -599,52 +560,68 @@ class Model:
             for parameter_name,parameter in self.parameters.items():
                 if 'abaqus' in parameter['solvers']:
                     inp_write.write('{} = {}\n'.format(parameter_name, parameter['default_value']))
-                    print('Parameter: "{} = {}", inserted into main input file'.format(parameter_name,parameter['default_value']))
+                    print(green_text('Parameter: "{} = {}", inserted into main input file'.format(parameter_name,parameter['default_value'])))
 
             # Copy main input file contents
             copyfileobj(inp_read,inp_write)
 
-
         # Save modified main input file
         if self.solver_fpaths['mpcci']:
             os.replace(os.path.join(self.solver_fpaths['abaqus'],'temp.inp'),os.path.join(self.solver_fpaths['abaqus'],'main.inp'))
+            print(green_text('Parameters successfully added to abaqus main input file: "main.inp".'))
             
         else: 
             os.remove(os.path.join(self.solver_fpaths['abaqus'],'main.inp'))
             os.rename(os.path.join(self.solver_fpaths['abaqus'],'temp.inp'),os.path.join(self.solver_fpaths['abaqus'],self.name+'.inp'))
-
-       
+            print(green_text('Parameters successfully added to abaqus main input file: "{}".'.format(self.name+'.inp')))
+            
+            
         # If submodel analysis, import global .odb and .prt files (Note: This only works if global analysis has been run, and global script preparation run)
         if self.requirements['analysis']['abaqus_global_odb'] and self.requirements['analysis']['abaqus_global_prt']:
 
-            potential_models = [model_name for model_name in self.builder.data['model'].keys() if model_name is not self.name]
+            potential_models = list(self.builder.data['model'].keys())
+            if self.name in potential_models: potential_models.remove(self.name)
 
             if potential_models:
-            
-                model_to_import_global = inquirer.list_input('This model requires a global .odb and .prt file to function, please specify the model you would like to import these from', choices=potential_models, carousel=True)
+                potential_models.append('choose_directory')
+                print('-'*60)
+                print('Select "choose_directory" to specify the files yourself.')
+                print('-'*60)
+                model_to_import_global = inquirer.prompt([inquirer.List('model_to_import_global',
+                                                                        'This model requires a global .odb and .prt file to function, please specify the model you would like to import these from', 
+                                                                        choices=potential_models, 
+                                                                        carousel=True)], theme=Theme())['model_to_import_global']
                 
-                # Copy global .odb 
-                if os.path.exists(os.path.join(self.builder.data['model'][model_to_import_global].solver_fpaths['abaqus'],model_to_import_global+'.odb')):
-                    copyfile(os.path.join(self.builder.data['model'][model_to_import_global].solver_fpaths['abaqus'],model_to_import_global+'.odb'),
-                                os.path.join(self.solver_fpaths['abaqus'],'global.odb'))
-                    print('Global .odb file copied from model: "{}".'.format(model_to_import_global))
+                if model_to_import_global == 'choose_directory':
+                    self.pick_global_files()
                 else:
-                    raise FileExistsError('{}.odb does not exist in the model: "{}"'.format(model_to_import_global,model_to_import_global))
-                
-                # Copy global .prt
-                if os.path.exists(os.path.join(self.builder.data['model'][model_to_import_global].solver_fpaths['abaqus'],model_to_import_global+'.prt')):
-                    copyfile(os.path.join(self.builder.data['model'][model_to_import_global].solver_fpaths['abaqus'],model_to_import_global+'.prt'),
-                                os.path.join(self.solver_fpaths['abaqus'],'global.prt'))
-                    print('Global .prt file copied from model: "{}".'.format(model_to_import_global))
-                else:
-                    raise FileExistsError('{}.prt does not exist in the model: "{}"'.format(model_to_import_global, model_to_import_global))
+                    # Copy global .odb 
+                    if os.path.exists(os.path.join(self.builder.data['model'][model_to_import_global].solver_fpaths['abaqus'],model_to_import_global+'.odb')):
+                        copyfile(os.path.join(self.builder.data['model'][model_to_import_global].solver_fpaths['abaqus'],model_to_import_global+'.odb'),
+                                    os.path.join(self.solver_fpaths['abaqus'],'global.odb'))
+                        print(green_text('Global .odb file copied from model: "{}".'.format(model_to_import_global)))
+                    else:
+                        print(red_text('{}.odb does not exist in the model: "{}"'.format(model_to_import_global)))
+                        raise FileNotFoundError
+                    
+                    # Copy global .prt
+                    if os.path.exists(os.path.join(self.builder.data['model'][model_to_import_global].solver_fpaths['abaqus'],model_to_import_global+'.prt')):
+                        copyfile(os.path.join(self.builder.data['model'][model_to_import_global].solver_fpaths['abaqus'],model_to_import_global+'.prt'),
+                                    os.path.join(self.solver_fpaths['abaqus'],'global.prt'))
+                        print(green_text('Global .prt file copied from model: "{}".'.format(model_to_import_global)))
+                    else:
+                        print(red_text('{}.prt does not exist in the model: "{}"'.format(model_to_import_global)))
+                        raise FileNotFoundError
 
             else:
-                raise FileExistsError('No models to import global files from')
+                print(red_text('No models to import global files from'))
+                if self.builder.yes_no_question('Choose global.odb and global.prt files yourself?'):
+                    self.pick_global_files()
+                else:
+                    raise FileNotFoundError
 
-        print('---------------------------------------------------')
-        print('Assembly of Abaqus model successful')
-        print('---------------------------------------------------')
+        print('-'*60)
+        print(green_text('Assembly of abaqus model successful'))
 
 
     def build_fluent_model(self):
@@ -652,39 +629,37 @@ class Model:
         
         '''
 
-        print('---------------------------------------------------')
-        print('Assembling Fluent model')
-        print('---------------------------------------------------')
-        
+        print('-'*60)
+        print('Assembling FLUENT model')
+        print('-'*60)
 
         fluent_setup = self.get_fluent_script()
-        print('Fluent script: "fluent_setup.py" retrieved successfully')
+        print(green_text('Fluent script: "fluent_setup.py" retrieved successfully'))
 
-        
         # Satisfy geometry requirements
         for requirement_name,requirement_value in self.requirements['geometry'].items():
             if requirement_value and ('fluent' in requirement_name):
                 copyfile(os.path.join(self.geometry.fpath,requirement_name+'.msh'), os.path.join(self.solver_fpaths['fluent'],requirement_name+'.msh'))
-                print('File: "{}", copied to model path'.format(requirement_name+'.msh'))
-
-                print('---------------------------------------------------')
-                print('Calling fluent_setup script to build case file')
-                print('---------------------------------------------------')
-
-                if self.solver_fpaths['mpcci']:
-                    fluent_name = 'fluent_model.cas.h5'
-                else: 
-                    fluent_name = self.name+'.cas.h5'
-
-                # Call setup script
-                fluent_setup(file_name = fluent_name,
-                             mesh_file_name = requirement_name+'.msh',
-                             fluent_wd = os.path.join(os.getcwd(),self.solver_fpaths['fluent']),
-                             parameters = self.parameters)
-                
-                sys.dont_write_bytecode = False
-                
+                print(green_text('File: "{}", copied to model path'.format(requirement_name+'.msh')))
                 break
+
+        print('Calling fluent_setup script to build case file')
+        print('-'*60)
+        
+        if self.solver_fpaths['mpcci']:
+            fluent_name = 'fluent_model.cas.h5'
+        else: 
+            fluent_name = self.name+'.cas.h5'
+
+        # Call setup script
+        fluent_setup(file_name = fluent_name,
+                        mesh_file_name = requirement_name+'.msh',
+                        fluent_wd = os.path.join(os.getcwd(),self.solver_fpaths['fluent']),
+                        parameters = self.parameters)
+        
+        sys.dont_write_bytecode = False
+        
+
         
         # Edit journal file
         if not self.solver_fpaths['mpcci']:
@@ -701,12 +676,48 @@ class Model:
                 # Copy rest of journal file
                 copyfileobj(old_file,new_file)
                 
+            
             os.replace(os.path.join(self.solver_fpaths['fluent'],'temp.jou'),os.path.join(self.solver_fpaths['fluent'],'journal.jou'))
+            print(green_text('Journal file successfully edited to import case file.'))
 
         
-        print('---------------------------------------------------')
-        print('Assembly of Fluent model successful')
-        print('---------------------------------------------------')
+        print('-'*60)
+        print(green_text('Assembly of FLUENT model successful'))
+
+
+    def build_mpcci_model(self):
+        '''
+        
+        '''
+
+        print('-'*60)
+        print('Assembling MPCCI coupled abaqus-FLUENT model')
+
+        self.build_fluent_model()
+
+        self.build_abaqus_model()
+
+        mpcci_setup = self.get_mpcci_script()
+        print(green_text('MPCCI script: "mpcci_setup.py" retrieved successfully'))
+
+        
+        # Prompt user for number of cpus for fluent and number of cpus for abaqus
+        questions = [inquirer.Text('fluent_cpus', 'Please enter the number of cpus to use for the fluent simulation', default = 2, validate = lambda _, c : c.isnumeric() and (int(c) > 1)),
+                     inquirer.Text('abaqus_cpus', 'Please enter the number of cpus to use for the abaqus simulation', default = 2, validate = lambda _, c : c.isnumeric() and (int(c) > 1))]
+        
+        answers = inquirer.prompt(questions, theme=Theme())
+
+        # Edit mpcci .csp file via script, depending on parameters set for the analysis.
+        mpcci_setup(fpath = self.solver_fpaths['mpcci'], name = self.name, parameters = self.parameters, fluent_cpus = answers['fluent_cpus'], abaqus_cpus = answers['abaqus_cpus'])
+
+        sys.dont_write_bytecode = False
+
+        # Delete old main.csp
+        os.remove(os.path.join(self.solver_fpaths['mpcci'],'main.csp'))
+        print(green_text('Deleted old main.csp'))
+
+        print('-'*60)
+        print(green_text('Assembly of MPCCI coupled abaqus-FLUENT model successful'))
 
 
     def get_fluent_script(self):
@@ -722,7 +733,7 @@ class Model:
         spec.loader.exec_module(temp)
 
         return temp.fluent_setup
-    
+        
 
     def get_mpcci_script(self):
         '''
@@ -739,42 +750,70 @@ class Model:
         return temp.mpcci_setup
 
 
-    def build_mpcci_model(self):
-        '''
+    def pick_global_files(self): # TODO
         
-        '''
+        pass
 
-        print('---------------------------------------------------')
-        print('Assembling MPCCI coupled abaqus-fluent model')
-        print('---------------------------------------------------')
+    
+    def validate_name(self, _, name):
+            '''
+            
+            '''
 
-        self.build_fluent_model()
+            current_names = list(self.builder.data['model'].keys())
 
-        self.build_abaqus_model()
+            # Cancel command given
+            if not name:
+                return True
+            
+            # If name meets requirements
+            if (len(name) < 30):
+                if (set(name) <= self.builder.allowed_characters['name']):
+                    if (name not in current_names):
+                        return True
+                    else:
+                        print(red_text('\nName: "{}" is already in use in the database.'.format(name)))
+                        return False
+                else:
+                    print(red_text('\nEntered name contains non-valid characters.'.format(name)))
+                    return False
+            else:
+                print(red_text('\nEntered name has a length of {} which is greater than the max length of 30.'.format(len(name))))
+                return False
 
-        mpcci_setup = self.get_mpcci_script()
-        print('MPCCI script: "mpcci_setup.py" retrieved successfully')
 
+    def validate_description(self, _, description):
+
+            # If description meets requirements
+            if (len(description) < 100):
+                if (set(description) <= self.builder.allowed_characters['description']):
+                    return True
+                else:
+                    print(red_text('\nEntered description contains non-valid characters.'))
+                    return False
+            else:
+                print(red_text('\nEntered description has a length of {} which is greater than the max length of 100.'.format(len(description))))
+                return False
+
+   
+    def validate_parameter_value(self, dtype , _, value):
         
-        # Prompt user for number of cpus for fluent and number of cpus for abaqus
-        questions = [inquirer.Text('fluent_cpus', 'Please enter the number of cpus to use for the fluent simulation', default = 2, validate = lambda _, c : c.isnumeric() and (int(c) > 1)),
-                     inquirer.Text('abaqus_cpus', 'Please enter the number of cpus to use for the abaqus simulation', default = 2, validate = lambda _, c : c.isnumeric() and (int(c) > 1))]
+        # Check parameter value matches entered datatype
+        if dtype == 'int':
+            if value.isnumeric():
+                return True
+            else:
+                print(red_text('\nThe entered value is not a valid integer'))
+        else:
+            try:
+                float(value)
+                return True
+            except ValueError:
+                print(red_text('\nThe entered value is not a valid float'))
+                return False
+            
+            
+    def validate_global_files(self): # TODO
         
-        answers = inquirer.prompt(questions)
-
-        # Edit mpcci .csp file via script, depending on parameters set for the analysis.
-        mpcci_setup(fpath = self.solver_fpaths['mpcci'], name = self.name, parameters = self.parameters, fluent_cpus = answers['fluent_cpus'], abaqus_cpus = answers['abaqus_cpus'])
-
-        sys.dont_write_bytecode = False
-
-        # Delete old main.csp
-        os.remove(os.path.join(self.solver_fpaths['mpcci'],'main.csp'))
-        print('Deleted old main.csp')
-
-        print('---------------------------------------------------')
-        print('Assembly of MPCCI coupled abaqus-fluent model successful')
-        print('---------------------------------------------------')
-
-
-
+        pass
     

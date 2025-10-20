@@ -1,6 +1,5 @@
 from Modular_Abaqus_Builder import Modular_Abaqus_Builder
 
-
 def main():
 
     # Instantiate class
@@ -18,6 +17,7 @@ def main():
 
 IMPORTANT STUFF
 --------------------------
+
 
 - print_database causing double line on different loops
 - clean up new classes to make them neater
@@ -44,6 +44,7 @@ NICE TO HAVE STUFF
 - object help message
 - model help message
 - run model progress?? :o
+
 '''
 
 

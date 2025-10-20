@@ -170,8 +170,8 @@ class Modular_Abaqus_Builder:
         
         # If delete_database flag set to true, delete all files
         if delete_database:
-            print(red_text('DELETE DATABASE FLAG SET TO TRUE'))
             print('-'*60)
+            print(red_text('DELETE DATABASE FLAG SET TO TRUE'))
 
             if self.yes_no_question('Are you sure you would like to delete the' + red_text(' entire ') + 'database'):
                 self.delete_database()
@@ -180,50 +180,39 @@ class Modular_Abaqus_Builder:
                 print('-'*60)
                 print(yellow_text('The delete flag was set to true, but the delete was denied. Closing the database.'))
                 print('-'*60)
-
                 exit(0)
+
 
         # If delete_all_models flag set to true, delete all model files
         elif delete_all_models:
-            print(red_text('DELETE MODELS FLAG SET TO TRUE'))
             print('-'*60)
+            print(red_text('DELETE MODELS FLAG SET TO TRUE'))
 
             if self.yes_no_question('Are you sure you would like to delete ' + red_text('all models') + ' in the database?'):
-                print('-'*60)
-
                 try:
                     self.load_database()
+                    self.delete_all_models()
+                    self.print_database(False)
                 except:
                     print(yellow_text('The data.pkl file: "{}" does not exist. An empty Modular_Abaqus_Builder has been loaded.'.format(self.fpaths['data'])))
-                    print('-'*60)
 
-                self.delete_all_models()
-                self.print_database(False)
-                print('-'*60)
-            
             else:
                 print('-'*60)
                 print(yellow_text('The delete models flag was set to true, but the delete was denied. Closing the database.'))
                 print('-'*60)
-
                 exit(0)
+
 
         # Otherwise load database as usual
         else:
-
-            # Load data from data.pickle
             try:
                 self.load_database()
-
                 self.print_database(False)
-                print('-'*60)
-
-            # If it doesnt exist load an empty Modular_Abaqus_Builder
-            except:
                 
-                print(yellow_text('The data.pkl file: "{}" does not exist. An empty Modular_Abaqus_Builder has been loaded.'.format(self.fpaths['data'])))
-                print('-'*60)        
+            except:
+                print(yellow_text('The data.pkl file: "{}" does not exist. An empty Modular_Abaqus_Builder has been loaded.'.format(self.fpaths['data']))) 
 
+        # Save database once initialisation complete
         self.save_database()
     
     '''
@@ -331,7 +320,6 @@ class Modular_Abaqus_Builder:
             print(yellow_text('Model fpath did not exist, one has been created'))
 
         print(green_text('Instantiated the Database Successfully.'))
-        print('-'*60)
         
 
     def delete_database(self):
@@ -372,7 +360,6 @@ class Modular_Abaqus_Builder:
 
             print('-'*60)
             print(green_text('The Database was successfully deleted.'))
-            print('-'*60)
 
         except:
             print(red_text('ERROR: The program cannot delete a file due to another program using a directory.'))
@@ -391,11 +378,11 @@ class Modular_Abaqus_Builder:
         directories = glob.glob(os.path.join(self.fpaths['model'], '*', ''), recursive=False)
         model_names = self.data['model'].keys()
 
+        print('-'*60)
         print(green_text('Deleting all models in the database'))
 
         if not (len(directories) or len(model_names)):
             print(green_text('No Models to delete'))
-            print('-'*60)
             return
         
         print('-'*60)
@@ -409,6 +396,8 @@ class Modular_Abaqus_Builder:
                 print(red_text('Deleted Model: "{}", from the database.'.format(model)))
 
             self.data['model'] = {}
+            print('-'*60)
+            print(green_text('Successfully deleted all models from the database.'))
 
         except:
             print(red_text('ERROR: The program cannot delete a file due to another program using a directory.'))
@@ -424,13 +413,11 @@ class Modular_Abaqus_Builder:
         Load the database from the .pkl file
         ---------------------------------------------------
         '''
+        print('-'*60)
+
         with open(self.fpaths['data'], 'rb') as df:
-            
-
             self.data = pkl.load(df).data
-
             print(green_text('Loading from: "{}" was successful.'.format(self.fpaths['data'])))
-            print('-'*60)
 
 
     def save_database(self):
@@ -439,6 +426,7 @@ class Modular_Abaqus_Builder:
         Saves the database to a .pkl file
         ---------------------------------------------------
         '''
+        print('-'*60)
 
         if not os.path.exists(self.fpaths['data']):
             print(yellow_text('New "{}" file created'.format(self.fpaths['data'])))
@@ -460,11 +448,14 @@ class Modular_Abaqus_Builder:
         Print Database in a cooler way than __str__. Hate that shit.
         ---------------------------------------------------
         '''
-
-        print(blue_text('The Analyses currently loaded are: '))
+        
+        # Print analysis data
         print('-'*60)
-        for analysis in self.data['analysis'].values():
+        print(blue_text('The Analyses currently loaded are: '))  if len(self.data['analysis'].keys()) else print(blue_text('No analyses currently loaded.'))
 
+        for analysis in self.data['analysis'].values():
+            
+            print('-'*60)
             print('Analysis Name: "{}"'.format(blue_text(analysis.name)))
             verbose and print('\tPath: "{}"'.format(analysis.fpath))
             print('\tDescription: "{}"'.format(analysis.description))
@@ -494,13 +485,14 @@ class Modular_Abaqus_Builder:
                     for requirement,requirement_value in analysis.requirements[requirement_type].items():
                         print('\t\t\t"{}": "{}"'.format(requirement,requirement_value))
 
-            print('-'*60)
-
-        
-        print(blue_text('The Geometries currently loaded are: '))
+            
+        # Print geometry data
         print('-'*60)
-        for geometry in self.data['geometry'].values():
+        print(blue_text('The Geometries currently loaded are: ')) if len(self.data['geometry'].keys()) else print(blue_text('No geometries currently loaded.'))
 
+        for geometry in self.data['geometry'].values():
+            
+            print('-'*60)
             print('Geometry Name: "{}"'.format(blue_text(geometry.name)))
             verbose and print('\tPath: "{}"'.format(geometry.fpath))
             print('\tDescription: "{}"'.format(geometry.description))
@@ -530,13 +522,14 @@ class Modular_Abaqus_Builder:
                     for requirement,requirement_value in geometry.requirements[requirement_type].items():
                         print('\t\t\t"{}": "{}"'.format(requirement,requirement_value))
 
-            print('-'*60)
 
-
-        print(blue_text('The Materials currently loaded are: '))
+        # Print material data
         print('-'*60)
+        print(blue_text('The Materials currently loaded are: ')) if len(self.data['material'].keys()) else print(blue_text('No materials currently loaded.'))
+        
         for material in self.data['material'].values():
-
+            
+            print('-'*60)
             print('Material Name: "{}"'.format(blue_text(material.name)))
             verbose and print('\tPath: "{}"'.format(material.fpath))
             print('\tDescription: "{}"'.format(material.description))
@@ -567,15 +560,14 @@ class Modular_Abaqus_Builder:
                     for requirement,requirement_value in material.requirements[requirement_type].items():
                         print('\t\t\t"{}": "{}"'.format(requirement,requirement_value))
 
-            print('-'*60)
 
-
-        # ******************* TODO WILL NEED TO BE UPDATED UPON ADDING MODEL CLASS *************************
-
-        print(blue_text('The Models currently loaded are: '))
+        # Print model data
         print('-'*60)
+        print(blue_text('The Models currently loaded are: ')) if len(self.data['model'].keys()) else print(blue_text('No models currently loaded.'))       
+            
         for model in self.data['model'].values():
-
+            
+            print('-'*60)
             print('Model Name: "{}"'.format(blue_text(model.name)))
             print('\tDescription: "{}"'.format(model.description))
             verbose and print('\tPath: "{}"'.format(model.fpath))
@@ -622,7 +614,7 @@ class Modular_Abaqus_Builder:
                                 print('\t\t\t\t"{}"'.format(solver))
 
 
-    def validate_database(self):
+    def validate_database(self): # Move validates to Objects
         '''
         
         '''
@@ -631,175 +623,187 @@ class Modular_Abaqus_Builder:
         print('-'*60)
 
         # Validate Analyses
-        print('Validating Analyses...')
+        if len(self.data['analysis'].keys()):
+            print('Validating ' + blue_text('Analyses') + '...')
+            print('-'*60)
+            for analysis_name in list(self.data['analysis'].keys()):
+                
+                print('\tValidating Analysis: "{}"'.format(blue_text(analysis_name)))
+
+                # Check fpath matches path + name
+                fpath_matches = os.path.join(self.fpaths['analysis'],analysis_name) == self.data['analysis'][analysis_name].fpath
+
+
+                # Check directory exists
+                directory_exists = os.path.exists(os.path.join(self.fpaths['analysis'],analysis_name))
+
+
+                # Check all files exist in object folder
+                all_files_exist = all([os.path.exists(os.path.join(self.fpaths['analysis'],analysis_name,file_to_check)) for file_to_check in self.data['analysis'][analysis_name].files])
+
+
+                # Check requirements match database requirements
+                if (self.requirements.keys() != self.data['analysis'][analysis_name].requirements.keys()) or any([self.requirements[key].keys() != self.data['analysis'][analysis_name].requirements[key].keys() for key in self.requirements.keys()]):
+
+                    print(yellow_text('\tThe requirements for the Analysis object: "{}" do not match the default requirements of the database. Please select new requirements.'.format(analysis_name)))
+                    self.data['analysis'][analysis_name].set_requirements(reset_requirements = True)
+
+
+                # Check all validations passed
+                if fpath_matches and directory_exists and all_files_exist:
+                    print(green_text('\tAnalysis: "{}", validated successfully'.format(analysis_name)))
+
+                else:
+                    self.data['analysis'].pop(analysis_name)
+                    print(red_text('\tAnalysis: "{}", was found to be not valid. Deleting from database'.format(analysis_name)))
+
+            print('-'*60)
+            print(green_text('Analyses Validated.'))
+        else:
+            print('No ' + blue_text('Analyses') + ' to validate.')
         print('-'*60)
-        for analysis_name in list(self.data['analysis'].keys()):
-            
-            print('\tValidating Analysis: "{}"'.format(analysis_name))
-
-            # Check fpath matches path + name
-            fpath_matches = os.path.join(self.fpaths['analysis'],analysis_name) == self.data['analysis'][analysis_name].fpath
 
 
-            # Check directory exists
-            directory_exists = os.path.exists(os.path.join(self.fpaths['analysis'],analysis_name))
+        # Validate Analyses
+        if len(self.data['geometry'].keys()):
+            print('Validating ' + blue_text('Geometries') + '...')
+            print('-'*60)
+            for geometry_name in list(self.data['geometry'].keys()):
+                
+                print('\tValidating Geometry: "{}"'.format(blue_text(geometry_name)))
+
+                # Check fpath matches path + name
+                fpath_matches = os.path.join(self.fpaths['geometry'],geometry_name) == self.data['geometry'][geometry_name].fpath
 
 
-            # Check all files exist in object folder
-            all_files_exist = all([os.path.exists(os.path.join(self.fpaths['analysis'],analysis_name,file_to_check)) for file_to_check in self.data['analysis'][analysis_name].files])
+                # Check directory exists
+                directory_exists = os.path.exists(os.path.join(self.fpaths['geometry'],geometry_name))
 
 
-            # Check requirements match database requirements
-            if (self.requirements.keys() != self.data['analysis'][analysis_name].requirements.keys()) or any([self.requirements[key].keys() != self.data['analysis'][analysis_name].requirements[key].keys() for key in self.requirements.keys()]):
-
-                print(yellow_text('\tThe requirements for the Analysis object: "{}" do not match the default requirements of the database. Please select new requirements.'.format(analysis_name)))
-                self.data['analysis'][analysis_name].set_requirements(reset_requirements = True)
+                # Check all files exist in object folder
+                all_files_exist = all([os.path.exists(os.path.join(self.fpaths['geometry'],geometry_name,file_to_check)) for file_to_check in self.data['geometry'][geometry_name].files])
 
 
-            # Check all validations passed
-            if fpath_matches and directory_exists and all_files_exist:
-                print(green_text('\tAnalysis: "{}", validated successfully'.format(analysis_name)))
+                # Check requirements match database requirements
+                if self.requirements['geometry'].keys() != self.data['geometry'][geometry_name].requirements['geometry'].keys():
 
-            else:
-                self.data['analysis'].pop(analysis_name)
-                print(red_text('\tAnalysis: "{}", was found to be not valid. Deleting from database'.format(analysis_name)))
-
-        len(self.data['analysis']) and print('-'*60)
-        print(green_text('Analyses Validated.'))
-        print('-'*60)
+                    print(yellow_text('\tThe requirements for the Geometry object: "{}" do not match the default requirements of the database.'.format(geometry_name)))
+                    self.data['geometry'][geometry_name].set_requirements(reset_requirements = True)
 
 
-        # Validate Geometries
-        print('Validating Geometries...')
-        print('-'*60)
-        for geometry_name in list(self.data['geometry'].keys()):
-            
-            print('\tValidating Geometry: "{}"'.format(geometry_name))
+                # Check all validations passed
+                if fpath_matches and directory_exists and all_files_exist:
+                    print(green_text('\tGeometry: "{}", validated successfully'.format(geometry_name)))
 
-            # Check fpath matches path + name
-            fpath_matches = os.path.join(self.fpaths['geometry'],geometry_name) == self.data['geometry'][geometry_name].fpath
+                else:
+                    self.data['geometry'].pop(geometry_name)
+                    print(red_text('\tGeometry: "{}", was found to be not valid. Deleting from database'.format(geometry_name)))
 
-
-            # Check directory exists
-            directory_exists = os.path.exists(os.path.join(self.fpaths['geometry'],geometry_name))
-
-
-            # Check all files exist in object folder
-            all_files_exist = all([os.path.exists(os.path.join(self.fpaths['geometry'],geometry_name,file_to_check)) for file_to_check in self.data['geometry'][geometry_name].files])
-
-
-            # Check requirements match database requirements
-            if self.requirements['geometry'].keys() != self.data['geometry'][geometry_name].requirements['geometry'].keys():
-
-                print(yellow_text('\tThe requirements for the Geometry object: "{}" do not match the default requirements of the database.'.format(geometry_name)))
-                self.data['geometry'][geometry_name].set_requirements(reset_requirements = True)
-
-
-            # Check all validations passed
-            if fpath_matches and directory_exists and all_files_exist:
-                print(green_text('\tGeometry: "{}", validated successfully'.format(geometry_name)))
-
-            else:
-                self.data['geometry'].pop(geometry_name)
-                print(red_text('\tGeometry: "{}", was found to be not valid. Deleting from database'.format(geometry_name)))
-
-        len(self.data['geometry']) and print('-'*60)
-        print(green_text('Geometries Validated.'))
+            print('-'*60)
+            print(green_text('Geometries Validated.'))
+        else:
+            print('No ' + blue_text('Geometries') + ' to validate.')
         print('-'*60)
 
 
         # Validate Materials
-        print('Validating Materials...')
-        print('-'*60)
-        for material_name in list(self.data['material'].keys()):
-            
-            print('\tValidating Material: "{}"'.format(material_name))
+        if len(self.data['material'].keys()):
+            print('Validating ' + blue_text('Materials') + '...')
+            print('-'*60)
+            for material_name in list(self.data['material'].keys()):
+                
+                print('\tValidating Material: "{}"'.format(blue_text(material_name)))
 
 
-            # Check fpath matches path + name
-            fpath_matches = os.path.join(self.fpaths['material'],material_name) == self.data['material'][material_name].fpath
+                # Check fpath matches path + name
+                fpath_matches = os.path.join(self.fpaths['material'],material_name) == self.data['material'][material_name].fpath
 
 
-            # check directory exists
-            directory_exists = os.path.exists(os.path.join(self.fpaths['material'],material_name))
+                # check directory exists
+                directory_exists = os.path.exists(os.path.join(self.fpaths['material'],material_name))
 
 
-            # check all files exist in object folder
-            all_files_exist = all([os.path.exists(os.path.join(self.fpaths['material'],material_name,file_to_check)) for file_to_check in self.data['material'][material_name].files])
+                # check all files exist in object folder
+                all_files_exist = all([os.path.exists(os.path.join(self.fpaths['material'],material_name,file_to_check)) for file_to_check in self.data['material'][material_name].files])
 
 
-            # check requirements match database requirements
-            if self.requirements['material'].keys() != self.data['material'][material_name].requirements['material'].keys():
+                # check requirements match database requirements
+                if self.requirements['material'].keys() != self.data['material'][material_name].requirements['material'].keys():
 
-                print(yellow_text('\tThe requirements for the Material object: "{}" do not match the default requirements of the database.'.format(material_name)))
-                self.data['material'][material_name].set_requirements(reset_requirements = True)
+                    print(yellow_text('\tThe requirements for the Material object: "{}" do not match the default requirements of the database.'.format(material_name)))
+                    self.data['material'][material_name].set_requirements(reset_requirements = True)
 
-            # Check all validations passed
-            if fpath_matches and directory_exists and all_files_exist:
-                print(green_text('\tMaterial: "{}", validated successfully'.format(material_name)))
+                # Check all validations passed
+                if fpath_matches and directory_exists and all_files_exist:
+                    print(green_text('\tMaterial: "{}", validated successfully'.format(material_name)))
 
-            else:
-                self.data['material'].pop(material_name)
-                print(red_text('\tMaterial: "{}", was found to be not valid. Deleting from database'.format(material_name)))
+                else:
+                    self.data['material'].pop(material_name)
+                    print(red_text('\tMaterial: "{}", was found to be not valid. Deleting from database'.format(material_name)))
 
-        len(self.data['material']) and print('-'*60)
-        print(green_text('Materials Validated.'))
+            print('-'*60)
+            print(green_text('Materials Validated.'))
+        else:
+             print('No ' + blue_text('Materials') + ' to validate.')
         print('-'*60)
 
 
         # Validate Models
-        print('Validating Models...')
-        print('-'*60)
-        for model_name in list(self.data['model'].keys()):
+        if len(self.data['model'].keys()):
+            print('Validating ' + blue_text('Models') + '...')
+            print('-'*60)
+            for model_name in list(self.data['model'].keys()):
 
-            print('\tValidating Model: "{}"'.format(model_name))
+                print('\tValidating Model: "{}"'.format(blue_text(model_name)))
 
-            # Check fpath matches path + name
-            fpath_matches = os.path.join(self.fpaths['model'],model_name) == self.data['model'][model_name].fpath
-
-
-            # check directory exists
-            directory_exists = os.path.exists(os.path.join(self.fpaths['model'],model_name))
+                # Check fpath matches path + name
+                fpath_matches = os.path.join(self.fpaths['model'],model_name) == self.data['model'][model_name].fpath
 
 
-            # Check objects exist
-            analysis_exists = self.data['model'][model_name].analysis.name in self.data['analysis']
-            geometry_exists = self.data['model'][model_name].geometry.name in self.data['geometry'] 
-            materials_exists = all([material_name in self.data['material'] for material_name in self.data['model'][model_name].materials.keys()])
-            objects_exist = analysis_exists and geometry_exists and materials_exists
-            
-            if not objects_exist:
-                objects_exist = not self.yes_no_question('One or more objects used in the model: "{}", no longer exist, Delete the model? (Note: keeping the model may cause an error in the future)'.format(model_name))
+                # check directory exists
+                directory_exists = os.path.exists(os.path.join(self.fpaths['model'],model_name))
 
 
-            # Check requirements match database requirements
-            if (self.requirements.keys() != self.data['model'][model_name].requirements.keys()) or any([self.requirements[key].keys() != self.data['model'][model_name].requirements[key].keys() for key in self.requirements.keys()]):
+                # Check objects exist
+                analysis_exists = self.data['model'][model_name].analysis.name in self.data['analysis']
+                geometry_exists = self.data['model'][model_name].geometry.name in self.data['geometry'] 
+                materials_exists = all([material_name in self.data['material'] for material_name in self.data['model'][model_name].materials.keys()])
+                objects_exist = analysis_exists and geometry_exists and materials_exists
+                
+                if not objects_exist:
+                    objects_exist = not self.yes_no_question('One or more objects used in the model: "{}", no longer exist, Delete the model? (Note: keeping the model may cause an error in the future)'.format(model_name))
 
-                print(yellow_text('\tThe requirements for the Model: "{}" do not match the default requirements of the database.'.format(model_name)))
 
-                if analysis_exists:
-                    self.data['model'][model_name].requirements = self.data['model'][model_name].analysis.requirements
-                    requirements_valid = True
+                # Check requirements match database requirements
+                if (self.requirements.keys() != self.data['model'][model_name].requirements.keys()) or any([self.requirements[key].keys() != self.data['model'][model_name].requirements[key].keys() for key in self.requirements.keys()]):
+
+                    print(yellow_text('\tThe requirements for the Model: "{}" do not match the default requirements of the database.'.format(model_name)))
+
+                    if analysis_exists:
+                        self.data['model'][model_name].requirements = self.data['model'][model_name].analysis.requirements
+                        requirements_valid = True
+                    else:
+                        requirements_valid = False
                 else:
-                    requirements_valid = False
-            else:
-                requirements_valid = True
+                    requirements_valid = True
 
 
-            # Check all validations passed
-            if fpath_matches and directory_exists and objects_exist and requirements_valid:
-                print(green_text('\tModel: "{}", validated successfully'.format(model_name)))
+                # Check all validations passed
+                if fpath_matches and directory_exists and objects_exist and requirements_valid:
+                    print(green_text('\tModel: "{}", validated successfully'.format(model_name)))
 
-            else:
-                self.data['model'].pop(model_name)
-                print(red_text('\tModel: "{}", was found to be not valid. Deleting from database'.format(model_name)))
+                else:
+                    self.data['model'].pop(model_name)
+                    print(red_text('\tModel: "{}", was found to be not valid. Deleting from database'.format(model_name)))
 
-        len(self.data['model']) and print('-'*60)
-        print(green_text('Models Validated.'))
+            print('-'*60)
+            print(green_text('Models Validated.'))
+        else:
+            print('No ' + blue_text('Models') + ' to validate.')
         print('-'*60)
 
 
-        print('Validating File Paths...')
+        print('Validating ' + blue_text('File Paths') + '...')
         print('-'*60)
         check_deleted = False
         fpath_keys = ['analysis', 'geometry', 'material', 'model']
@@ -838,15 +842,12 @@ class Modular_Abaqus_Builder:
         help_command = inquirer.prompt(help_questions, theme=Theme())['help_command']
 
         if help_command != 'cancel':
-            print('-'*60)
 
             if help_command == 'print':
                 self.print_database()
-                print('-'*60)
 
             elif help_command == 'verbose_print':
                 self.print_database(True)
-                print('-'*60)
 
             elif help_command == 'main_help':
                 self.print_main_help()
@@ -899,13 +900,21 @@ class Modular_Abaqus_Builder:
         ---------------------------------------------------
         '''
         command = 'edit_objects'
+        print('-'*60)
+        print('Entering ' + blue_text('main loop') + ' interface')
 
         while True:
             
             print('-'*60)
+            print('Database contains:')
+            print('\t{} Analysis Objects'.format(blue_text(len(self.data['analysis']))))
+            print('\t{} Geometry Objects'.format(blue_text(len(self.data['geometry']))))
+            print('\t{} Material Objects'.format(blue_text(len(self.data['material']))))
+            print('\t{} Models'.format(blue_text(len(self.data['model']))))
+            print('-'*60)
             # Commands = ['edit_objects', 'edit_models', 'save_database', 'validate_database', 'help', 'exit']
             main_loop_questions = [inquirer.List('command', 
-                                       'Pick Command', 
+                                       'Pick command', 
                                        choices=self.inquirer_dialogs['main_loop'], 
                                        carousel=True, 
                                        default=command)]
@@ -913,9 +922,7 @@ class Modular_Abaqus_Builder:
             command = inquirer.prompt(main_loop_questions, theme=Theme())['command']
 
             if command == 'exit':
-                print('-'*60)
                 if self.yes_no_question('Are you sure you would like to exit?'):
-                    print('-'*60)
                     self.save_database()
                     break
 
@@ -923,7 +930,6 @@ class Modular_Abaqus_Builder:
                 self.help_menu()
 
             elif command == 'save_database':
-                print('-'*60)
                 self.save_database()
 
             elif command == 'edit_models':
@@ -948,13 +954,13 @@ class Modular_Abaqus_Builder:
         '''
 
         print('-'*60)
-        print('Entering Edit Objects interface')
-        print('-'*60)
+        print('Entering edit ' + blue_text('objects') + ' interface')
 
         command = 'create_object'
 
         while command != 'back_to_main':
-
+            
+            print('-'*60)
             print('Database contains:')
             print('\t{} Analysis Objects'.format(blue_text(len(self.data['analysis']))))
             print('\t{} Geometry Objects'.format(blue_text(len(self.data['geometry']))))
@@ -964,7 +970,7 @@ class Modular_Abaqus_Builder:
             
             # Commands = ['create', 'modify', 'duplicate', 'delete', 'help', 'back']
             object_questions = [inquirer.List('command',
-                                       'Pick Edit Object Command', 
+                                       'Pick edit object command', 
                                        choices=self.inquirer_dialogs['edit_object_loop'], 
                                        carousel = True, 
                                        default = command)]
@@ -976,71 +982,44 @@ class Modular_Abaqus_Builder:
 
             elif command == 'create_object':
                 
-                print('-'*60)
                 object_type = self.select_object_type()
 
                 self.create_object(object_type)
 
                 self.save_database()
-                print('-'*60)
 
 
             elif command == 'modify_object':
                 
-                print('-'*60)
                 object_name, object_type = self.select_object()
                 
-                # Check if object was available
                 if object_name:
-
                     self.modify_object(object_name, object_type)
                     
                     self.save_database()
-                    print('-'*60)
-
-                else: 
-                    print('Returning to object loop.')
-                    print('-'*60)
 
             elif command == 'duplicate_object':
 
-                print('-'*60)
                 object_name, object_type = self.select_object()
-
-                # Check if object was available
+                
                 if object_name:
-
-                    # Duplicate the object to a new name
                     self.duplicate_object(object_name, object_type)
 
                     self.save_database()
-                    print('-'*60)
 
-                else: 
-                    print('Returning to object loop.')
-                    print('-'*60)
 
 
             elif command == 'delete_object':
                 
-                print('-'*60)
                 object_name, object_type = self.select_object(message = ' you would like to delete')
 
-                # Check if object was available
                 if object_name:
-
-                    # Delete the object
                     self.delete_object(object_name, object_type)
 
                     self.save_database()
-                    print('-'*60)
-
-                else: 
-                    print('Returning to object loop.')
-                    print('-'*60)
 
         print('-'*60)
-        print('Returning to the main loop')
+        print('Returning to the ' + blue_text('main loop'))
         
 
     def edit_models(self):
@@ -1051,13 +1030,13 @@ class Modular_Abaqus_Builder:
         '''
 
         print('-'*60)
-        print('Entering edit models interface')
-        print('-'*60)
+        print('Entering edit ' + blue_text('models') + ' interface')
         
         command = 'create_model'
 
         while command != 'back_to_main':
             
+            print('-'*60)
             print('Database contains:')
             print('\t{} Analysis Objects'.format(blue_text(len(self.data['analysis']))))
             print('\t{} Geometry Objects'.format(blue_text(len(self.data['geometry']))))
@@ -1067,7 +1046,7 @@ class Modular_Abaqus_Builder:
             
             # Commands = ['create_model', 'modify_model', 'duplicate_model', 'delete_model', 'post_process_model', 'run_model', 'help', 'back_to_main']
             model_questions = [inquirer.List('command',
-                                             'Pick Model Edit Command: ', 
+                                             'Pick edit model command', 
                                              choices=self.inquirer_dialogs['edit_model_loop'], 
                                              carousel = True, 
                                              default = command)]
@@ -1081,40 +1060,34 @@ class Modular_Abaqus_Builder:
                 self.create_model()
 
                 self.save_database()
-                print('-'*60)
 
             elif command == 'modify_model':
                 self.modify_model()
 
                 self.save_database()
-                print('-'*60)
 
             elif command == 'duplicate_model':
                 self.duplicate_model()
 
                 self.save_database()
-                print('-'*60)
 
             elif command == 'delete_model':
                 self.delete_model()
 
                 self.save_database()
-                print('-'*60)
 
             elif command == 'post_process_model':
                 self.postprocess_model()
                 
                 self.save_database()
-                print('-'*60)
 
             elif command == 'run_model':
                 self.run_model()
 
                 self.save_database()
-                print('-'*60)
 
         print('-'*60)
-        print('Returning to the main loop')
+        print('Returning to the ' + blue_text('main loop'))
 
     '''
     ----------------------------------------
@@ -1133,6 +1106,7 @@ class Modular_Abaqus_Builder:
             One of the three object types, chosen by the user.
         ---------------------------------------------------
         '''
+        print('-'*60)
         questions = [inquirer.List('object_type','Pick Object Type: ', choices=self.inquirer_dialogs['object_types'], carousel = True)]
         object_type = inquirer.prompt(questions, theme=Theme())['object_type']
 
@@ -1159,7 +1133,8 @@ class Modular_Abaqus_Builder:
         '''
         if not object_type:
             object_type = self.select_object_type()
-            print('-'*60)
+        
+        print('-'*60)
 
         # Get available choices
         choices = list(self.data[object_type].keys())
@@ -1172,18 +1147,16 @@ class Modular_Abaqus_Builder:
             
             print('-'*60)
             print('Object: "{}" of object type: "{}" was selected.'.format(blue_text(selected_object),blue_text(object_type)))
-            print('-'*60)
             
             return selected_object, object_type
 
         else:
-
             print(red_text('ERROR: no objects of type: "{}" to select.'.format(object_type)))
-            print('-'*60)
+            
             return '', object_type
 
 
-    def get_object_modifications(self, object_name, object_type):
+    def get_object_modifications(self, object_name):
         '''
         ---------------------------------------------------
         
@@ -1212,7 +1185,7 @@ class Modular_Abaqus_Builder:
         # If no changes picked or cancelled return to main loop
         if (not modifications) or ('cancel' in modifications):
             print('-'*60)
-            print(yellow_text('No changes picked or cancel command picked'))
+            print(yellow_text('Modify object cancelled'))
             return object_modifications
 
         for modification_key in object_modifications.keys():
@@ -1235,42 +1208,31 @@ class Modular_Abaqus_Builder:
 
         try:
             if object_type == 'analysis':
-                
                 temp_object = Analysis_Object(self)
-                if not temp_object.name:
-                    return
-                
                 self.data['analysis'][temp_object.name] = temp_object
 
             elif object_type == 'geometry':
-
                 temp_object = Geometry_Object(self)
-                if not temp_object.name:
-                    return
-
                 self.data['geometry'][temp_object.name] = temp_object
 
             elif object_type == 'material':
-
                 temp_object = Material_Object(self)
-                if not temp_object.name:
-                    return
-                
                 self.data['material'][temp_object.name] = temp_object
 
-            print(green_text('Object: "{}" successfully added to the database.'.format(temp_object.name)))
             print('-'*60)
+            print(green_text('Object: "{}" successfully added to the database.'.format(temp_object.name)))
 
+        except NameError:
+            print('-'*60)
+            print(yellow_text('Create object cancelled by user.'))
         except:
-
+            print('-'*60)
             print(red_text('An error occurred while adding the object to the Database.'))
             for object_fpath in glob.glob(os.path.join(self.fpaths[object_type],'*',''), recursive=False):
                 if object_fpath not in [os.path.join(object.fpath,'') for object in self.data[object_type].values()]:
                     rmtree(object_fpath)
                     print(red_text('\tDeleted Folder: "{}", that did not exist in the database.'.format(object_fpath)))
-
-            print('-'*60)
-            
+        
     
     def modify_object(self, object_name, object_type):
         '''
@@ -1289,30 +1251,25 @@ class Modular_Abaqus_Builder:
         # Check the user would like to delete the object
         if not self.yes_no_question('Would you like to modify object: "{}" of type: "{}"'.format(object_name, object_type)):
             print('-'*60)
+            print(yellow_text('Cancelled modify object'))
             return
 
         print('-'*60)
         print(green_text('Modify object operation begun.'))
         print('-'*60)
 
-        object_modifications = self.get_object_modifications(object_name, object_type)
-
-        if not any(object_modifications.values()):
-            print(yellow_text('Returning to edit objects loop.'))
-            print('-'*60)
-            return
+        object_modifications = self.get_object_modifications(object_name)
         
         
         # Change name/file directory
         if object_modifications['name']:
             
-            print('-'*60)
             # Pick new name
             self.data[object_type][object_name].new_object_name()
             new_name = self.data[object_type][object_name].name
 
             self.data[object_type][new_name] = self.data[object_type].pop(object_name)
-
+            
             print(green_text('Object name successfully changed from: "{}" to "{}".'.format(object_name, new_name)))
 
             # Change folder name
@@ -1323,7 +1280,6 @@ class Modular_Abaqus_Builder:
                 print(green_text('Renaming the filepath: "{}" to "{}" was successful.'.format(fpath,new_fpath)))
 
             except:
-                print('-'*60)
                 print(red_text('Renaming the filepath: "{}" to "{}" has failed.'.format(fpath,new_fpath)))
 
                 self.validate_database()
@@ -1334,29 +1290,30 @@ class Modular_Abaqus_Builder:
             
             object_name = new_name
 
+            print('-'*60)
             print(green_text('Name modification was successful.'))
-
 
         # Change description
         if object_modifications['description']:
             self.data[object_type][object_name].new_description()
+            print('-'*60)
             print(green_text('Description modification was successful.'))
-
 
         # Change parameters
         if object_modifications['parameters']:
-            print('-'*60)
             self.data[object_type][object_name].define_parameters()
+            print('-'*60)
             print(green_text('Parameters modification was successful.'))
             
         # Change requirements
         if object_modifications['requirements']:
             self.data[object_type][object_name].set_requirements()
+            print('-'*60)
             print(green_text('Requirements modification was successful.'))
 
-
-        print(green_text('Modify object operation successful.'))
-        print('-'*60)
+        if any(object_modifications.values()):
+            print('-'*60)
+            print(green_text('Modify object operation successful.')) 
 
 
     def duplicate_object(self, object_name, object_type):
@@ -1373,8 +1330,15 @@ class Modular_Abaqus_Builder:
             The name of the object to be duplicated, all of this *.inp files will be duplicated from the file path. If this does not match an object in the object type dictionary then an error will be thrown.
         ---------------------------------------------------
         '''
-        print(green_text('Duplicate object operation begun.'))
+        
+        # Check the user would like to delete the object
+        if not self.yes_no_question('Would you like to duplicate object: "{}" of type: "{}"'.format(object_name, object_type)):
+            print('-'*60)
+            print(yellow_text('Cancelled duplicate object'))
+            return
+        
         print('-'*60)
+        print(green_text('Duplicate object operation begun.'))
 
         # Copy object and change its name
         duplicated_object = deepcopy(self.data[object_type][object_name])
@@ -1396,8 +1360,8 @@ class Modular_Abaqus_Builder:
             self.data[object_type][new_name] = duplicated_object
             self.data[object_type][new_name].move_folder(fpath, new_fpath)  
 
-            print(green_text('Duplicate object operation successful.'))
             print('-'*60)
+            print(green_text('Duplicate object operation successful.'))
 
 
     def delete_object(self, object_name, object_type):
@@ -1417,6 +1381,8 @@ class Modular_Abaqus_Builder:
 
         # Check the user would like to delete the object
         if not self.yes_no_question('Would you like to delete object: "{}" of type: "{}"'.format(object_name, object_type)):
+            print('-'*60)
+            print(yellow_text('Cancelled delete object'))
             return
         
         print('-'*60)
@@ -1434,11 +1400,11 @@ class Modular_Abaqus_Builder:
             self.data[object_type].pop(object_name)
             print(green_text('The {}: "{}" has been successfully removed from the local dictionary.'.format(object_type,object_name)))     
             
-            print(green_text('Delete object operation successful.'))
             print('-'*60)
+            print(green_text('Delete object operation successful.'))
+
         except:
             print(red_text('ERROR: The object could not be deleted.'))
-            print('-'*60)
             self.validate_database()
     
     '''
@@ -1447,24 +1413,65 @@ class Modular_Abaqus_Builder:
     ----------------------------------------
     '''
 
-    def select_model(self): # TODO
+    def select_model(self, message):
+        '''
+        ---------------------------------------------------
+        Select a model from the database.
+        ---------------------------------------------------
+        PARAMETERS
+        ---------------------------------------------------
+        message : str
+            The message to use in the select model interface
+        ---------------------------------------------------
+        RETURNS
+        ---------------------------------------------------
+        selected_model : str
+            The name of the model selected by the user. If string is empty then cancelled or no models to choose.
+        ---------------------------------------------------
+        '''
+        print('-'*60)
+        model_choices = list(self.data['model'].keys())
 
-        pass
+        if model_choices:
+            model_choices.append('cancel')
+            selected_model = inquirer.prompt([inquirer.List('model', message, choices=model_choices, carousel = True)], theme=Theme())['model']
+            
+            if selected_model == 'cancel':
+                return ''
+                
+            print('-'*60)
+            print(green_text('The model: "{}" was chosen.'.format(selected_model)))
+            return selected_model
+
+        else:
+            print(red_text('ERROR: no models to pick from.'))
+            return ''
 
 
     def create_model(self):
         '''
+        ---------------------------------------------------
         Build model
+        ---------------------------------------------------
         '''
         try:
             model = Model(self)
             
             self.data['model'][model.name] = model
-
+            print('-'*60)
+            print(green_text('Model "{}", successfully added to the database.'.format(model.name)))
+        
+        except NameError:
+            print('-'*60)
+            print(yellow_text('Create model cancelled by user.'))
+            
+        except FileExistsError:
+            print('-'*60)
+            print(red_text('An error occurred while adding the model to the Database.'))
+            
         except:
             print('-'*60)
-            print(red_text('Create Model Failed, validating database to ensure corruption does not occur.'))
-
+            print(red_text('An error occurred while adding the model to the Database.'))
             self.validate_database()
         
         
@@ -1622,59 +1629,54 @@ class Modular_Abaqus_Builder:
         '''
         
         '''
-        model_names = list(self.data['model'].keys())
+        model_to_duplicate = self.select_model('Please select the model you would like to duplicate from the database')
+        print('-'*60)
+        
+        if not model_to_duplicate:
+            print(yellow_text('Duplicate model operation cancelled, returning to edit model loop'))
+            return
+        
+        if not self.yes_no_question('Would you like to duplicate the model: "{}"'.format(model_to_duplicate)):
+            print('-'*60)
+            print(yellow_text('Cancelled duplicate model'))
+            return
 
-        if model_names:
-            
-            questions = [inquirer.List('model_to_duplicate','Please select the model you would like to duplicate from the database', choices = model_names+['cancel'], carousel = True)]
-            model_to_duplicate = inquirer.prompt(questions, theme=Theme())['model_to_duplicate']
+        print('Model: "{}", chosen to be duplicated'.format(model_to_duplicate))
+        print('-'*60)
 
-            if model_to_duplicate == 'cancel':
+        # Try to copy the chosen model and then rebuild it from its base objects
+        try:
+            analysis_name = self.data['model'][model_to_duplicate].analysis.name
+            geometry_name = self.data['model'][model_to_duplicate].geometry.name
+            material_names = list(self.data['model'][model_to_duplicate].materials.keys())
+
+            # Check that all the objects used to build the model to be duplicated still exist
+            analysis_exists = analysis_name in self.data['analysis']
+            geometry_exists = geometry_name in self.data['geometry'] 
+            materials_exists = all([material_name in self.data['material'] for material_name in material_names])
+
+            if analysis_exists and geometry_exists and materials_exists:
+
+                print(green_text('The Model: "{}", meets all the requirements for duplication.'.format(model_to_duplicate)))
+
+                duplicate_model = Model(self, analysis_name, geometry_name, material_names)
+
+                self.data['model'][duplicate_model.name] = duplicate_model
+
                 print('-'*60)
-                print(yellow_text('Duplicate model operation cancelled, returning to edit model loop'))
+                print(green_text('The Model: "{}", was successfully duplicated to the new Model: "{}".'.format(model_to_duplicate, duplicate_model.name)))
+                
+
+            else:
                 print('-'*60)
+                print(red_text('Tried to duplicate the model: "{}", and failed due to the previously used objects no longer existing.'.format(model_to_duplicate)))
 
-            print('Model: "{}", chosen to be duplicated'.format(model_to_duplicate))
+        except:
+            print('-'*60)
+            print(red_text('Tried to duplicate the model: "{}", but could not. Check if the directory is open in another application.'.format(model_to_duplicate)))
+            print(red_text('Validating database to ensure corruption does not occur.'))
 
-            # Try to copy the chosen model and then rebuild it from its base objects
-            try:
-                analysis_name = self.data['model'][model_to_duplicate].analysis.name
-                geometry_name = self.data['model'][model_to_duplicate].geometry.name
-                material_names = list(self.data['model'][model_to_duplicate].materials.keys())
-
-                # Check that all the objects used to build the model to be duplicated still exist
-                analysis_exists = analysis_name in self.data['analysis']
-                geometry_exists = geometry_name in self.data['geometry'] 
-                materials_exists = all([material_name in self.data['material'] for material_name in material_names])
-
-                if analysis_exists and geometry_exists and materials_exists:
-
-                    print(green_text('The Model: "{}", meets all the requirements for duplication.'.format(model_to_duplicate)))
-
-                    duplicate_model = Model(self, analysis_name, geometry_name, material_names)
-
-                    self.data['model'][duplicate_model.name] = duplicate_model
-
-                    print(green_text('The Model: "{}", was successfully duplicated to the new Model: "{}".'.format(model_to_duplicate, duplicate_model.name)))
-                    print('-'*60)
-
-                else:
-                    print('-'*60)
-                    print(red_text('Tried to duplicate the model: "{}", and failed due to the previously used objects no longer existing.'.format(model_to_duplicate)))
-                    print('-'*60)
-
-            except:
-                print('-'*60)
-                print(red_text('Tried to duplicate the model: "{}", but could not. Check if the directory is open in another application.'.format(model_to_duplicate)))
-                print(red_text('Validating database to ensure corruption does not occur.'))
-
-                self.validate_database()
-
-
-        else:
-            print('-----------------------------------------------')
-            print(red_text('No models in database to duplicate, returning to edit model loop'))
-            print('-----------------------------------------------')
+            self.validate_database()
 
 
     def delete_model(self):
@@ -1682,51 +1684,42 @@ class Modular_Abaqus_Builder:
         
         '''
         
-        model_names = list(self.data['model'].keys())
-
-        if model_names:
+        model_to_delete = self.select_model('Please select the model you would like to duplicate from the database')
+        print('-'*60)
+        
+        if not model_to_delete:
+            print(yellow_text('Delete model operation cancelled, returning to edit model loop'))
+            return
+        
+        if not self.yes_no_question('Would you like to delete the model: "{}"'.format(model_to_delete)):
+            print('-'*60)
+            print(yellow_text('Cancelled delete model'))
+            return
             
+        try:
+            # Delete folder
+            rmtree(self.data['model'][model_to_delete].fpath)
+            print(green_text('Deleted Folder: "{}"'.format(self.data['model'][model_to_delete].fpath)))
+
+            # Delete from database
+            self.data['model'].pop(model_to_delete)
+            print(green_text('Deleted model: "{}", from the database.'.format(model_to_delete)))
+            print(green_text('{} Model Successfully Deleted.'.format(model_to_delete)))
+
+        except:
             print('-'*60)
-            questions = [inquirer.List('model_to_delete','Please select the model you would like to delete from the database', choices = model_names+['cancel'], carousel = True)]
-            model_to_delete = inquirer.prompt(questions, theme=Theme())['model_to_delete']
-
-            if model_to_delete == 'cancel':
-                print('-'*60)
-                print('Delete model operation cancelled, returning to edit model loop')
-                print('-'*60)
-
-            try:
-                # Delete folder
-                rmtree(self.data['model'][model_to_delete].fpath)
-                print('-'*60)
-                print(green_text('Deleted Folder: "{}"'.format(self.data['model'][model_to_delete].fpath)))
-
-                # Delete from database
-                self.data['model'].pop(model_to_delete)
-                print(green_text('Deleted model: "{}", from the database.'.format(model_to_delete)))
-                print(green_text('{} Model Successfully Deleted.'.format(model_to_delete)))
-                print('-'*60)
-
-            except:
-                print('-'*60)
-                print(red_text('ERROR: Tried to delete the model: "{}", but could not. Check if the directory is open in another application.'.format(model_to_delete)))
-                print(red_text('Try running the validate database command once the error has been rectified to ensure corruption does not occur.'))
-                print('-'*60)
-
-        else:
-            print('-'*60)
-            print(red_text('No models in database to delete, returning to edit model loop'))
-            print('-'*60)   
+            print(red_text('ERROR: Tried to delete the model: "{}", but could not. Check if the directory is open in another application.'.format(model_to_delete)))
+            print(red_text('Try running the validate database command once the error has been rectified to ensure corruption does not occur.'))
         
 
-    def postprocess_model(self):
+    def postprocess_model(self): # TODO
         '''
         
         '''
         pass
 
 
-    def run_model(self):
+    def run_model(self): # TODO
         '''
         
         '''
@@ -1744,14 +1737,13 @@ class Modular_Abaqus_Builder:
         Ask a yes/no question, "yes" returns True and "no" returns False
         -----------------------------------------------
         '''
+        
+        print('-'*60)
 
         # Enquire the yes and no question using the final line as the message
         command = inquirer.prompt([inquirer.List('yes_no', message, choices=['yes','no'], carousel = True)], theme=Theme())['yes_no']
 
-        if command == 'yes':
-            return True 
-        elif command == 'no':
-            return False
+        return True if command == 'yes' else False
 
 
     def get_relative_fpath(self, full_fpath, relative_to_fpath):
@@ -1771,14 +1763,14 @@ class Modular_Abaqus_Builder:
         return full_fpath
 
 
-    def __repr__(self):
+    def __repr__(self): # TODO
         '''
         **********************TODO*******************************
         '''
         pass
 
 
-    def __str__(self):
+    def __str__(self): # TODO
 
         return ':3'
 
