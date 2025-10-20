@@ -10,7 +10,7 @@ def fluent_setup(file_name = 'fluent_model.cas.h5',
 
     # Get parameter values from dictionary
     total_time = parameters['total_time']['default_value']
-
+    print('-'*60)
     print('Parameter Values: ')
     print('total_time = "{}s"'.format(total_time))
 
@@ -26,13 +26,13 @@ def fluent_setup(file_name = 'fluent_model.cas.h5',
     # ----------------------------------------------------------------
 
     print('Instantiating Fluent session, Note: this can take a while.')
-    print('----------------------------------------------------------------')
+    print('-'*60)
     # Instantiate fluent launcher
     if fluent_wd:
         solver = pyfluent.launch_fluent(mode='solver', ui_mode='hidden_gui', precision='double', processor_count=16, cwd=fluent_wd, start_transcript=False)
     else:
         solver = pyfluent.launch_fluent(mode='solver', ui_mode='hidden_gui', precision='double', processor_count=16, start_transcript=False)
-    print('----------------------------------------------------------------')
+    print('-'*60)
     print('Fluent session instantiated')
 
     # Import mesh

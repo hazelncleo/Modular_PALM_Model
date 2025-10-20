@@ -595,6 +595,7 @@ class Model:
                 if model_to_import_global == 'choose_directory':
                     self.pick_global_files()
                 else:
+                    print('-'*60)
                     # Copy global .odb 
                     if os.path.exists(os.path.join(self.builder.data['model'][model_to_import_global].solver_fpaths['abaqus'],model_to_import_global+'.odb')):
                         copyfile(os.path.join(self.builder.data['model'][model_to_import_global].solver_fpaths['abaqus'],model_to_import_global+'.odb'),
@@ -644,7 +645,6 @@ class Model:
                 break
 
         print('Calling fluent_setup script to build case file')
-        print('-'*60)
         
         if self.solver_fpaths['mpcci']:
             fluent_name = 'fluent_model.cas.h5'
@@ -658,7 +658,7 @@ class Model:
                         parameters = self.parameters)
         
         sys.dont_write_bytecode = False
-        
+        print('-'*60)
 
         
         # Edit journal file
@@ -700,17 +700,18 @@ class Model:
         mpcci_setup = self.get_mpcci_script()
         print(green_text('MPCCI script: "mpcci_setup.py" retrieved successfully'))
 
-        
+        print('-'*60)
         # Prompt user for number of cpus for fluent and number of cpus for abaqus
         questions = [inquirer.Text('fluent_cpus', 'Please enter the number of cpus to use for the fluent simulation', default = 2, validate = lambda _, c : c.isnumeric() and (int(c) > 1)),
                      inquirer.Text('abaqus_cpus', 'Please enter the number of cpus to use for the abaqus simulation', default = 2, validate = lambda _, c : c.isnumeric() and (int(c) > 1))]
         
         answers = inquirer.prompt(questions, theme=Theme())
+        print('-'*60)
 
         # Edit mpcci .csp file via script, depending on parameters set for the analysis.
         mpcci_setup(fpath = self.solver_fpaths['mpcci'], name = self.name, parameters = self.parameters, fluent_cpus = answers['fluent_cpus'], abaqus_cpus = answers['abaqus_cpus'])
-
         sys.dont_write_bytecode = False
+        print('-'*60)
 
         # Delete old main.csp
         os.remove(os.path.join(self.solver_fpaths['mpcci'],'main.csp'))

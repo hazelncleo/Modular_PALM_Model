@@ -5,16 +5,18 @@ def mpcci_setup(fpath, name, parameters, fluent_cpus = 2, abaqus_cpus = 2):
     '''
     
     '''
-
+    print('-'*60)
     print('"mpcci_setup.py" launched')
 
     # Get parameter values
     n_cycles = parameters['n_cycles']['default_value']
     vibration_frequency = parameters['vibration_frequency']['default_value']
-
+    
+    print('-'*60)
     print('Parameter Values: ')
     print('vibration_frequency = "{}"'.format(vibration_frequency))
     print('n_cycles = "{}"'.format(n_cycles))
+    print('-'*60)
 
     # Calculate Parameter values
     total_time = n_cycles / vibration_frequency

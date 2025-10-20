@@ -3,7 +3,7 @@ from Modular_Abaqus_Builder import Modular_Abaqus_Builder
 def main():
 
     # Instantiate class
-    builder = Modular_Abaqus_Builder(delete_database=True, delete_all_models=False)
+    builder = Modular_Abaqus_Builder(delete_database=False, delete_all_models=False)
     
     builder.main_loop()
 
@@ -18,16 +18,12 @@ def main():
 IMPORTANT STUFF
 --------------------------
 
-
-- print_database causing double line on different loops
-- clean up new classes to make them neater
-- parameter storage class and paramter class, requirements class etc.
+- write test suite
+- clean up model class and finish methods
+- licence shit guhh, including uni signature
 - make print database use print methods for each class
-- licence shit guhh
 - create small commandline launcher for script
 - look at better way to layout imports
-- interpreter themes ***IN PROGRESS***
-- validate functions for interpreters ***IN PROGRESS***
 - if cant delete directories on reset prompt user
 - modify model parameters
 - postprocess model
@@ -37,6 +33,7 @@ IMPORTANT STUFF
 
 NICE TO HAVE STUFF
 -------------------------------
+- parameter storage class and paramter class, requirements class etc.
 - __repr__
 - __str__
 - docstrings you dumbass
@@ -44,6 +41,8 @@ NICE TO HAVE STUFF
 - object help message
 - model help message
 - run model progress?? :o
+- documentation
+- write paper
 
 '''
 

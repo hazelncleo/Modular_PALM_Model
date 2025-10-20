@@ -17,11 +17,13 @@ def fluent_setup(file_name = 'fluent_model.cas.h5',
     vibration_frequency = parameters['vibration_frequency']['default_value']
     n_cycles = parameters['n_cycles']['default_value']
 
+    print('-'*60)
     print('Parameter Values: ')
     print('x_grid_position = "{}"'.format(x_grid_position))
     print('y_grid_position = "{}"'.format(y_grid_position))
     print('vibration_frequency = "{}"'.format(vibration_frequency))
     print('n_cycles = "{}"'.format(n_cycles))
+    print('-'*60)
 
     # Grid spacing between each section
     GRID_SPACING = 0.5e-3
@@ -42,14 +44,14 @@ def fluent_setup(file_name = 'fluent_model.cas.h5',
     # ----------------------------------------------------------------
 
     print('Instantiating Fluent session, Note: this can take a while.')
-    print('----------------------------------------------------------------')
+    print('-'*60)
     # Instantiate fluent launcher
     if fluent_wd:
         solver = pyfluent.launch_fluent(mode='solver', ui_mode='hidden_gui', precision='double', processor_count=16, cwd=fluent_wd, start_transcript=False)
     else:
         solver = pyfluent.launch_fluent(mode='solver', ui_mode='hidden_gui', precision='double', processor_count=16, start_transcript=False)
 
-    print('----------------------------------------------------------------')
+    print('-'*60)
     print('Fluent session instantiated')
 
     # Import mesh
