@@ -18,16 +18,16 @@ class Parent_Object:
         **Attributes**
     ------------------------------------------------------------
     name : str
-        The name of the  Object
+        The name of the object.
 
     builder : Modular_Abaqus_Builder Class
-        The Database Class that contains this object
+        The database Class that contains this object.
     
     description : str
-        A short description of what the object is
+        A short description of what the object is.
 
     fpath : str
-        File path of the objects data
+        File path to the objects data.
 
     files : list
         A list of all files stored in the filepath. Stored relative to fpath.
@@ -44,6 +44,7 @@ class Parent_Object:
     ----------------------------------------
         Setting Attributes
     ----------------------------------------
+
     new_object_name():
 
     new_description():
@@ -64,28 +65,32 @@ class Parent_Object:
 
     delete_parameter(parameter_to_delete):
 
+    load_requirements():
+
     ----------------------------------------
         Validations
     ----------------------------------------
-    validate_name(., name):
 
-    validate_description(., description):
+    validate_name(_, name):
+
+    validate_description(_, description):
 
     validate_fpath(fpath):
 
-    validate_parameter_name(., name):
+    validate_parameter_name(_, name):
 
-    validate_parameter_description(., description):
+    validate_parameter_description(_, description):
 
-    validate_parameter_dtype(., dtype):
+    validate_parameter_dtype(_, dtype):
 
     validate_parameter_value(answers, value):
 
-    validate_parameter_solvers(., solvers):
+    validate_parameter_solvers(_, solvers):
 
     ----------------------------------------
         Other
     ----------------------------------------
+
     move_folder(source_fpath, destination_fpath):
 
     get_all_files():
@@ -255,9 +260,9 @@ class Parent_Object:
         Try to load the parameters for the object from a file, if it does not exist prompt the user to specify the parameters.
         ---------------------------------------------------
         '''
-        print('-'*60)
         self.parameters = {}
         if os.path.exists(os.path.join(self.fpath,'parameters.json')):
+            print('-'*60)
             # Read parameters
             with open(os.path.join(self.fpath,'parameters.json'),'r') as f:
                 self.parameters = json.load(f)
@@ -268,6 +273,7 @@ class Parent_Object:
   
         else:
             print('-'*60)
+            print(yellow_text('No "parameters.json" in source filepath.'))
             self.define_parameters()
 
 
@@ -279,13 +285,13 @@ class Parent_Object:
         '''
         command = 'add'
         
-        while command != 'exit':
+        while command != 'done':
             
             print('-'*60)
             # Get parameter type or exit choosing parameter command
             command = inquirer.prompt([inquirer.List('command',
                                                      'Add more '+ blue_text('parameters') + ' or exit dialog', 
-                                                     choices=['add', 'modify', 'delete', 'exit'], 
+                                                     choices=['add', 'modify', 'delete', 'done'], 
                                                      carousel = True,
                                                      default=command)], theme=Theme())['command']
             
@@ -424,6 +430,34 @@ class Parent_Object:
         print('-'*60)
         _ = self.parameters.pop(parameter_to_delete)
         print(green_text('Successfully deleted parameter "{}".'.format(parameter_to_delete)))
+
+
+    def load_requirements(self):
+        '''
+        ---------------------------------------------------
+        Try to load the requirements for the object from a file included in the source_fpath, if it does not exist prompt the user to specify the requirements.
+        ---------------------------------------------------
+        '''
+        print('-'*60)
+        if os.path.exists(os.path.join(self.fpath,'requirements.json')):
+            with open(os.path.join(self.fpath,'requirements.json'),'r') as f:
+                self.requirements = json.load(f)
+
+            print(green_text('Loaded requirements from "requirements.json".'))
+            os.remove(os.path.join(self.fpath,'requirements.json'))
+                
+        else:
+            print(yellow_text('No "requirements.json" in directory.'))
+            self.set_requirements()
+
+
+    def set_requirements(self):
+        '''
+        ---------------------------------------------------
+        Placeholder method for child object classes
+        ---------------------------------------------------
+        '''
+        pass
 
     '''
     ----------------------------------------
@@ -613,29 +647,7 @@ class Analysis_Object(Parent_Object):
         self.load_requirements()
 
         print('-'*60)
-        print(green_text('Create Analysis object operation successful.'))
-
-    
-    def load_requirements(self):
-        '''
-        ---------------------------------------------------
-        Try to load the requirements for the analysis from a file, if it does not exist prompt the user to specify the requirements.
-        ---------------------------------------------------
-        '''
-        try:
-            # Read requirements
-            with open(os.path.join(self.fpath,'requirements.json'),'r') as f:
-                self.requirements = json.load(f)
-
-            print(green_text('Loaded requirements from "requirements.json".'))
-                
-            # Delete file from directory
-            os.remove(os.path.join(self.fpath,'requirements.json'))
-                
-        except:
-            # If no file to read have the user set the requirements
-            print(yellow_text('No "requirements.json" in directory.\nPlease enter the requirements.'))
-            self.set_requirements()
+        print(green_text('Create analysis object operation successful.'))
         
         
     def set_requirements(self, reset_requirements=False):
@@ -676,12 +688,15 @@ class Analysis_Object(Parent_Object):
         print('-'*60)
         # Get answers to questions
         answers = inquirer.prompt(questions, theme=Theme())
+        print('-'*60)
 
 
         # Set requirements according to answers
         for requirement_type in self.requirements.keys():
             for requirement in self.requirements[requirement_type].keys():
                 self.requirements[requirement_type][requirement] = requirement in answers[requirement_type]
+
+        print(green_text('Requirements set successfully.'))
 
 
 
@@ -692,29 +707,7 @@ class Geometry_Object(Parent_Object):
         self.load_requirements()
 
         print('-'*60)
-        print(green_text('Create Geometry object operation successful.'))
-
-    
-    def load_requirements(self):
-        '''
-        ---------------------------------------------------
-        Try to load the requirements for the geometry from a file, if it does not exist prompt the user to specify the requirements.
-        ---------------------------------------------------
-        '''
-        try:
-            # Read requirements
-            with open(os.path.join(self.fpath,'requirements.json'),'r') as f:
-                self.requirements = json.load(f)
-
-            print(green_text('Loaded requirements from "requirements.json".'))
-                
-            # Delete file from directory
-            os.remove(os.path.join(self.fpath,'requirements.json'))
-                
-        except:
-            # If no file to read have the user set the requirements
-            print(yellow_text('No "requirements.json" in directory.'))
-            self.set_requirements()
+        print(green_text('Create geometry object operation successful.'))
         
         
     def set_requirements(self, reset_requirements = False):
@@ -732,33 +725,36 @@ class Geometry_Object(Parent_Object):
             if ('abaqus' in requirement_name) or ('assembly' in requirement_name):
                 if os.path.exists(os.path.join(self.fpath,requirement_name+'.inp')):
                     self.requirements[self.object_type][requirement_name] = True
+                    print(green_text('Automatically detected the file: "{}".'.format(requirement_name+'.inp')))
                     change_made = True
             else:
                 if os.path.exists(os.path.join(self.fpath,requirement_name+'.msh')):
                     self.requirements[self.object_type][requirement_name] = True
+                    print(green_text('Automatically detected the file: "{}".'.format(requirement_name+'.msh')))
                     change_made = True
         
         # If file names dont match then prompt user
         if change_made:
-            print(green_text('Automatically Detected the requirements based on files in the selected folder.'))
+            print(green_text('Automatically detected the requirements based on files in the selected folder.'))
+            return
         else:
             print('-'*60)
             print(red_text('No requirements automatically detected, you can select the requirements, but it is recommended to use a "requirements.json" file.'))
             print('-'*60)
-            # Build questions object
             questions = [inquirer.Checkbox('geometry',
-                                        message = 'Please choose the Requirements fulfilled by this object',
-                                        choices = list(self.builder.requirements[self.object_type].keys()),
-                                        carousel = True,
-                                        default = [key for key in self.requirements[self.object_type].keys() if self.requirements[self.object_type][key]])]
+                                           message = 'Please choose the Requirements fulfilled by this object',
+                                           choices = list(self.builder.requirements[self.object_type].keys()),
+                                           carousel = True,
+                                           default = [key for key in self.requirements[self.object_type].keys() if self.requirements[self.object_type][key]])]
             
-            # Get answers to questions
             answers = inquirer.prompt(questions, Theme())
+            print('-'*60)
 
-            # Set requirements according to answers
             for requirement_type in self.requirements.keys():
                 for requirement in self.requirements[requirement_type].keys():
                     self.requirements[requirement_type][requirement] = requirement in answers[requirement_type]
+
+            print(green_text('Requirements set successfully.'))
 
 
 
@@ -769,30 +765,8 @@ class Material_Object(Parent_Object):
         self.load_requirements()
 
         print('-'*60)
-        print(green_text('Create Material object operation successful.'))
-
-
-    def load_requirements(self):
-        '''
-        ---------------------------------------------------
-        Try to load the requirements for the material from a file, if it does not exist prompt the user to specify the requirements.
-        ---------------------------------------------------
-        '''
-        try:
-            # Read requirements
-            with open(os.path.join(self.fpath,'requirements.json'),'r') as f:
-                self.requirements = json.load(f)
-
-            print(green_text('Loaded requirements from "requirements.json".'))
-                
-            # Delete file from directory
-            os.remove(os.path.join(self.fpath,'requirements.json'))
-                
-        except:
-            # If no file to read have the user set the requirements
-            print(yellow_text('No "requirements.json" in directory.'))
-            self.set_requirements()
-        
+        print(green_text('Create material object operation successful.'))
+ 
         
     def set_requirements(self, reset_requirements = False):
         '''
@@ -809,24 +783,27 @@ class Material_Object(Parent_Object):
         for requirement_name in self.requirements[self.object_type].keys():
             if os.path.exists(os.path.join(self.fpath,requirement_name+'.inp')):
                 self.requirements[self.object_type][requirement_name] = True
+                print(green_text('Automatically detected the file: "{}".'.format(requirement_name+'.inp')))
                 change_made = True
 
         if change_made:
-            print(green_text('Automatically Detected the requirements based on files in the selected folder.'))
+            print(green_text('Automatically detected the requirements based on files in the selected folder.'))
+            return
         else:
             print('-'*60)
             print(red_text('No requirements automatically detected, you can select the requirements, but it is recommended to use a "requirements.json" file.'))
             print('-'*60)
             questions = [inquirer.List('material',
-                                        message = 'Please choose the valid material type',
-                                        choices = list(self.builder.requirements[self.object_type].keys()),
-                                        carousel = True,
-                                        default = [key for key in self.requirements[self.object_type].keys() if self.requirements[self.object_type][key]])]
+                                       message = 'Please choose the valid material type',
+                                       choices = list(self.builder.requirements[self.object_type].keys()),
+                                       carousel = True,
+                                       default = [key for key in self.requirements[self.object_type].keys() if self.requirements[self.object_type][key]])]
             
-            # Get answers to questions
             answers = inquirer.prompt(questions, theme=Theme())
+            print('-'*60)
 
-            # Set requirements according to answers
             for requirement_type in self.requirements.keys():
                 for requirement in self.requirements[requirement_type].keys():
                     self.requirements[requirement_type][requirement] = requirement in answers[requirement_type]
+
+            print(green_text('Requirements set successfully.'))
