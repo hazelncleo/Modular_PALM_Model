@@ -27,6 +27,7 @@ class Modular_Abaqus_Builder:
     ------------------------------------------------------------
         **Attributes**
     ------------------------------------------------------------
+    
     fpaths : dict, keys = ["object", "analysis", "geometry", "material", "model", "data"]
         A dictionary containing the important filepaths for the database.
 
@@ -51,6 +52,7 @@ class Modular_Abaqus_Builder:
     ----------------------------------------
         Database Controls
     ----------------------------------------
+    
     instantiate_database(base_data_fpath='base_data.json'):
         Instantiates the attributes of the database from the json file base_data_fpath if it exists
 
@@ -87,6 +89,7 @@ class Modular_Abaqus_Builder:
     ----------------------------------------
         Interface loops
     ----------------------------------------
+    
     main_loop():
         Main interface loop
 
@@ -99,6 +102,7 @@ class Modular_Abaqus_Builder:
     ----------------------------------------
         Edit Objects
     ----------------------------------------
+    
     select_object_type():
         Select an object type
 
@@ -123,6 +127,7 @@ class Modular_Abaqus_Builder:
     ----------------------------------------
         Edit Models
     ----------------------------------------
+    
     select_model():
         Select a model from the database
 
@@ -147,6 +152,7 @@ class Modular_Abaqus_Builder:
     ----------------------------------------
         Other
     ----------------------------------------
+    
     yes_no_question(message):
         Prompt the user with a yes-no question. Yes returns True, no returns False.
 

@@ -814,7 +814,7 @@ class Model:
                 return False
             
             
-    def validate_global_files(self): # TODO
+    def validate_global_files(self, name, fpath): # TODO
         
         pass
     
