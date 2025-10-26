@@ -23,7 +23,155 @@ from HazelsAwesomeTheme import HazelsAwesomeTheme as Theme
 
 
 class Model:
-    def __init__(self, builder, analysis_name = None, geometry_name = None, material_names = None):
+
+    '''
+    ------------------------------------------------------------
+        ***Model Class***
+    ------------------------------------------------------------
+        **Attributes**
+    ------------------------------------------------------------
+
+    name : str
+        The name of the model.
+
+    builder : Modular_Abaqus_Builder Class
+        The database Class that contains this model
+    
+    description : str
+        A short description of what the model is.
+
+    fpath : str
+        File path that the analysis data is stored in. (NOTE: This is not always the solver filepath).
+
+    analysis : Analysis_Object
+        The analysis object used to assemble this model.
+
+    requirements : dict
+        A dictionary containing the requirements dictionary.
+
+    geometry : Geometry_Object
+        The geometry object used to assemble this model.
+
+    materials : dict, {'material.name' : Material_object, ...} 
+        A dictionary containing the material objects used to assemble this model. (NOTE: Can be empty dict if no materials required)
+
+    solver_fpaths : dict, {'abaqus' : 'PATH/TO/ABAQUS', 'fluent' : 'PATH/TO/FLUENT', 'mpcci' : 'PATH/TO/MPCCI'}
+        The path that the respective solvers will run in. (NOTE: None if solver not used in analysis).
+
+    parameters : dict
+        A dictionary containing the parameters that modify the analysis. 
+
+    ------------------------------------------------------------
+        **Methods**
+    ------------------------------------------------------------
+    ----------------------------------------
+        Setting Attributes
+    ----------------------------------------
+
+    new_model_name():
+        Prompt user to choose a new name for the model. (NOTE: This is validated by validate_name()).
+
+    new_description():
+        Prompt user to write a short description of what the model is. (NOTE: This is validated by validate_description())        
+
+    select_analysis(analyis_name=None):
+        Prompt user to select the analysis object they would like to use for this model. The requirements of the analysis are propogated to the model. If an analysis name is provided then that analysis is selected.
+
+    select_geometry(geometry_name=None):
+        Prompt user to select the geometry object they would like to use for this model. (NOTE: Only geometry objects that meet all the geometry requirements of the analysis can be selected). If a geometry name is provided then that geometry is selected.
+
+    select_materials(material_names=None):
+        Prompt user to select the material objects they would like to use for this model. (NOTE: Material objects only fulfill one material requirement, so multiple may need to be selected). If a list of material names is provided then those materials are selected.
+
+    get_potential_geometries():
+        Retrieves a list of the geometry objects that satisfy the geometry requirements of the analysis object selected.
+
+    get_potential_materials():
+        Returns a dict where each key,value pair is a material requirement and a list of the materials that satisfy that requirement. (NOTE: An error is raised if there are no materials that satisfy a requirement). 
+
+    set_fpaths():
+        Sets the solver_fpaths attribute based on the software requirements of the analysis object. 
+
+    print_model_parameter_info():
+        Prints the parameter information for each parameter included in each of the objects used in this model.
+
+    copy_and_modify_parameters():
+        Prompts the user to modify parameters from their default values. (NOTE: The parameter values are validated by validate_parameter_value(), dtypes of int and float are currently supported).
+
+    ----------------------------------------
+        Model Assembly
+    ----------------------------------------
+
+    move_files_from_objects():
+        Copies the analysis object files into the model folder and then based on the software requirements assembles the model.
+
+    build_abaqus_model():
+        Builds the abaqus model by performing a series of actions:
+            - Moves the required geometry files into the model folder
+            - Modifies the assembly.inp file based on the geometry requirements
+            - Moves the required material files into the model folder
+            - Adds the paramter values to the main abaqus input file
+            - If the analysis requires a global model, prompt the user to select one
+
+    build_fluent_model():
+        Builds the fluent model by performing a series of actions:
+            - Moves the required geometry files into the model folder
+            - Fetches a python script provided in the analysis, "fluent_setup.py" with function "fluent_setup()".
+            - Runs the imported fluent_setup() script in the fluent solver directory.
+            - Modifies the journal.jou file to read the case file
+
+    build_mpcci_model():
+        Builds the mpcci model by performing a series of actions:
+            - Runs build_fluent_model() method to assemble the fluent model in the fluent solver directory.
+            - Runs build_abaqus_model() method to assemble the abaqus model in the abaqus solver directory.
+            - Fetches a python script provided in the analysis, "mpcci_setup.py" with function "mpcci_setup()".
+            - Runs the imported mpcci_setup() script in the mpcci solver directory.
+
+    get_fluent_script():
+        Retrieves the fluent script "fluent_setup()" from the file "fluent_setup.py" in the fluent solver directory.
+
+    get_mpcci_script():
+        Retrieves the mpcci script "mpcci_setup()" from the file "mpcci_setup.py" in the mpcci solver directory.
+
+    pick_global_files(): ***TODO***
+        Prompt the user to pick a different model to import global model files from, or to use a file dialog. (NOTE: The file dialog fpath return is validated by validate_global_files()).
+
+    ----------------------------------------
+        Validations
+    ----------------------------------------
+
+    validate_name(_, name):
+        Validates the model name entered by the user. Returns True if it meets the requirements:
+            - Name must not already exist in the database
+            - Name must be less than 30 characters
+            - Name must only contain the lowercase alphabet, the digits 0-9 and hyphens and underscores (No spaces).
+            - An empty name will return True but will cancel the create/modify/duplicate model action.
+
+    validate_description(_, description):
+        Validates the model description entered by the user. Returns True if it meets the requirements:
+            - Description must be less than 100 characters.
+            - Description must only contain the alphabet, the digits 0-9 and the following symbols _-!()[] ,.
+            - Descriptions can be empty strings (This is not recommended).
+
+    validate_parameter_value(dtype, _, value):
+        Validates the parameter values entered by the user based on the data-type specified.
+            - If dtype = 'int', then checks value.isnumeric() (i.e. string only contains digits).
+            - if dtype = 'float', then checks that float(value) does not raise an exception.
+
+    validate_global_files(fpath): ***TODO***
+        Validates the filepath selected by the user for the global model files (*.odb, *.prt). 
+
+    ----------------------------------------
+        Other
+    ----------------------------------------
+
+    move_object_folder(source_fpath, destination_fpath, dirs_exist_ok=False):
+        Moves a folder located at "source_fpath" to "destination_fpath". If dirs_exist_ok=True then no error is raised if "destination_fpath" already exists.
+
+    ------------------------------------------------------------
+    '''
+
+    def __init__(self, builder, analysis_name=None, geometry_name=None, material_names=None):
         '''
         ---------------------------------------------------
         
@@ -53,13 +201,11 @@ class Model:
 
         self.new_description()
 
-        # Select Analysis
         self.select_analysis(analysis_name)
 
-        # Select Geometry
         self.select_geometry(geometry_name)
 
-        # Add Materials
+        # Add Materials (if required)
         if any(self.requirements['material'].values()):
             self.select_materials(material_names)
         else:
@@ -79,19 +225,11 @@ class Model:
         print('-'*60)
         print(green_text('Create model operation successful.'))
     
-
-    def move_object_folder(self, source_fpath, destination_fpath, dirs_exist_ok=False):
-        '''
-        
-        '''
-        copytree(source_fpath, destination_fpath, symlinks=True, dirs_exist_ok=dirs_exist_ok)
-        
-        if os.path.isabs(source_fpath):
-            source_fpath = os.path.join('...',os.path.join('',*source_fpath.split('/')[-4:]))
-            
-        print('-'*60)
-        print(green_text('Successfully copied files from:\n"{}" -> "{}"'.format(source_fpath, destination_fpath)))
-
+    '''
+    ----------------------------------------
+        Setting Attributes
+    ----------------------------------------
+    '''
     
     def new_model_name(self):
         '''
@@ -162,7 +300,7 @@ class Model:
         return
             
  
-    def select_analysis(self, analysis_name = None):
+    def select_analysis(self, analysis_name=None):
         '''
         ---------------------------------------------------
         Select an analysis object from the database for this model
@@ -198,30 +336,8 @@ class Model:
         self.analysis = self.builder.data['analysis'][analysis_name]
         self.requirements = self.analysis.requirements
 
-
-    def get_potential_geometries(self):
-        '''
-        ---------------------------------------------------
-        Get a list of all the potential geometries that fulfill the analysis requirements
-        ---------------------------------------------------
-        '''
-        potential_geometries = []
-
-        for geometry_name,geometry_object in self.builder.data['geometry'].items():
-            # Check that the selected geometry fulfills all of the requirements of the analysis
-            are_requirements_fulfilled = [fulfilled_requirement[1] for requirement_to_fulfill, fulfilled_requirement in zip(self.requirements['geometry'].items(),geometry_object.requirements['geometry'].items()) if requirement_to_fulfill[1]]
-
-            if all(are_requirements_fulfilled):
-                potential_geometries.append(geometry_name)
-                
-        if not potential_geometries:
-            print(red_text('No geometry objects that meet the requirements available in the database'))
-            raise FileExistsError
-
-        return potential_geometries
-
-
-    def select_geometry(self, geometry_name = None):
+    
+    def select_geometry(self, geometry_name=None):
         '''
         ---------------------------------------------------
         Select a Geometry object from the database for this model
@@ -263,22 +379,7 @@ class Model:
         self.geometry = self.builder.data['geometry'][geometry_name]
         
     
-    def get_potential_materials(self):
-        '''
-        ---------------------------------------------------
-        Get a list of all the potential materials that fulfill a requirement
-        ---------------------------------------------------
-        '''
-        potential_materials = {key : [name for name,obj in self.builder.data['material'].items() if obj.requirements['material'][key]] for key,value in self.requirements['material'].items() if value}
-
-        if len(potential_materials) and all([len(mats) for mats in potential_materials.values()]):
-            return potential_materials
-        else:
-            print(red_text('No Material objects that meet all the requirements of the analysis.'))
-            raise FileExistsError
-        
-
-    def select_materials(self, material_names = None):
+    def select_materials(self, material_names=None):
         '''
         ---------------------------------------------------
         Select Material objects from the database for this model
@@ -336,6 +437,43 @@ class Model:
             for material in self.materials.keys():
                 print(green_text('"{}"'.format(material)))
                     
+
+    def get_potential_geometries(self):
+        '''
+        ---------------------------------------------------
+        Get a list of all the potential geometries that fulfill the analysis requirements
+        ---------------------------------------------------
+        '''
+        potential_geometries = []
+
+        for geometry_name,geometry_object in self.builder.data['geometry'].items():
+            # Check that the selected geometry fulfills all of the requirements of the analysis
+            are_requirements_fulfilled = [fulfilled_requirement[1] for requirement_to_fulfill, fulfilled_requirement in zip(self.requirements['geometry'].items(),geometry_object.requirements['geometry'].items()) if requirement_to_fulfill[1]]
+
+            if all(are_requirements_fulfilled):
+                potential_geometries.append(geometry_name)
+                
+        if not potential_geometries:
+            print(red_text('No geometry objects that meet the requirements available in the database'))
+            raise FileExistsError
+
+        return potential_geometries
+
+
+    def get_potential_materials(self):
+        '''
+        ---------------------------------------------------
+        Returns a 
+        ---------------------------------------------------
+        '''
+        potential_materials = {key : [name for name,obj in self.builder.data['material'].items() if obj.requirements['material'][key]] for key,value in self.requirements['material'].items() if value}
+
+        if len(potential_materials) and all([len(mats) for mats in potential_materials.values()]):
+            return potential_materials
+        else:
+            print(red_text('No Material objects that meet all the requirements of the analysis.'))
+            raise FileExistsError
+
 
     def set_fpaths(self):
         '''
@@ -461,6 +599,11 @@ class Model:
             
         print(green_text('The parameter values assigned to the model: "{}" have been successfully modified.'.format(self.name)))
         
+    '''
+    ----------------------------------------
+        Model Assembly
+    ----------------------------------------
+    '''
 
     def move_files_from_objects(self):
         '''
@@ -579,13 +722,13 @@ class Model:
         # If submodel analysis, import global .odb and .prt files (Note: This only works if global analysis has been run, and global script preparation run)
         if self.requirements['analysis']['abaqus_global_odb'] and self.requirements['analysis']['abaqus_global_prt']:
 
-            potential_models = list(self.builder.data['model'].keys())
+            potential_models = [model for model in self.builder.data['model'].keys() if model.requirements['software']['abaqus']]
             if self.name in potential_models: potential_models.remove(self.name)
 
             if potential_models:
                 potential_models.append('choose_directory')
                 print('-'*60)
-                print('Select "choose_directory" to specify the files yourself.')
+                print(blue_text('Select "choose_directory" to specify the files yourself.'))
                 print('-'*60)
                 model_to_import_global = inquirer.prompt([inquirer.List('model_to_import_global',
                                                                         'This model requires a global .odb and .prt file to function, please specify the model you would like to import these from', 
@@ -754,7 +897,12 @@ class Model:
     def pick_global_files(self): # TODO
         
         pass
-
+    
+    '''
+    ----------------------------------------
+        Validations
+    ----------------------------------------
+    '''
     
     def validate_name(self, _, name):
             '''
@@ -818,3 +966,20 @@ class Model:
         
         pass
     
+    '''
+    ----------------------------------------
+        Other
+    ----------------------------------------
+    '''
+    
+    def move_object_folder(self, source_fpath, destination_fpath, dirs_exist_ok=False):
+        '''
+        
+        '''
+        copytree(source_fpath, destination_fpath, symlinks=True, dirs_exist_ok=dirs_exist_ok)
+        
+        if os.path.isabs(source_fpath):
+            source_fpath = os.path.join('...',os.path.join('',*source_fpath.split('/')[-4:]))
+            
+        print('-'*60)
+        print(green_text('Successfully copied files from:\n"{}" -> "{}"'.format(source_fpath, destination_fpath)))

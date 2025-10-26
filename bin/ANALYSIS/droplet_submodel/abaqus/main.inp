@@ -12,6 +12,8 @@
 ** ----------------------------------------------------------------
 ** CALCULATED VALUES
 ** ----------------------------------------------------------------
+** Set the acoustic element type for an explicit run
+acoustic_element_type = 'AC3D8R'
 ** Calculate the total time of the simulation
 total_time = n_cycles / vibration_frequency
 ** Calculate the max time step

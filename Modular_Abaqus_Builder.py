@@ -413,7 +413,7 @@ class Modular_Abaqus_Builder:
             exit(0)
 
 
-    def load_database(self):
+    def load_database(self): 
         '''
         ---------------------------------------------------
         Load the database from the .pkl file
@@ -448,7 +448,7 @@ class Modular_Abaqus_Builder:
             print('-'*60)
 
 
-    def print_database(self, verbose = False): # Move prints to Objects
+    def print_database(self, verbose = False): # Move prints to Objects/Models
         '''
         ---------------------------------------------------
         Print Database in a cooler way than __str__. Hate that shit.
@@ -620,7 +620,7 @@ class Modular_Abaqus_Builder:
                                 print('\t\t\t\t"{}"'.format(solver))
 
 
-    def validate_database(self): # Move validates to Objects
+    def validate_database(self): # Move validates to Objects/Models
         '''
         
         '''

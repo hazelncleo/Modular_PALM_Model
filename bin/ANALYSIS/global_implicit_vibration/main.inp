@@ -12,6 +12,8 @@
 ** ----------------------------------------------------------------
 ** CALCULATED VALUES
 ** ----------------------------------------------------------------
+** Set the acoustic element type for a standard run
+acoustic_element_type = 'AC3D8'
 ** Calculate the Circular Frequency of the Vibration
 omega = vibration_frequency*2*3.1415926
 ** Calculate the Implicit Step Size to ensure 10 data points per vibration

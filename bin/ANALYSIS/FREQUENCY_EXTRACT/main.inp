@@ -9,6 +9,8 @@
 ** Extract Frequencies for specified frequencies +- specified range
 ** ----------------------------------------------------------------
 *Parameter
+** Set the acoustic element type for a standard run
+acoustic_element_type = 'AC3D8'
 ** Calculate frequency bounds and names
 freq_1_lower = freq_1 - range
 freq_1_upper = freq_1 + range

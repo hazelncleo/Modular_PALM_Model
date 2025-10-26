@@ -3,7 +3,7 @@ from Modular_Abaqus_Builder import Modular_Abaqus_Builder
 def main():
 
     # Instantiate class
-    builder = Modular_Abaqus_Builder(delete_database=False, delete_all_models=False)
+    builder = Modular_Abaqus_Builder(delete_database=True, delete_all_models=False)
     
     builder.main_loop()
 
