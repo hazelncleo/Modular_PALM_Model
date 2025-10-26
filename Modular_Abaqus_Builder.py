@@ -424,6 +424,12 @@ class Modular_Abaqus_Builder:
         with open(self.fpaths['data'], 'rb') as df:
             self.data = pkl.load(df).data
             print(green_text('Loading from: "{}" was successful.'.format(self.fpaths['data'])))
+            
+        # Set builders to point at current builder
+        for objects in self.data.values():
+            for obj in objects.values():
+                obj.builder = self
+            
 
 
     def save_database(self):

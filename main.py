@@ -18,6 +18,7 @@ def main():
 IMPORTANT STUFF
 --------------------------
 
+- look at validations
 - write test suite
 - clean up model class and finish methods
 - licence shit guhh, including uni signature

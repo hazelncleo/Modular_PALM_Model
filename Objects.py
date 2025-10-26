@@ -5,6 +5,7 @@ from tkinter.filedialog import askdirectory
 import inquirer
 import json
 from glob import glob
+from copy import deepcopy
 
 from HazelsAwesomeTheme import red_text,green_text,blue_text,yellow_text
 from HazelsAwesomeTheme import HazelsAwesomeTheme as Theme
@@ -747,7 +748,7 @@ class Geometry_Object(Parent_Object):
                                            carousel = True,
                                            default = [key for key in self.requirements[self.object_type].keys() if self.requirements[self.object_type][key]])]
             
-            answers = inquirer.prompt(questions, Theme())
+            answers = inquirer.prompt(questions, theme=Theme())
             print('-'*60)
 
             for requirement_type in self.requirements.keys():
