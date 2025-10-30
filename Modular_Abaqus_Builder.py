@@ -494,7 +494,7 @@ class Modular_Abaqus_Builder:
         
         '''
         print('-'*60)
-        print('Validating the Database to ensure no corruption has occured.')
+        print('Validating the Database.')
         print('-'*60)
 
         # Validate Analyses
@@ -502,35 +502,8 @@ class Modular_Abaqus_Builder:
             print('Validating ' + blue_text('Analyses') + '...')
             print('-'*60)
             for analysis_name in list(self.data['analysis'].keys()):
-                
-                print('\tValidating Analysis: "{}"'.format(blue_text(analysis_name)))
-
-                # Check fpath matches path + name
-                fpath_matches = os.path.join(self.fpaths['analysis'],analysis_name) == self.data['analysis'][analysis_name].fpath
-
-
-                # Check directory exists
-                directory_exists = os.path.exists(os.path.join(self.fpaths['analysis'],analysis_name))
-
-
-                # Check all files exist in object folder
-                all_files_exist = all([os.path.exists(os.path.join(self.fpaths['analysis'],analysis_name,file_to_check)) for file_to_check in self.data['analysis'][analysis_name].files])
-
-
-                # Check requirements match database requirements
-                if (self.requirements.keys() != self.data['analysis'][analysis_name].requirements.keys()) or any([self.requirements[key].keys() != self.data['analysis'][analysis_name].requirements[key].keys() for key in self.requirements.keys()]):
-
-                    print(yellow_text('\tThe requirements for the Analysis object: "{}" do not match the default requirements of the database. Please select new requirements.'.format(analysis_name)))
-                    self.data['analysis'][analysis_name].set_requirements(reset_requirements = True)
-
-
-                # Check all validations passed
-                if fpath_matches and directory_exists and all_files_exist:
-                    print(green_text('\tAnalysis: "{}", validated successfully'.format(analysis_name)))
-
-                else:
-                    self.data['analysis'].pop(analysis_name)
-                    print(red_text('\tAnalysis: "{}", was found to be not valid. Deleting from database'.format(analysis_name)))
+                print('Validating Analysis: "{}"'.format(blue_text(analysis_name)))
+                self.data['analysis'][analysis_name].validate_object(self)
 
             print('-'*60)
             print(green_text('Analyses Validated.'))
@@ -544,35 +517,8 @@ class Modular_Abaqus_Builder:
             print('Validating ' + blue_text('Geometries') + '...')
             print('-'*60)
             for geometry_name in list(self.data['geometry'].keys()):
-                
-                print('\tValidating Geometry: "{}"'.format(blue_text(geometry_name)))
-
-                # Check fpath matches path + name
-                fpath_matches = os.path.join(self.fpaths['geometry'],geometry_name) == self.data['geometry'][geometry_name].fpath
-
-
-                # Check directory exists
-                directory_exists = os.path.exists(os.path.join(self.fpaths['geometry'],geometry_name))
-
-
-                # Check all files exist in object folder
-                all_files_exist = all([os.path.exists(os.path.join(self.fpaths['geometry'],geometry_name,file_to_check)) for file_to_check in self.data['geometry'][geometry_name].files])
-
-
-                # Check requirements match database requirements
-                if self.requirements['geometry'].keys() != self.data['geometry'][geometry_name].requirements['geometry'].keys():
-
-                    print(yellow_text('\tThe requirements for the Geometry object: "{}" do not match the default requirements of the database.'.format(geometry_name)))
-                    self.data['geometry'][geometry_name].set_requirements(reset_requirements = True)
-
-
-                # Check all validations passed
-                if fpath_matches and directory_exists and all_files_exist:
-                    print(green_text('\tGeometry: "{}", validated successfully'.format(geometry_name)))
-
-                else:
-                    self.data['geometry'].pop(geometry_name)
-                    print(red_text('\tGeometry: "{}", was found to be not valid. Deleting from database'.format(geometry_name)))
+                print('Validating Geometry: "{}"'.format(blue_text(geometry_name)))
+                self.data['geometry'][geometry_name].validate_object(self)
 
             print('-'*60)
             print(green_text('Geometries Validated.'))
@@ -586,35 +532,8 @@ class Modular_Abaqus_Builder:
             print('Validating ' + blue_text('Materials') + '...')
             print('-'*60)
             for material_name in list(self.data['material'].keys()):
-                
-                print('\tValidating Material: "{}"'.format(blue_text(material_name)))
-
-
-                # Check fpath matches path + name
-                fpath_matches = os.path.join(self.fpaths['material'],material_name) == self.data['material'][material_name].fpath
-
-
-                # check directory exists
-                directory_exists = os.path.exists(os.path.join(self.fpaths['material'],material_name))
-
-
-                # check all files exist in object folder
-                all_files_exist = all([os.path.exists(os.path.join(self.fpaths['material'],material_name,file_to_check)) for file_to_check in self.data['material'][material_name].files])
-
-
-                # check requirements match database requirements
-                if self.requirements['material'].keys() != self.data['material'][material_name].requirements['material'].keys():
-
-                    print(yellow_text('\tThe requirements for the Material object: "{}" do not match the default requirements of the database.'.format(material_name)))
-                    self.data['material'][material_name].set_requirements(reset_requirements = True)
-
-                # Check all validations passed
-                if fpath_matches and directory_exists and all_files_exist:
-                    print(green_text('\tMaterial: "{}", validated successfully'.format(material_name)))
-
-                else:
-                    self.data['material'].pop(material_name)
-                    print(red_text('\tMaterial: "{}", was found to be not valid. Deleting from database'.format(material_name)))
+                print('Validating Material: "{}"'.format(blue_text(material_name)))
+                self.data['material'][material_name].validate_object(self)
 
             print('-'*60)
             print(green_text('Materials Validated.'))
@@ -629,47 +548,9 @@ class Modular_Abaqus_Builder:
             print('-'*60)
             for model_name in list(self.data['model'].keys()):
 
-                print('\tValidating Model: "{}"'.format(blue_text(model_name)))
-
-                # Check fpath matches path + name
-                fpath_matches = os.path.join(self.fpaths['model'],model_name) == self.data['model'][model_name].fpath
-
-
-                # check directory exists
-                directory_exists = os.path.exists(os.path.join(self.fpaths['model'],model_name))
-
-
-                # Check objects exist
-                analysis_exists = self.data['model'][model_name].analysis.name in self.data['analysis']
-                geometry_exists = self.data['model'][model_name].geometry.name in self.data['geometry'] 
-                materials_exists = all([material_name in self.data['material'] for material_name in self.data['model'][model_name].materials.keys()])
-                objects_exist = analysis_exists and geometry_exists and materials_exists
+                print('Validating Model: "{}"'.format(blue_text(model_name)))
+                self.data['model'][model_name].validate_model(self)
                 
-                if not objects_exist:
-                    objects_exist = not self.yes_no_question('One or more objects used in the model: "{}", no longer exist, Delete the model? (Note: keeping the model may cause an error in the future)'.format(model_name))
-
-
-                # Check requirements match database requirements
-                if (self.requirements.keys() != self.data['model'][model_name].requirements.keys()) or any([self.requirements[key].keys() != self.data['model'][model_name].requirements[key].keys() for key in self.requirements.keys()]):
-
-                    print(yellow_text('\tThe requirements for the Model: "{}" do not match the default requirements of the database.'.format(model_name)))
-
-                    if analysis_exists:
-                        self.data['model'][model_name].requirements = self.data['model'][model_name].analysis.requirements
-                        requirements_valid = True
-                    else:
-                        requirements_valid = False
-                else:
-                    requirements_valid = True
-
-
-                # Check all validations passed
-                if fpath_matches and directory_exists and objects_exist and requirements_valid:
-                    print(green_text('\tModel: "{}", validated successfully'.format(model_name)))
-
-                else:
-                    self.data['model'].pop(model_name)
-                    print(red_text('\tModel: "{}", was found to be not valid. Deleting from database'.format(model_name)))
 
             print('-'*60)
             print(green_text('Models Validated.'))
@@ -678,7 +559,7 @@ class Modular_Abaqus_Builder:
         print('-'*60)
 
 
-        print('Validating ' + blue_text('File Paths') + '...')
+        print('Validating ' + blue_text('file paths') + '...')
         print('-'*60)
         check_deleted = False
         fpath_keys = ['analysis', 'geometry', 'material', 'model']
@@ -688,20 +569,20 @@ class Modular_Abaqus_Builder:
                 
                 if folder not in [os.path.join(object.fpath,'') for object in self.data[key].values()]:
                     rmtree(folder)
-                    print(red_text('\tDeleted Folder: "{}", that did not exist in the database.'.format(folder)))
+                    print(red_text('Deleted Folder: "{}", that did not exist in the database.'.format(folder)))
                     check_deleted = True
 
-        # Delete any extra folders in the 
+        # Delete any extra folders in the main object folder
         for extra_object_fpath in glob.glob(os.path.join(self.fpaths['object'],'*',''), recursive=False):
             if extra_object_fpath not in [os.path.join(self.fpaths["analysis"],''),os.path.join(self.fpaths['geometry'],''),os.path.join(self.fpaths['material'],'')]:
                 rmtree(extra_object_fpath)
-                print(red_text('\tDeleted Folder: "{}", that did not exist in the database.'.format(extra_object_fpath)))
+                print(red_text('Deleted folder: "{}", that did not exist in the database.'.format(extra_object_fpath)))
                 check_deleted = True
 
         check_deleted and print('-'*60)
-        print(green_text('File Paths Validated.'))
+        print(green_text('File paths validated.'))
         print('-'*60)
-        print(green_text('Database Validation Successful.'))
+        print(green_text('Database validation successful.'))
 
 
     def help_menu(self):
@@ -1094,8 +975,13 @@ class Modular_Abaqus_Builder:
                 temp_object = Material_Object(self)
                 self.data['material'][temp_object.name] = temp_object
 
-            print('-'*60)
-            print(green_text('Object: "{}" successfully added to the database.'.format(temp_object.name)))
+            if self.data[temp_object.object_type][temp_object.name].validate_requirements_against_database():
+                print('-'*60)
+                print(green_text('Object: "{}" successfully added to the database.'.format(temp_object.name)))
+
+            else:
+                self.data[object_type].pop(temp_object.name)
+                raise ValueError
 
         except NameError:
             print('-'*60)
@@ -1106,7 +992,7 @@ class Modular_Abaqus_Builder:
             for object_fpath in glob.glob(os.path.join(self.fpaths[object_type],'*',''), recursive=False):
                 if object_fpath not in [os.path.join(object.fpath,'') for object in self.data[object_type].values()]:
                     rmtree(object_fpath)
-                    print(red_text('\tDeleted Folder: "{}", that did not exist in the database.'.format(object_fpath)))
+                    print(red_text('Deleted Folder: "{}", that did not exist in the database.'.format(object_fpath)))
         
     
     def modify_object(self, object_name, object_type):

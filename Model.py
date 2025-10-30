@@ -903,6 +903,41 @@ class Model:
         Validations
     ----------------------------------------
     '''
+
+    def validate_model(self, builder):
+
+        self.builder = builder
+
+        # Check fpath matches path + name
+        fpath_matches = os.path.join(self.builder.fpaths['model'],self.name) == self.fpath
+
+        # check directory exists
+        directory_exists = os.path.exists(os.path.join(self.builder.fpaths['model'],self.name))
+
+        # Check objects exist
+        analysis_exists = self.analysis.name in self.builder.data['analysis']
+        geometry_exists = self.geometry.name in self.builder.data['geometry'] 
+        materials_exists = all([material_name in self.builder.data['material'] for material_name in self.materials.keys()])
+        objects_exist = analysis_exists and geometry_exists and materials_exists
+        
+        # TODO ARCHIVE MODELS
+        if not objects_exist:
+            objects_exist = not self.yes_no_question('One or more objects used in the model: "{}", no longer exist, Delete the model? (Note: keeping the model may cause an error in the future)'.format(self.name))
+
+        if analysis_exists:
+            self.requirements = self.analysis.requirements
+            requirements_valid = True
+        else:
+            requirements_valid = False
+
+        # Check all validations passed
+        if all([fpath_matches, directory_exists, objects_exist, requirements_valid]):
+            print(green_text('Model: "{}", validated successfully'.format(self.name)))
+
+        else:
+            self.builder.data['model'].pop(self.name)
+            print(red_text('Model: "{}", was found to be not valid. Deleting from database'.format(self.name)))
+
     
     def validate_name(self, _, name):
             '''
@@ -1035,7 +1070,3 @@ class Model:
                     print('\t\t\tSolvers parameter modifies: ')
                     for solver in self.parameters[parameter]['solvers']:
                             print('\t\t\t\t"{}"'.format(solver))
-
-
-    def validate_model(self):
-        pass

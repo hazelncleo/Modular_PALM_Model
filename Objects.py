@@ -677,7 +677,7 @@ class Parent_Object:
                     print('\t\t\t"{}": "{}"'.format(requirement,requirement_value))
 
 
-    def validate_object(self, builder): # TODO
+    def validate_object(self, builder):
         '''
         ---------------------------------------------------
         Validates the object against the database and the files stored in the object folder.
@@ -706,12 +706,14 @@ class Parent_Object:
         requirements_valid = self.validate_requirements_against_database()
         if not requirements_valid:
             print(red_text('The requirements error was not able to be fixed automatically.'))
-        
 
+        if all([fpath_matches, directory_exists, all_files_exist, requirements_valid]):
+            print(green_text('The object: "{}" is valid.'.format(self.name)))
+        else:
+            self.builder.delete_object(self.name, self.object_type)
+            print(green_text('The object: "{}" was deleted due to being invalid.'.format(self.name)))
 
-
-
-
+                
 
 
 class Analysis_Object(Parent_Object):
@@ -719,9 +721,6 @@ class Analysis_Object(Parent_Object):
         super().__init__(builder, object_type)
 
         self.load_requirements()
-
-        print('-'*60)
-        print(green_text('Create analysis object operation successful.'))
         
         
     def set_requirements(self, reset_requirements=False):
@@ -773,31 +772,52 @@ class Analysis_Object(Parent_Object):
         print(green_text('Requirements set successfully.'))
 
 
-    def validate_requirements_against_database(self): # TODO
+    def validate_requirements_against_database(self):
+        '''
         
-        # Add any extra keys from the global requirements to the objects requirements
-        self.requirements = {key : self.requirements[key] if key in self.requirements.keys() else self.builder.requirements[key] for key in self.builder.requirements.keys()}
+        '''
 
-        # Check that the requirements possible for each category match 
-        reqs_dont_match = {key : self.requirements[key].keys() != self.builder.requirements[key].keys() for key in self.builder.requirements.keys()}
 
-        if any(reqs_dont_match.values()):
-            print(yellow_text('The requirements for the analysis object: "{}" do not match the requirements of the database.'.format(self.name)))
+        # Add extra from global
+        for requirement_category in self.builder.requirements.keys():
+            if requirement_category not in self.requirements.keys():
+                self.requirements[requirement_category] = self.builder.requirements[requirement_category]
+                print(yellow_text('Requirements updated to have: "{}" category.'.format(requirement_category)))
+            else:
+                for requirement in self.builder.requirements[requirement_category].keys():
+                    if requirement not in self.requirements[requirement_category].keys():
+                        self.requirements[requirement_category][requirement] = False 
+                        print(yellow_text('Requirements updated to have: "{}" requirement in the "{}" category.'.format(requirement,requirement_category)))
 
-            
-        else:
-            # The object requirements match the database
-            return True
-        
+        # Check if extra in object can be deleted, else raise error
+        for requirement_category in list(self.requirements.keys()):
+            if requirement_category not in self.builder.requirements.keys():
+                if not any(self.requirements[requirement_category].values()):
+                    self.requirements.pop(requirement_category)
+                    print(yellow_text('Requirements updated to remove redundant: "{}" category.'.format(requirement_category)))
+                else:
+                    print(red_text('Object: "{}" found to have invalid requirement: "{}" that can not be updated automatically.'.format(self.name,requirement_category)))
+                    return False
+            else:
+                for requirement in list(self.requirements[requirement_category].keys()):
+                    if requirement not in self.builder.requirements[requirement_category].keys():
+                        if self.requirements[requirement_category][requirement]:
+                            print(red_text('Object: "{}" found to have invalid requirement: "{}" that can not be updated automatically.'.format(self.name,requirement)))
+                            return False
+                        else:
+                            self.requirements[requirement_category].pop(requirement)
+                            print(yellow_text('Requirements updated to remove redundant requirement: "{}" from the "{}" category.'.format(requirement,requirement_category)))
+
+        # If valid return true
+        return True
+
+
 
 class Geometry_Object(Parent_Object):
     def __init__(self, builder, object_type='geometry'):
         super().__init__(builder, object_type)
 
         self.load_requirements()
-
-        print('-'*60)
-        print(green_text('Create geometry object operation successful.'))
         
         
     def set_requirements(self, reset_requirements = False):
@@ -847,15 +867,33 @@ class Geometry_Object(Parent_Object):
             print(green_text('Requirements set successfully.'))
 
 
+    def validate_requirements_against_database(self):
+        '''
+        
+        '''
+
+        # Add any extra global requirements
+        for requirement in self.builder.requirements[self.object_type].keys():
+            if requirement not in self.requirements[self.object_type].keys():
+                self.requirements[self.object_type][requirement] = False 
+                print(yellow_text('Requirements updated to have: "{}" requirement in the "{}" category.'.format(requirement,self.object_type)))
+
+        # Check if extra in object can be deleted, else raise error
+        for requirement in list(self.requirements[self.object_type].keys()):
+            if requirement not in self.builder.requirements[self.object_type].keys():
+                self.requirements[self.object_type].pop(requirement)
+                print(yellow_text('Requirements updated to remove redundant requirement: "{}" from the "{}" category.'.format(requirement,self.object_type)))
+
+        # If valid return true
+        return True
+
+
 
 class Material_Object(Parent_Object):
     def __init__(self, builder, object_type='material'):
         super().__init__(builder, object_type)
 
         self.load_requirements()
-
-        print('-'*60)
-        print(green_text('Create material object operation successful.'))
  
         
     def set_requirements(self, reset_requirements = False):
@@ -897,3 +935,24 @@ class Material_Object(Parent_Object):
                     self.requirements[requirement_type][requirement] = requirement in answers[requirement_type]
 
             print(green_text('Requirements set successfully.'))
+
+
+    def validate_requirements_against_database(self):
+        '''
+        
+        '''
+
+        # Add any extra global requirements
+        for requirement in self.builder.requirements[self.object_type].keys():
+            if requirement not in self.requirements[self.object_type].keys():
+                self.requirements[self.object_type][requirement] = False 
+                print(yellow_text('Requirements updated to have: "{}" requirement in the "{}" category.'.format(requirement,self.object_type)))
+
+        # Check if extra in object can be deleted, else raise error
+        for requirement in list(self.requirements[self.object_type].keys()):
+            if requirement not in self.builder.requirements[self.object_type].keys():
+                self.requirements[self.object_type].pop(requirement)
+                print(yellow_text('Requirements updated to remove redundant requirement: "{}" from the "{}" category.'.format(requirement,self.object_type)))
+
+        # If valid return true
+        return True

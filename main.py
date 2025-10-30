@@ -1,13 +1,12 @@
 from Modular_Abaqus_Builder import Modular_Abaqus_Builder
 
+
 def main():
 
     # Instantiate class
     builder = Modular_Abaqus_Builder(delete_database=False, delete_all_models=False)
     
     builder.main_loop()
-
-
 
 
 ''' 
@@ -18,8 +17,9 @@ def main():
 IMPORTANT STUFF
 --------------------------
 
-- look at validations
-- write test suite
+- look at validations (seems better)
+- INVALID MODELS GET ARCHIVED
+- write test suite (also update methods to call with )
 - clean up model class and finish methods
 - licence shit guhh, including uni signature
 - create small commandline launcher for script
