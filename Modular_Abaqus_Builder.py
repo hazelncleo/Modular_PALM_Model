@@ -431,7 +431,6 @@ class Modular_Abaqus_Builder:
                 obj.builder = self
             
 
-
     def save_database(self):
         '''
         ---------------------------------------------------
@@ -454,7 +453,7 @@ class Modular_Abaqus_Builder:
             print('-'*60)
 
 
-    def print_database(self, verbose = False): # Move prints to Objects/Models
+    def print_database(self, verbose=False):
         '''
         ---------------------------------------------------
         Print Database in a cooler way than __str__. Hate that shit.
@@ -466,165 +465,29 @@ class Modular_Abaqus_Builder:
         print(blue_text('The Analyses currently loaded are: '))  if len(self.data['analysis'].keys()) else print(blue_text('No analyses currently loaded.'))
 
         for analysis in self.data['analysis'].values():
-            
-            print('-'*60)
-            print('Analysis Name: "{}"'.format(blue_text(analysis.name)))
-            verbose and print('\tPath: "{}"'.format(analysis.fpath))
-            print('\tDescription: "{}"'.format(analysis.description))
-            
-            if verbose:
-                print('\tFiles: ')
-                for file in analysis.files:
-                    print('\t\t"{}"'.format(file))
+            analysis.print_object(verbose=verbose)
 
-            if len(analysis.parameters):
-                print('\tParameters: ')
-                for parameter in analysis.parameters.keys():
-                    print('\t\tName: "{}"'.format(analysis.parameters[parameter]['name']))
-                    verbose and print('\t\t\tDescription: "{}"'.format(analysis.parameters[parameter]['description']))
-                    print('\t\t\tDefault Value: "{}"'.format(analysis.parameters[parameter]['default_value']))
-                    verbose and print('\t\t\tData-type: "{}"'.format(analysis.parameters[parameter]['dtype']))
-
-                    if verbose:
-                        print('\t\t\tSolvers parameter modifies: ')
-                        for solver in analysis.parameters[parameter]['solvers']:
-                                print('\t\t\t\t"{}"'.format(solver))
-
-            if verbose:
-                print('\tRequirements: ')
-                for requirement_type in analysis.requirements.keys():
-                    print('\t\t"{}"'.format(requirement_type))
-                    for requirement,requirement_value in analysis.requirements[requirement_type].items():
-                        print('\t\t\t"{}": "{}"'.format(requirement,requirement_value))
-
-            
         # Print geometry data
         print('-'*60)
         print(blue_text('The Geometries currently loaded are: ')) if len(self.data['geometry'].keys()) else print(blue_text('No geometries currently loaded.'))
 
         for geometry in self.data['geometry'].values():
-            
-            print('-'*60)
-            print('Geometry Name: "{}"'.format(blue_text(geometry.name)))
-            verbose and print('\tPath: "{}"'.format(geometry.fpath))
-            print('\tDescription: "{}"'.format(geometry.description))
-
-            if verbose:
-                print('\tFiles: ')
-                for file in geometry.files:
-                    print('\t\t"{}"'.format(file))
-
-            if len(geometry.parameters):
-                print('\tParameters: ')
-                for parameter in geometry.parameters.keys():
-                    print('\t\tName: "{}"'.format(geometry.parameters[parameter]['name']))
-                    verbose and print('\t\t\tDescription: "{}"'.format(geometry.parameters[parameter]['description']))
-                    print('\t\t\tDefault Value: "{}"'.format(geometry.parameters[parameter]['default_value']))
-                    verbose and print('\t\t\tData-type: "{}"'.format(geometry.parameters[parameter]['dtype']))
-                    
-                    if verbose:
-                        print('\t\t\tSolvers parameter modifies: ')
-                        for solver in geometry.parameters[parameter]['solvers']:
-                                print('\t\t\t\t"{}"'.format(solver))
-
-            if verbose:
-                print('\tRequirements: ')
-                for requirement_type in geometry.requirements.keys():
-                    print('\t\t"{}"'.format(requirement_type))
-                    for requirement,requirement_value in geometry.requirements[requirement_type].items():
-                        print('\t\t\t"{}": "{}"'.format(requirement,requirement_value))
-
+            geometry.print_object(verbose=verbose)
 
         # Print material data
         print('-'*60)
         print(blue_text('The Materials currently loaded are: ')) if len(self.data['material'].keys()) else print(blue_text('No materials currently loaded.'))
         
         for material in self.data['material'].values():
-            
-            print('-'*60)
-            print('Material Name: "{}"'.format(blue_text(material.name)))
-            verbose and print('\tPath: "{}"'.format(material.fpath))
-            print('\tDescription: "{}"'.format(material.description))
-
-            if verbose:
-                print('\tFiles: ')
-                for file in material.files:
-                    print('\t\t"{}"'.format(file))
-
-            if len(material.parameters):
-                print('\tParameters: ')
-                for parameter in material.parameters.keys():
-
-                    print('\t\tName: "{}"'.format(material.parameters[parameter]['name']))
-                    verbose and print('\t\t\tDescription: "{}"'.format(material.parameters[parameter]['description']))
-                    print('\t\t\tDefault Value: "{}"'.format(material.parameters[parameter]['default_value']))
-                    verbose and print('\t\t\tData-type: "{}"'.format(material.parameters[parameter]['dtype']))
-                    
-                    if verbose:
-                        print('\t\t\tSolvers parameter modifies: ')
-                        for solver in material.parameters[parameter]['solvers']:
-                                print('\t\t\t\t"{}"'.format(solver))
-
-            if verbose:
-                print('\tRequirements: ')
-                for requirement_type in material.requirements.keys():
-                    print('\t\t"{}"'.format(requirement_type))
-                    for requirement,requirement_value in material.requirements[requirement_type].items():
-                        print('\t\t\t"{}": "{}"'.format(requirement,requirement_value))
-
+            material.print_object(verbose=verbose)
 
         # Print model data
         print('-'*60)
         print(blue_text('The Models currently loaded are: ')) if len(self.data['model'].keys()) else print(blue_text('No models currently loaded.'))       
             
         for model in self.data['model'].values():
+            model.print_model(verbose=verbose)
             
-            print('-'*60)
-            print('Model Name: "{}"'.format(blue_text(model.name)))
-            print('\tDescription: "{}"'.format(model.description))
-            verbose and print('\tPath: "{}"'.format(model.fpath))
-
-            if verbose:
-                print('\tSolver Fpaths: ')
-                for solver,fpath in model.solver_fpaths.items():
-                    if fpath is not None:
-                        print('\t\t "{}": "{}"'.format(solver,fpath))
-
-            print('\tAnalysis used: "{}"'.format(model.analysis.name))
-
-            if verbose:
-                print('\tWhich has requirements: ')
-                for requirement_type in model.requirements.keys():
-                    print('\t\t"{}"'.format(requirement_type))
-                    for requirement,requirement_value in model.requirements[requirement_type].items():
-                        print('\t\t\t"{}": "{}"'.format(requirement,requirement_value))
-
-            print('\tGeometry used: "{}"'.format(model.geometry.name))
-
-            if len(model.materials) > 1:
-                print('\tMaterials used: ')
-                for material in model.materials.keys():
-                    print('\t\t"{}"'.format(model.materials[material].name))
-
-            elif len(model.materials) == 1:
-                for material in model.materials.keys():
-                    print('\tMaterial used: "{}"'.format(model.materials[material].name))
-
-            if len(model.parameters):
-                print('\tParameters: ')
-                for parameter in model.parameters.keys():
-
-                    print('\t\tName: "{}"'.format(model.parameters[parameter]['name']))
-                    verbose and print('\t\t\tDescription: "{}"'.format(model.parameters[parameter]['description']))
-                    print('\t\t\tDefault Value: "{}"'.format(model.parameters[parameter]['default_value']))
-                    verbose and print('\t\t\tData-type: "{}"'.format(model.parameters[parameter]['dtype']))
-                    
-
-                    if verbose:
-                        print('\t\t\tSolvers parameter modifies: ')
-                        for solver in model.parameters[parameter]['solvers']:
-                                print('\t\t\t\t"{}"'.format(solver))
-
 
     def validate_database(self): # Move validates to Objects/Models
         '''
@@ -676,7 +539,7 @@ class Modular_Abaqus_Builder:
         print('-'*60)
 
 
-        # Validate Analyses
+        # Validate Geometries
         if len(self.data['geometry'].keys()):
             print('Validating ' + blue_text('Geometries') + '...')
             print('-'*60)

@@ -1,0 +1,42 @@
+** assembly
+*Assembly, name=Assembly
+**
+** abaqus_whole-chip_solid
+*Instance,name=abaqus_whole-chip_solid_1,part=abaqus_whole-chip_solid
+  10.,0.,0.
+*End Instance
+**
+** abaqus_whole-chip_acoustic
+*Instance,name=abaqus_whole-chip_acoustic_1,part=abaqus_whole-chip_acoustic
+  5.,2.913166,0.3
+*End Instance
+*Tie, name=acoustic_coupling, adjust=no
+  abaqus_whole-chip_acoustic_1.acoustic_coupling, abaqus_whole-chip_solid_1.acoustic_coupling
+**
+** abaqus_submodel_solid UPDATE
+*Parameter
+grid_spacing = 0.5
+solid_submodel_x_position = grid_spacing*(x_grid_position-3)
+solid_submodel_y_position = grid_spacing*(y_grid_position-3)
+*Instance, name=abaqus_submodel_solid_1, part=abaqus_submodel_solid
+  <solid_submodel_x_position>,           <solid_submodel_y_position>,           0.
+*End Instance
+*Submodel, type=NODE, exteriorTolerance=0.05, globalelset=abaqus_whole-chip_solid_1.solid
+  abaqus_submodel_solid_1.driven_nodes, 
+**
+** abaqus_submodel_acoustic UPDATE
+*Parameter
+grid_spacing = 0.5
+acoustic_submodel_x_position = grid_spacing*(x_grid_position-3)
+acoustic_submodel_y_position = grid_spacing*(y_grid_position-3)
+*Instance, name=abaqus_submodel_acoustic_1, part=abaqus_submodel_acoustic
+  <acoustic_submodel_x_position>,     <acoustic_submodel_y_position>,          0
+*End Instance
+*Submodel, type=NODE, exteriorTolerance=0.05, globalelset=abaqus_whole-chip_acoustic_1.acoustic
+  abaqus_submodel_acoustic_1.driven_nodes,
+*Tie, name=acoustic_coupling, adjust=no
+  abaqus_submodel_acoustic_1.acoustic_coupling, abaqus_submodel_solid_1.acoustic_coupling
+** 
+** assembly
+*End Assembly
+**

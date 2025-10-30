@@ -722,7 +722,7 @@ class Model:
         # If submodel analysis, import global .odb and .prt files (Note: This only works if global analysis has been run, and global script preparation run)
         if self.requirements['analysis']['abaqus_global_odb'] and self.requirements['analysis']['abaqus_global_prt']:
 
-            potential_models = [model for model in self.builder.data['model'].keys() if model.requirements['software']['abaqus']]
+            potential_models = [model for model in self.builder.data['model'].keys() if self.builder.data['model'][model].requirements['software']['abaqus']]
             if self.name in potential_models: potential_models.remove(self.name)
 
             if potential_models:
@@ -983,3 +983,59 @@ class Model:
             
         print('-'*60)
         print(green_text('Successfully copied files from:\n"{}" -> "{}"'.format(source_fpath, destination_fpath)))
+
+
+    def print_model(self, verbose=False):
+        '''
+        ----------------------------------------
+        Prints the Model attributes.
+        ----------------------------------------
+        '''
+        print('-'*60)
+        print('Model name: "{}"'.format(blue_text(self.name)))
+        print('\tDescription: "{}"'.format(self.description))
+        verbose and print('\tPath: "{}"'.format(self.fpath))
+
+        if verbose:
+            print('\tSolver Fpaths: ')
+            for solver,fpath in self.solver_fpaths.items():
+                if fpath is not None:
+                    print('\t\t "{}": "{}"'.format(solver,fpath))
+
+        print('\tAnalysis used: "{}"'.format(blue_text(self.analysis.name)))
+
+        if verbose:
+            print('\tWhich has requirements: ')
+            for requirement_type in self.requirements.keys():
+                print('\t\t"{}"'.format(requirement_type))
+                for requirement,requirement_value in self.requirements[requirement_type].items():
+                    print('\t\t\t"{}": "{}"'.format(requirement,requirement_value))
+
+        print('\tGeometry used: "{}"'.format(blue_text(self.geometry.name)))
+
+        if len(self.materials) > 1:
+            print('\tMaterials used: ')
+            for material in self.materials.keys():
+                print('\t\t"{}"'.format(blue_text(self.materials[material].name)))
+
+        elif len(self.materials) == 1:
+            for material in self.materials.keys():
+                print('\tMaterial used: "{}"'.format(blue_text(self.materials[material].name)))
+
+        if len(self.parameters):
+            print('\tParameters: ')
+            for parameter in self.parameters.keys():
+
+                print('\t\tName: "{}"'.format(self.parameters[parameter]['name']))
+                verbose and print('\t\t\tDescription: "{}"'.format(self.parameters[parameter]['description']))
+                print('\t\t\tDefault Value: "{}"'.format(blue_text(self.parameters[parameter]['default_value'])))
+                verbose and print('\t\t\tData-type: "{}"'.format(self.parameters[parameter]['dtype']))
+                
+                if verbose:
+                    print('\t\t\tSolvers parameter modifies: ')
+                    for solver in self.parameters[parameter]['solvers']:
+                            print('\t\t\t\t"{}"'.format(solver))
+
+
+    def validate_model(self):
+        pass

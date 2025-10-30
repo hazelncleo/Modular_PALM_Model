@@ -639,6 +639,79 @@ class Parent_Object:
 
         self.files = [self.builder.get_relative_fpath(file,self.fpath) for file in object_files if (('requirements.json' not in file) and ('parameters.json' not in file))]
 
+    
+    def print_object(self, verbose=False):
+        '''
+        ---------------------------------------------------
+        Prints the Objects attributes
+        ---------------------------------------------------
+        '''
+        print('-'*60)
+        print('{}: "{}"'.format(self.object_type, blue_text(self.name)))
+        verbose and print('\tPath: "{}"'.format(self.fpath))
+        print('\tDescription: "{}"'.format(self.description))
+        
+        if verbose:
+            print('\tFiles: ')
+            for file in self.files:
+                print('\t\t"{}"'.format(file))
+
+        if len(self.parameters):
+            print('\tParameters: ')
+            for parameter in self.parameters.keys():
+                print('\t\tName: "{}"'.format(self.parameters[parameter]['name']))
+                verbose and print('\t\t\tDescription: "{}"'.format(self.parameters[parameter]['description']))
+                print('\t\t\tDefault Value: "{}"'.format(blue_text(self.parameters[parameter]['default_value'])))
+                verbose and print('\t\t\tData-type: "{}"'.format(self.parameters[parameter]['dtype']))
+
+                if verbose:
+                    print('\t\t\tSolvers parameter modifies: ')
+                    for solver in self.parameters[parameter]['solvers']:
+                            print('\t\t\t\t"{}"'.format(solver))
+
+        if verbose:
+            print('\tRequirements: ')
+            for requirement_type in self.requirements.keys():
+                print('\t\t"{}"'.format(requirement_type))
+                for requirement,requirement_value in self.requirements[requirement_type].items():
+                    print('\t\t\t"{}": "{}"'.format(requirement,requirement_value))
+
+
+    def validate_object(self, builder): # TODO
+        '''
+        ---------------------------------------------------
+        Validates the object against the database and the files stored in the object folder.
+        ---------------------------------------------------
+        '''
+
+        # Set builder
+        self.builder = builder
+
+        # Check fpath matches path + name
+        fpath_matches = os.path.join(self.builder.fpaths[self.object_type],self.name) == self.fpath
+        if not fpath_matches:
+            print(red_text('The current fpath stored in the object does not match its name.'))
+
+        # Check directory exists
+        directory_exists = os.path.exists(os.path.join(self.builder.fpaths[self.object_type],self.name))
+        if not directory_exists:
+            print(red_text('The directory stored in the object does not exist under the stored name.'))
+
+        # Check all files exist in object folder
+        all_files_exist = all([os.path.exists(os.path.join(self.builder.fpaths[self.object_type],self.name,file_to_check)) for file_to_check in self.files])
+        if not all_files_exist:
+            print(red_text('The files in the object folder do not match those recorded in the object.'))
+
+        # Check requirement structure matches the database structure
+        requirements_valid = self.validate_requirements_against_database()
+        if not requirements_valid:
+            print(red_text('The requirements error was not able to be fixed automatically.'))
+        
+
+
+
+
+
 
 
 class Analysis_Object(Parent_Object):
@@ -700,6 +773,22 @@ class Analysis_Object(Parent_Object):
         print(green_text('Requirements set successfully.'))
 
 
+    def validate_requirements_against_database(self): # TODO
+        
+        # Add any extra keys from the global requirements to the objects requirements
+        self.requirements = {key : self.requirements[key] if key in self.requirements.keys() else self.builder.requirements[key] for key in self.builder.requirements.keys()}
+
+        # Check that the requirements possible for each category match 
+        reqs_dont_match = {key : self.requirements[key].keys() != self.builder.requirements[key].keys() for key in self.builder.requirements.keys()}
+
+        if any(reqs_dont_match.values()):
+            print(yellow_text('The requirements for the analysis object: "{}" do not match the requirements of the database.'.format(self.name)))
+
+            
+        else:
+            # The object requirements match the database
+            return True
+        
 
 class Geometry_Object(Parent_Object):
     def __init__(self, builder, object_type='geometry'):
