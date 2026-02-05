@@ -169,34 +169,32 @@ def fluent_setup(
     dynamic_mesh.methods.smoothing.radial_settings.local_smoothing     = True
 
     solver.tui.define.dynamic_mesh.zones.create(
-        'outlet', 
-        'deforming', 
-        'faceted', 
-        'no', 
-        'yes', 
-        'no', 
-        'no', 
-        '0', 
-        '0', 
-        '0.7', 
-        'no', 
-        'yes'
-    ) 
-
-    solver.tui.define.dynamic_mesh.zones.create(
         'symmetry', 
         'deforming', 
         'faceted', 
         'no', 
         'yes', 
-        'no', 
-        'no', 
-        '0', 
-        '0', 
-        '0.7', 
+        'yes', 
+        'yes', 
+        'yes', 
+        'yes', 
         'no', 
         'yes'
     )
+
+    solver.tui.define.dynamic_mesh.zones.create(
+        'outlet', 
+        'deforming', 
+        'faceted', 
+        'no', 
+        'yes', 
+        'yes', 
+        'yes', 
+        'yes', 
+        'yes', 
+        'no', 
+        'yes'
+    ) 
 
     solver.tui.define.dynamic_mesh.zones.create(
         'solid_coupling', 
