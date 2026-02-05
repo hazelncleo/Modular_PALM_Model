@@ -790,9 +790,9 @@ class Model:
         print('Calling fluent_setup script to build case file')
         
         if self.solver_fpaths['mpcci']:
-            fluent_name = 'fluent_model.cas.h5'
+            fluent_name = 'fluent_model'
         else: 
-            fluent_name = self.name+'.cas.h5'
+            fluent_name = self.name
 
         # Call setup script
         fluent_setup(file_name = fluent_name,
@@ -809,8 +809,9 @@ class Model:
             with open(os.path.join(self.solver_fpaths['fluent'],'journal.jou'),'r') as old_file, open(os.path.join(self.solver_fpaths['fluent'],'temp.jou'),'w') as new_file:
 
                 # Write new first two lines
-                new_file.write('\t; Read the case file\n')
-                new_file.write('\t/rc {}\n'.format(fluent_name))
+                new_file.write('\t; Read the case & data files\n')
+                new_file.write('\t/rc {}\n'.format(fluent_name+'.cas.h5'))
+                new_file.write('\t/rd {}\n'.format(fluent_name+'.dat.h5'))
 
                 # Delete first two lines of old journal file
                 old_file.readline()

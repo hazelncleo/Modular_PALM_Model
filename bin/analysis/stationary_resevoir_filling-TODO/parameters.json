@@ -1,0 +1,11 @@
+{
+    "total_time": {
+        "name": "total_time",
+        "description": "Total time of the model",
+        "dtype": "float",
+        "default_value": 0.001,
+        "solvers": [
+            "fluent"
+        ]
+    }
+}
