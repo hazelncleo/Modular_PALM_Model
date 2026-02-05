@@ -21,3 +21,4 @@
 *.SMAFocus
 *.rpy
 test_storage/
+.venv/
