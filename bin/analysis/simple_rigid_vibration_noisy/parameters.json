@@ -1,0 +1,47 @@
+{
+    "vibration_frequency": {
+        "name": "vibration_frequency",
+        "description": "Frequency of Vibration",
+        "dtype": "float",
+        "default_value": 1.63e6,
+        "solvers": [
+            "fluent"
+        ]
+    },
+    "n_cycles": {
+        "name": "n_cycles",
+        "description": "Number of Cycles to vibrate for",
+        "dtype": "int",
+        "default_value": 50,
+        "solvers": [
+            "fluent"
+        ]
+    },
+    "vibration_amplitude": {
+        "name": "vibration_amplitude",
+        "description": "Amplitude of vibration",
+        "dtype": "float",
+        "default_value": 1e-6,
+        "solvers": [
+            "fluent"
+        ]
+    },
+    "noise_frequency": {
+        "name": "noise_frequency",
+        "description": "Frequency of noise",
+        "dtype": "float",
+        "default_value": 1.4e5,
+        "solvers": [
+            "fluent"
+        ]
+    },
+    "noise_amplitude": {
+        "name": "noise_amplitude",
+        "description": "Amplitude of noise",
+        "dtype": "float",
+        "default_value": 1e-7,
+        "solvers": [
+            "fluent"
+        ]
+    }
+}

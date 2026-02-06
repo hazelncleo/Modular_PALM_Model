@@ -1,0 +1,12 @@
+
+
+
+	; Switch back commands because fluent is fucking stupid
+	/mesh/adapt/set/method/hanging-node
+	/file/convert-hanging-nodes-during-read?/no
+	
+	; Start solving
+    /solve/dual-time-iterate , , ok 
+	
+	; Exit 
+	/exit yes

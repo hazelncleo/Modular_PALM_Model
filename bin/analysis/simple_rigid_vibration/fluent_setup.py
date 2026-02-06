@@ -161,13 +161,12 @@ def fluent_setup(
 
     dynamic_mesh = DynamicMesh(solver)
 
-    dynamic_mesh.enabled                                               = True
-    dynamic_mesh.methods.layering.enabled                              = False
-    dynamic_mesh.methods.remeshing.enabled                             = False
-    dynamic_mesh.methods.smoothing.enabled                             = True
-    dynamic_mesh.methods.smoothing.method                              = 'radial'
-    dynamic_mesh.methods.smoothing.radial_settings.local_smoothing     = True
-
+    dynamic_mesh.enabled                   = True
+    dynamic_mesh.methods.layering.enabled  = False
+    dynamic_mesh.methods.remeshing.enabled = False
+    dynamic_mesh.methods.smoothing.enabled = True
+    dynamic_mesh.methods.smoothing.method  = 'diffusion'
+    
     solver.tui.define.dynamic_mesh.zones.create(
         'symmetry', 
         'deforming', 
@@ -214,6 +213,14 @@ def fluent_setup(
         '0', 
         'no', 
         'no'
+    )
+
+    solver.tui.define.dynamic_mesh.zones.create(
+        'fluid',
+        'deforming',
+        'yes',
+        'yes',
+        'yes'
     )
     
     # Boundary Conditions 
@@ -293,7 +300,7 @@ def fluent_setup(
         variable                  = "mp",
         reference_frame           = "Relative to Cell Zone",
         use_custom_field_function = False,
-        value                     = 'IF(Position.z<493.75[micron],1,0)',
+        value                     = 'IF(Position.z<480[micron],1,0)',
     )    
 
     print('Initial conditions defined successfully')
