@@ -1,0 +1,22 @@
+{
+    "x_grid_position": {
+        "name": "x_grid_position",
+        "description": "Grid position of submodel in x direction (must be between 2 and 15)",
+        "dtype": "int",
+        "default_value": 2,
+        "solvers": [
+            "abaqus",
+            "fluent"
+        ]
+    },
+    "y_grid_position": {
+        "name": "y_grid_position",
+        "description": "Grid position of submodel in y direction (must be between 1 and 13)",
+        "dtype": "int",
+        "default_value": 1,
+        "solvers": [
+            "abaqus",
+            "fluent"
+        ]
+    }
+}
