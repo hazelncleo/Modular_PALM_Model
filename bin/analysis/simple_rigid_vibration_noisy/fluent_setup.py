@@ -118,17 +118,17 @@ def fluent_setup(
         name = "water-liquid"
     )
 
-    solver.scheme.eval("(make-new-rpvar 'user/vibration_amplitude {:f} 'real)".format(vibration_amplitude))
-    print('Defined rpvar: "user/vibration_amplitude" with value: "{:f}".'.format(vibration_amplitude))
+    solver.scheme.eval("(make-new-rpvar 'user/vibration_amplitude {} 'real)".format(vibration_amplitude))
+    print('Defined rpvar: "user/vibration_amplitude" with value: "{}".'.format(vibration_amplitude))
 
-    solver.scheme.eval("(make-new-rpvar 'user/vibration_frequency {:f} 'real)".format(vibration_frequency))
-    print('Defined rpvar: "user/vibration_frequency" with value: "{:f}".'.format(vibration_frequency))
+    solver.scheme.eval("(make-new-rpvar 'user/vibration_frequency {} 'real)".format(vibration_frequency))
+    print('Defined rpvar: "user/vibration_frequency" with value: "{}".'.format(vibration_frequency))
 
-    solver.scheme.eval("(make-new-rpvar 'user/noise_amplitude {:f} 'real)".format(noise_amplitude))
-    print('Defined rpvar: "user/noise_amplitude" with value: "{:f}".'.format(noise_amplitude))
+    solver.scheme.eval("(make-new-rpvar 'user/noise_amplitude {} 'real)".format(noise_amplitude))
+    print('Defined rpvar: "user/noise_amplitude" with value: "{}".'.format(noise_amplitude))
 
-    solver.scheme.eval("(make-new-rpvar 'user/noise_frequency {:f} 'real)".format(noise_frequency))
-    print('Defined rpvar: "user/noise_frequency" with value: "{:f}".'.format(noise_frequency))
+    solver.scheme.eval("(make-new-rpvar 'user/noise_frequency {} 'real)".format(noise_frequency))
+    print('Defined rpvar: "user/noise_frequency" with value: "{}".'.format(noise_frequency))
     
     model_setup = Models(solver)
 
