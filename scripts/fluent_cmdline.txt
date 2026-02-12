@@ -1,3 +1,0 @@
-"C:\Program Files\ANSYS Inc\v241\fluent\ntbin\win64\fluent.exe" 3ddp -i journal.jou -gu -tx -driver null
-
--tx, x=ncpus $SLURM_NTASKS works on hpc (unless mpcci)
