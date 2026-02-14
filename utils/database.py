@@ -25,48 +25,135 @@ from HazelsAwesomeTheme import HazelsAwesomeTheme as Theme
 
 
 class Modular_Builder_Database:
-    def __init__(self) -> None:
-        pass
+    def __init__(self, requirements: Requirements, database_id: str) -> None:
+        self.requirements = requirements
+        self.database_id = database_id
+        
+        self.fpaths = {
+            'analysis'                   : ['databases', self.database_id, 'objects', 'analysis'],
+            'geometry'                   : ['databases', self.database_id, 'objects', 'geometry'],
+            'material'                   : ['databases', self.database_id, 'objects', 'material'],
+            'model'                      : ['databases', self.database_id, 'models'],
+            'database_data'              : ['databases', self.database_id, 'database_data.json'],
+            'database_requirements_data' : ['defaults', self.database_id + '.json'],
+            'base_data'                  : ['defaults','base_data.json']
+        }
+        
+        self.data = {
+            'analysis' : {},
+            'geometry' : {},
+            'material' : {},
+            'model'    : {}
+        }
+        
     
     '''
-    Class Methods
+    ---------------------------
+        Load a Database
+    ---------------------------
     '''
     
     @classmethod
-    def load_from_file(cls, file: str, delete_models = False) -> Modular_Builder_Database:
-        pass
+    def load_from_file(cls, database_id: str) -> Modular_Builder_Database:
+        '''Load a database from a file.'''
+        
+        cls.load_database_requirements(database_id = database_id)
+        
+        try:
+            with open(cls.fpaths['database_data'], 'r') as database_data_file:
+                loaded_data = json.load(database_data_file)
+        except:
+            FileNotFoundError('Error reading "{}" to database.'.format(cls.fpaths['database_data']))
+            
+        # Loop through dictionary loaded from json and load each object/model into the database.
+        for data_key, data_dict in loaded_data.items():
+            if data_key is 'analysis':
+                for object_name, object_data in data_dict.items():
+                    cls.data[data_key][object_name] = Analysis_Object().load_from_dict(object_data = object_data)
+                    
+            elif data_key is 'geometry':
+                for object_name, object_data in data_dict.items():
+                    cls.data[data_key][object_name] = Geometry_Object().load_from_dict(object_data = object_data)
+                    
+            elif data_key is 'material':
+                for object_name, object_data in data_dict.items():
+                    cls.data[data_key][object_name] = Material_Object().load_from_dict(object_data = object_data)
+                    
+            elif data_key is 'model':
+                for object_name, object_data in data_dict.items():
+                    cls.data[data_key][object_name] = Model().load_from_dict(object_data = object_data)
+                    
+            else:
+                ValueError(f'The string: "{data_key}" is not one of: analysis, geometry, material or model.')
     
+             
     @classmethod
-    def load_empty(cls) -> Modular_Builder_Database:
-        pass
+    def load_database_requirements(cls, database_id: str) -> Modular_Builder_Database:
+        '''Load the requirements from a given database name.'''
+        
+        base_database = cls.load_base_database(database_id = database_id)
+        
+        try:
+            with open(cls.fpaths['database_requirements_data'], 'r') as requirements_database_file:
+                requirements_data_to_import = json.load(requirements_database_file)
+        except:
+            FileNotFoundError('Error reading "{}" to database.'.format(cls.fpaths['database_requirements_data']))
+            
+        base_database.requirements.add_requirements_from_dict(requirements_data_to_import)
+        
+        return base_database
+        
+        
+    @classmethod
+    def load_base_database(cls, database_id: str) -> Modular_Builder_Database:
+        '''Load a completely empty database. Contains no requirements, objects or models.'''
+        
+        try:
+            with open(os.path.join('defaults', 'base_data.json'),'r') as base_data_file:
+                base_data = json.load(base_data_file)
+        except:
+            FileNotFoundError('Error reading "{}" to database.'.format(os.path.join('defaults','base_data.json')))
+            
+        return cls(requirements = Requirements.from_dict(base_data), database_id = database_id)
     
-    @classmethod
-    def validate_loaded_database(cls) -> None:
-        pass
+    '''
+    ----------------------------------------
+        Database requirements operations
+    ----------------------------------------
+    '''
     
-    @classmethod
+    
+    
+    
+    '''
+    ---------------------------
+        Database operations
+    ---------------------------
+    '''
+    
     def reset_database(cls) -> None:
         pass
     
-    @classmethod
+
     def delete_models(cls) -> None:
         pass
-
-    '''
-    Database operations
-    '''
+    
     
     def save_database(self) -> None:
         pass
     
+    
     def print_database(self, verbose = False) -> None:
         pass
+    
     
     def validate_database(self) -> None:
         pass
     
     '''
+    ---------------------------
     Object operations
+    ---------------------------
     '''
     
     def create_object(self, name: str) -> None:
@@ -82,7 +169,9 @@ class Modular_Builder_Database:
         pass
     
     '''
+    ---------------------------
     Model operations
+    ---------------------------
     '''
     
     def create_model(self, name: str) -> None:
@@ -95,6 +184,10 @@ class Modular_Builder_Database:
         pass
     
     def delete_model(self, name: str) -> None:
+        
+        # Try delete model data folder
+        
+        # Delete model object from database
         pass
         
     

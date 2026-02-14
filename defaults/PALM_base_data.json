@@ -1,0 +1,27 @@
+{
+    "requirements" :
+    {
+        "software" : [
+            "abaqus",
+            "fluent",
+            "mpcci"
+        ],
+        "geometry" : [
+            "assembly",
+            "abaqus_whole-chip_solid",
+            "abaqus_whole-chip_acoustic",
+            "abaqus_submodel_solid",
+            "abaqus_submodel_acoustic",
+            "fluent_whole-chip_fluid",
+            "fluent_submodel_fluid"
+        ],
+        "material" : [
+            "abaqus_solid",
+            "abaqus_acoustic"
+        ],
+        "analysis" : [
+            "abaqus_global_odb",
+            "abaqus_global_prt"
+        ]
+    }
+}

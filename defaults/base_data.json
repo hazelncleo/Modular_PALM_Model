@@ -1,0 +1,13 @@
+{
+    "requirements" :
+    {
+        "software" : [
+            "abaqus",
+            "fluent",
+            "mpcci"
+        ],
+        "geometry" : [],
+        "material" : [],
+        "analysis" : []
+    }
+}
