@@ -240,7 +240,7 @@ class Parent_Object:
         print('-'*60)
         # Create window and remove from view
         root = Tk()
-        root.iconbitmap('cade.ico')
+        #root.iconbitmap('cade.ico')
         root.overrideredirect(1)
         root.geometry('0x0+0+0')
         root.withdraw()

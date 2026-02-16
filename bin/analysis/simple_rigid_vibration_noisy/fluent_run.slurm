@@ -15,5 +15,5 @@
 module load ansys/25r1
 
 echo Starting fluent job
-fluent 3ddp -i journal.jou -gu -t64 -driver null -scheduler_tight_coupling -pethernet -mpi=openmpi
+fluent 3ddp -i journal.jou -gu -t$SLURM_NTASKS -driver null -scheduler_tight_coupling -pethernet -mpi=openmpi
 echo fluent job completed successfully

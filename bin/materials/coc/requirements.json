@@ -1,0 +1,6 @@
+{
+    "material": {
+        "abaqus_solid": true,
+        "abaqus_acoustic": false
+    }
+}

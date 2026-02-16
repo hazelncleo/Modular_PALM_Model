@@ -1,0 +1,7 @@
+** Material Definition for GVX-7H SI(mm)
+*Material, name=abaqus_solid
+*Density
+ 1.85e-9,
+*Elastic, type=ISOTROPIC
+ 2.8e4, 0.35 
+**

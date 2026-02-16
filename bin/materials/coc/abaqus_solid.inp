@@ -1,0 +1,7 @@
+** Material Definition for COC SI(mm)
+*Material, name=abaqus_solid
+*Density
+ 1.02e-9,
+*Elastic, type=ISOTROPIC
+ 2.6e3, 0.4
+**

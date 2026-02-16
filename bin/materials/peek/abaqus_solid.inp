@@ -1,0 +1,7 @@
+** Material Definition for PEEK SI(mm)
+*Material, name=abaqus_solid
+*Density
+ 1.31e-09,
+*Elastic, type=ISOTROPIC
+ 4.6e3, 0.38
+**

@@ -1,0 +1,7 @@
+** Material Definition for Isotropic Silicon SI(mm)
+*Material, name=abaqus_solid
+*Density
+ 2.33e-09,
+*Elastic, type=ISOTROPIC
+ 130000., 0.2783,
+**
