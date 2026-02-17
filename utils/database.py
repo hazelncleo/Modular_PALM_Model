@@ -122,8 +122,12 @@ class Modular_Builder_Database:
     ----------------------------------------
     '''
     
+    def add_requirement(self, requirement_category: str, requirement_to_add: str) -> None:
+        pass
     
     
+    def remove_requirement(self, requirement_category: str, requirement_to_remove: str) -> None:
+        pass    
     
     '''
     ---------------------------
