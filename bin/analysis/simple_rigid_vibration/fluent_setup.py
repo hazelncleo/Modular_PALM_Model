@@ -257,6 +257,9 @@ def fluent_setup(
     solver.settings.solution.monitor.residual.equations['y-velocity'].absolute_criteria = 1e-05
     solver.settings.solution.monitor.residual.equations['z-velocity'].absolute_criteria = 1e-05
 
+    solver.settings.solution.controls.under_relaxation['mom'] = 0.95
+    solver.settings.solution.controls.under_relaxation['pressure'] = 0.95
+
     # Time stepping controls
     solver.settings.solution.run_calculation.transient_controls.mp_specific_time_stepping = {
         'enabled'                : True,
@@ -282,8 +285,19 @@ def fluent_setup(
     solver.settings.solution.run_calculation.transient_controls.multiphase_specific_time_constraints.physics_based_constraint = True
 
     # Save frequency controls
-    solver.settings.file.auto_save.save_data_file_every = {"frequency_type" : "flow-time"}
-    solver.settings.file.auto_save.data_frequency       = SAVE_FREQUENCY
+    solver.settings.file.auto_save.save_data_file_every     = {"frequency_type" : "flow-time"}
+    solver.settings.file.auto_save.data_frequency           = 1/vibration_frequency
+    solver.settings.file.auto_save.retain_most_recent_files = True
+    solver.settings.file.auto_save.max_files                = 2
+
+    command = r'''/file/transient-export/ensight-gold-transient '''
+    command += str('"data/' + file_name + '" ')
+    command += '() * () '
+    command += 'x-velocity y-velocity z-velocity velocity-magnitude absolute-pressure cell-volume '
+    command += 'water-vof air-vof strain-rate-mag quit '
+    command += 'yes yes "export-1" '
+    command += '"flow-time" ' + str(SAVE_FREQUENCY) + ' yes'
+    solver.execute_tui(command)
     print('Model setup completed successfully')
 
     print('Defining Initial Conditions')
@@ -312,3 +326,13 @@ def fluent_setup(
     solver.settings.file.write_data(file_name = file_name + '.dat.h5')
     print('Data file saved as: "{}"'.format(file_name + '.dat.h5'))
     
+
+if __name__ == '__main__':
+    fluent_setup(
+        fluent_wd  = os.path.abspath(os.getcwd()),
+        parameters = {
+            'vibration_frequency' : {'default_value' : 1.63e6},
+            'n_cycles'            : {'default_value' : 60},
+            'amplitude'           : {'default_value' : 1e-6}
+        }
+    )
