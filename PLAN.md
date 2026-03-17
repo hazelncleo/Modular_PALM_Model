@@ -1,12 +1,15 @@
-# Interface
 
-## Main menu options
+# Classes to Build
 
-
-
-
-
-- Load recent database
-- Create new database from existing structure
-    - empty/base
-    - list of previously built structures
+- object
+    - analysis
+    - geometry
+    - material
+- model
+- parameter
+- requirements
+- interface
+- database
+- theme
+- tests
+- validation

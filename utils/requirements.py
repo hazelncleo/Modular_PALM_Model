@@ -14,7 +14,7 @@ class Requirements:
         self.material = material
     
     @classmethod
-    def from_dict(cls, data_dict: dict) -> Requirements:       
+    def load_from_dict(cls, data_dict: dict) -> Requirements:       
         ''''''
         return cls(
             software = data_dict['software'],
@@ -29,15 +29,12 @@ class Requirements:
         try:
             with open(requirements_file_name, 'r') as requirements_file:
                 data_dict = json.load(requirements_file)
+
         except:
             FileNotFoundError(f'Error reading the file: "{requirements_file_name}".')
                    
-        return cls(
-            software = data_dict['software'],
-            analysis = data_dict['analysis'],
-            geometry = data_dict['geometry'],
-            material = data_dict['material']
-        )
+        return cls.load_from_dict(data_dict)
+
     
     def add_requirements_from_dict(self, data_dict: dict) -> None:
         ''''''
