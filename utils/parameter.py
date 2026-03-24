@@ -1,7 +1,59 @@
 import os
 import json
+import re
+'''
+-------------------
+    TODO
+-------------------
+
+- Docstrings
+- Tests
+
+'''
 
 class Parameter:
+    '''
+    ------------------------------
+        Object/Model Parameter Class
+    ------------------------------
+    Parameter class that stores all values relating to a specific parameter.
+    ------------------------------
+        Attributes
+    ------------------------------
+    name : str
+        The name of the parameter, a string containing letters, numbers and underscores/hyphens.
+        It must be less than 101 characters in length.
+
+    dtype : str, [bool, int, float, str]
+
+
+    value_range : list
+
+
+    default_value : 
+
+
+    value : 
+
+
+    attached_to_model : bool
+
+
+    ------------------------------
+        Methods
+    ------------------------------
+    
+    ------------------------------
+        Class Methods
+    ------------------------------
+    
+    ------------------------------
+        Examples/Usage
+    ------------------------------
+    '''
+
+    allowed_dtypes = ['bool', 'int', 'float', 'str']
+
     def __init__(
         self,
         name:          str,
@@ -72,23 +124,16 @@ class Parameter:
             'value'
         ]
 
-        dtypes = [
-            'bool',
-            'int',
-            'float',
-            'str'
-        ]
-
         # Check keys in dict
         if any([key not in data_dict for key in keys]):
             return False
 
         # Check name is str
-        if not isinstance(data_dict['name'], str):
+        if not isinstance(data_dict['name'], str) or (len(data_dict['name']) > 100):
             return False
 
         # Check datatype is str and is a valid type
-        if (not isinstance(data_dict['dtype'], str)) or (data_dict['dtype'] not in dtypes):
+        if (not isinstance(data_dict['dtype'], str)) or (data_dict['dtype'] not in cls.allowed_dtypes):
             return False
 
         # Check value_range is a list and has a length of 2
@@ -123,6 +168,14 @@ class Parameter:
             if (not isinstance(data_dict['default_value'], int)) or (not isinstance(data_dict['value'], int)):
                 return False
 
+            # Check default_value within value_range
+            if (data_dict['default_value'] < data_dict['value_range'][0]) or (data_dict['default_value'] > data_dict['value_range'][1]):
+                return False
+
+            # Check value within value_range
+            if (data_dict['value'] < data_dict['value_range'][0]) or (data_dict['value'] > data_dict['value_range'][1]):
+                return False
+
 
         # Validations for float dtype
         if (data_dict['dtype'] == 'float'):
@@ -137,6 +190,14 @@ class Parameter:
 
             # Check correct dtypes for values
             if (not isinstance(data_dict['default_value'], float)) or (not isinstance(data_dict['value'], float)):
+                return False
+
+            # Check default_value within value_range
+            if (data_dict['default_value'] < data_dict['value_range'][0]) or (data_dict['default_value'] > data_dict['value_range'][1]):
+                return False
+
+            # Check value within value_range
+            if (data_dict['value'] < data_dict['value_range'][0]) or (data_dict['value'] > data_dict['value_range'][1]):
                 return False
 
         
@@ -155,13 +216,13 @@ class Parameter:
             if (not isinstance(data_dict['default_value'], str)) or (not isinstance(data_dict['value'], str)):
                 return False
 
-        # TODO: ADD CHECKS FOR VALUE RANGES, THESE DO NOT WORK
-        #if not self.validate_new_parameter_value(data_dict['default_value'])[0]:
-        #    return False
-        #
-        #if not self.validate_new_parameter_value(data_dict['value'])[0]:
-        #    return False
+            # Check default_value within value_range
+            if len(data_dict['default_value']) > data_dict['value_range'][1]:
+                return False
 
+            # Check value within value_range
+            if len(data_dict['value']) > data_dict['value_range'][1]:
+                return False
 
         return True
 
@@ -178,7 +239,7 @@ class Parameter:
                 data_dict = json.load(parameter_file)
 
         except:
-            raise FileNotFoundError(f'Could not load file: "{fpath}".')
+            raise FileNotFoundError(f'Could not load file: "{os.path.join(fpath, parameter_file_name)}".')
 
         return cls.load_from_dict(data_dict)
 
@@ -188,7 +249,7 @@ class Parameter:
         return {
             'name'          : self.name,
             'dtype'         : self.dtype,
-            'value_range'   : self.value_range,
+            'value_range'   : list(self.value_range),
             'default_value' : self.default_value,
             'value'         : self.value
         }
@@ -207,6 +268,178 @@ class Parameter:
                 json.dump(data_dict, file_to_save)
         except:
             raise FileExistsError('Could not save json file of Parameter: "{self.name}".')
+
+
+    def change_parameter_name(self, new_name) -> tuple[bool, str]:
+        ''''''
+        name_valid, message = self.validate_new_parameter_name(new_name)
+
+        if name_valid:
+            old_name = self.name
+            self.name = new_name
+            return True, f'Parameter "{old_name}" name changed to: "{self.name}"'
+        else:
+            return False, message
+    
+
+    def change_parameter_dtype(self, new_dtype) -> tuple[bool, str]:
+        ''''''
+        parameter_dtype, message = self.validate_new_parameter_dtype(new_dtype)
+
+        if parameter_dtype:
+
+            self.dtype         = new_dtype
+            self.value_range   = None
+            self.value         = None
+            self.default_value = None
+
+            return True, f'Parameter "{self.name}" dtype changed to: "{self.dtype}"'
+        else:
+            return False, message
+
+
+    def change_parameter_value_range(self, new_value_range) -> tuple[bool, str]:
+        ''''''
+        parameter_value_range, message = self.validate_new_parameter_value_range(new_value_range)
+
+        if parameter_value_range:
+
+            self.value_range   = new_value_range
+            self.value         = None
+            self.default_value = None
+
+            return True, f'Parameter "{self.name}" value range changed to: "{self.value_range}"'
+        else:
+            return False, message
+
+
+    def change_parameter_default_value(self, new_default_value) -> tuple[bool, str]:
+        ''''''
+        parameter_valid, message = self.validate_new_parameter_default_value(new_default_value)
+
+        if parameter_valid:
+            self.default_value = new_default_value
+            return True, f'Parameter "{self.name}" default value changed to: "{self.default_value}"'
+        else:
+            return False, message
+
+
+    def change_parameter_value(self, new_value) -> tuple[bool, str]:
+        ''''''
+        parameter_valid, message = self.validate_new_parameter_value(new_value)
+
+        if parameter_valid:
+            self.value = new_value
+            return True, f'Parameter "{self.name}" value changed to: "{self.value}"'
+        else:
+            return False, message
+
+
+    def validate_new_parameter_name(self, test_name: str) -> tuple[bool, str]:
+        ''''''
+        
+        if isinstance(new_name, str):
+            if len(new_name) <= 100:
+                if re.match("^[A-Za-z0-9_-]+$", new_name):
+                    return True, ''
+                else:
+                    return False, 'Supplied name contains invalid characters'    
+            else:
+                return False, 'Supplied name was greater than 100 characters'
+        else:
+            return False, 'Supplied name was not a string'
+
+    
+    def validate_new_parameter_dtype(self, test_dtype: str) -> tuple[bool, str]:
+        
+        if test_dtype in self.allowed_dtypes:
+            return True, ''
+        else:
+            return False, 'Supplied dtype was not valid'
+
+    
+    def validate_new_parameter_value_range(self, test_value_range: list) -> tuple[bool, str]:
+        
+        if self.dtype == 'bool':
+            return False, 'Bool value range cannot be altered'
+        
+        
+        if len(test_value_range) != 2:
+            return False, 'Invalid value range length'
+
+        elif self.dtype == 'int':
+            if isinstance(test_value_range[0], int) and isinstance(test_value_range[1], int):
+                if test_value_range[0] < test_value_range[1]:
+                    return True, ''
+                else:
+                    return False, 'First value in range is greater than second'
+            else:
+                return False, 'Provided values do not match dtype'
+
+        elif self.dtype == 'float':
+            if isinstance(test_value_range[0], float) and isinstance(test_value_range[1], float):
+                if test_value_range[0] < test_value_range[1]:
+                    return True, ''
+                else:
+                    return False, 'First value in range is greater than second'
+            else:
+                return False, 'Provided values do not match dtype'
+
+        elif self.dtype == 'str':
+            if isinstance(test_value_range[0], int) and isinstance(test_value_range[1], int):
+                if (test_value_range[0] == 0) and (test_value_range[1] > 0):
+                    return True
+                else:
+                    return False, 'Provided value range is not valid'
+            else:
+                return False, 'Provided values do not match dtype'
+
+        else:
+            raise ValueError(f'Current dtype "{self.dtype}" is invalid.')
+
+
+    def validate_new_parameter_default_value(self, test_default_value) -> tuple[bool, str]:
+        '''Validate that default_value provided meets the requirements.'''
+
+        if self.dtype == 'bool':
+            if isinstance(test_default_value, bool):
+                return True, ''
+            else:
+                return False, 'Supplied value was not a boolean'
+
+
+        elif self.dtype == 'int':
+            if isinstance(test_default_value, int):
+                if (test_default_value >= self.value_range[0]) and (test_default_value <= self.value_range[1]):
+                    return True, ''
+                else:
+                    return False, 'Supplied value was not within value range.'
+            else:
+                return False, 'Supplied value was not an integer'
+
+
+        elif self.dtype == 'float':
+            if isinstance(test_default_value, float):
+                if (test_default_value >= self.value_range[0]) and (test_default_value <= self.value_range[1]):
+                    return True, ''
+                else:
+                    return False, 'Supplied value was not within value range.'
+            else:
+                return False, 'Supplied value was not a float'
+
+
+        elif self.dtype == 'str':
+            if isinstance(test_default_value, str):
+                if (len(test_default_value) <= self.value_range[1]) and (len(test_default_value) != 0):
+                    return True, ''
+                else:
+                    return False, 'Supplied value was not within value range.'
+            else:
+                return False, 'Supplied value was not a string'
+
+
+        else:
+            raise TypeError(f'The datatype "{self.dtype}" specified in parameter "{self.name}" is not supported.')
 
 
     def validate_new_parameter_value(self, test_value) -> tuple[bool, str]:
@@ -241,7 +474,7 @@ class Parameter:
 
         elif self.dtype == 'str':
             if isinstance(test_value, str):
-                if (len(test_value) <= self.value_range[1]):
+                if (len(test_value) <= self.value_range[1]) and (len(test_value) != 0):
                     return True, ''
                 else:
                     return False, 'Supplied value was not within value range.'
