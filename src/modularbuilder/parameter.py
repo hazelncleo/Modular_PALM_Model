@@ -1,6 +1,8 @@
+from __future__ import annotations
 import os
 import json
 import re
+
 '''
 -------------------
     TODO
@@ -53,6 +55,7 @@ class Parameter:
     '''
 
     allowed_dtypes = ['bool', 'int', 'float', 'str']
+    keys           = ['name', 'dtype', 'value_range', 'default_value', 'value']
 
     def __init__(
         self,
@@ -74,14 +77,16 @@ class Parameter:
     @classmethod
     def clone_parameter_with_new_value(cls, old_parameter: Parameter, new_value) -> Parameter:
         '''Create a new parameter with all attributes identical, except for a new value'''
+        
+        temp_dict = {
+            'name'          : old_parameter.name,
+            'dtype'         : old_parameter.dtype,
+            'value_range'   : old_parameter.value_range,
+            'default_value' : old_parameter.default_value,
+            'value'         : new_value
+        }
 
-        return cls(
-            name          = old_parameter.name,
-            dtype         = old_parameter.dtype,
-            value_range   = old_parameter.value_range,
-            default_value = old_parameter.default_value,
-            value         = new_value
-        )
+        return cls.load_from_dict(temp_dict)
 
 
     @classmethod 
@@ -96,7 +101,7 @@ class Parameter:
             dtype         = data_dict['dtype'],
             value_range   = data_dict['value_range'],
             default_value = data_dict['default_value'],
-            value         = data_dict['default_value']
+            value         = data_dict['value']
         )
 
     
@@ -116,28 +121,24 @@ class Parameter:
         -------------------------------------------------
         '''
 
-        keys = [
-            'name',
-            'dtype',
-            'value_range',
-            'default_value',
-            'value'
-        ]
-
         # Check keys in dict
-        if any([key not in data_dict for key in keys]):
+        if any([key not in data_dict for key in cls.keys]):
             return False
 
         # Check name is str
-        if not isinstance(data_dict['name'], str) or (len(data_dict['name']) > 100):
+        if not isinstance(data_dict['name'], str):
+            return False
+
+        # Check name is valid
+        if not cls.validate_new_parameter_name(data_dict['name'])[0]:
             return False
 
         # Check datatype is str and is a valid type
-        if (not isinstance(data_dict['dtype'], str)) or (data_dict['dtype'] not in cls.allowed_dtypes):
+        if (not isinstance(data_dict['dtype'], str)) or (not cls.validate_new_parameter_dtype(data_dict['dtype'])[0]):
             return False
 
         # Check value_range is a list and has a length of 2
-        if (not isinstance(data_dict['value_range'], list)) or (len(data_dict['value_range'] != 2)):
+        if (not isinstance(data_dict['value_range'], list)) or (len(data_dict['value_range']) != 2):
             return False
         
 
@@ -335,12 +336,13 @@ class Parameter:
             return False, message
 
 
-    def validate_new_parameter_name(self, test_name: str) -> tuple[bool, str]:
+    @classmethod
+    def validate_new_parameter_name(cls, test_name: str) -> tuple[bool, str]:
         ''''''
         
-        if isinstance(new_name, str):
-            if len(new_name) <= 100:
-                if re.match("^[A-Za-z0-9_-]+$", new_name):
+        if isinstance(test_name, str):
+            if len(test_name) <= 100:
+                if re.match("^[A-Za-z0-9 _-]+$", test_name):
                     return True, ''
                 else:
                     return False, 'Supplied name contains invalid characters'    
@@ -350,9 +352,10 @@ class Parameter:
             return False, 'Supplied name was not a string'
 
     
-    def validate_new_parameter_dtype(self, test_dtype: str) -> tuple[bool, str]:
+    @classmethod
+    def validate_new_parameter_dtype(cls, test_dtype: str) -> tuple[bool, str]:
         
-        if test_dtype in self.allowed_dtypes:
+        if test_dtype in cls.allowed_dtypes:
             return True, ''
         else:
             return False, 'Supplied dtype was not valid'

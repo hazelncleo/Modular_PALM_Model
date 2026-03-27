@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 
 class Requirements:
     def __init__(
