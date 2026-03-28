@@ -617,52 +617,52 @@ class TestParameter:
     
     def test_validate_parameter_name(self):
         
-        assert not Parameter.validate_new_parameter_name('')[0]
-        assert Parameter.validate_new_parameter_name('Wow')[0]
-        assert Parameter.validate_new_parameter_name('Wow_-123- -123')[0]
-        assert not Parameter.validate_new_parameter_name('Fail!')[0]
-        assert not Parameter.validate_new_parameter_name('Fail again@')[0]
-        assert not Parameter.validate_new_parameter_name(101 * 'A')[0]
+        assert not Parameter.validate_name('')[0]
+        assert Parameter.validate_name('Wow')[0]
+        assert Parameter.validate_name('Wow_-123- -123')[0]
+        assert not Parameter.validate_name('Fail!')[0]
+        assert not Parameter.validate_name('Fail again@')[0]
+        assert not Parameter.validate_name(101 * 'A')[0]
 
 
     def test_validate_parameter_dtype(self):
         ''''''
         
-        assert Parameter.validate_new_parameter_dtype('bool')[0]
-        assert Parameter.validate_new_parameter_dtype('int')[0]
-        assert Parameter.validate_new_parameter_dtype('float')[0]
-        assert Parameter.validate_new_parameter_dtype('str')[0]
+        assert Parameter.validate_dtype('bool')[0]
+        assert Parameter.validate_dtype('int')[0]
+        assert Parameter.validate_dtype('float')[0]
+        assert Parameter.validate_dtype('str')[0]
 
-        assert not Parameter.validate_new_parameter_dtype(1)[0]
-        assert not Parameter.validate_new_parameter_dtype('not_dtype')[0]
+        assert not Parameter.validate_dtype(1)[0]
+        assert not Parameter.validate_dtype('not_dtype')[0]
     
     
     def test_validate_parameter_solvers(self):
         ''''''
 
         solvers = []
-        assert not Parameter.validate_new_parameter_solvers(solvers)[0]
+        assert not Parameter.validate_solvers(solvers)[0]
 
         solvers = [12]
-        assert not Parameter.validate_new_parameter_solvers(solvers)[0]
+        assert not Parameter.validate_solvers(solvers)[0]
 
         solvers = ['not solver']
-        assert not Parameter.validate_new_parameter_solvers(solvers)[0]
+        assert not Parameter.validate_solvers(solvers)[0]
 
         solvers = ['abaqus']
-        assert Parameter.validate_new_parameter_solvers(solvers)[0]
+        assert Parameter.validate_solvers(solvers)[0]
 
         solvers = ['abaqus', 'fluent']
-        assert Parameter.validate_new_parameter_solvers(solvers)[0]
+        assert Parameter.validate_solvers(solvers)[0]
 
         solvers = ['abaqus', 'fluent', 'mpcci']
-        assert Parameter.validate_new_parameter_solvers(solvers)[0]
+        assert Parameter.validate_solvers(solvers)[0]
 
         solvers = ['abaqus', 'not solver']
-        assert not Parameter.validate_new_parameter_solvers(solvers)[0]
+        assert not Parameter.validate_solvers(solvers)[0]
 
         solvers = ['abaqus', 12]
-        assert not Parameter.validate_new_parameter_solvers(solvers)[0]
+        assert not Parameter.validate_solvers(solvers)[0]
 
 
     def test_validate_parameter_value_range(self):
@@ -679,7 +679,7 @@ class TestParameter:
 
         test_param = Parameter.load_from_dict(test_dict)
 
-        assert not test_param.validate_new_parameter_value_range([False, True])[0]
+        assert not test_param.validate_value_range([False, True])[0]
         
         # Int tests
         test_dict = {
@@ -693,18 +693,18 @@ class TestParameter:
 
         test_param = Parameter.load_from_dict(test_dict)
 
-        assert not test_param.validate_new_parameter_value_range([1, 2, 3])[0]
-        assert not test_param.validate_new_parameter_value_range([0.1, 1])[0]
-        assert not test_param.validate_new_parameter_value_range([1e-3, 1e3])[0]
-        assert not test_param.validate_new_parameter_value_range([0, 'wrong'])[0]
-        assert not test_param.validate_new_parameter_value_range([5, 0])[0]
-        assert test_param.validate_new_parameter_value_range([0, 100])[0]
-        assert test_param.validate_new_parameter_value_range([-1000, 1000])[0]
-        assert test_param.validate_new_parameter_value_range([-250000, 250000])[0]
+        assert not test_param.validate_value_range([1, 2, 3])[0]
+        assert not test_param.validate_value_range([0.1, 1])[0]
+        assert not test_param.validate_value_range([1e-3, 1e3])[0]
+        assert not test_param.validate_value_range([0, 'wrong'])[0]
+        assert not test_param.validate_value_range([5, 0])[0]
+        assert test_param.validate_value_range([0, 100])[0]
+        assert test_param.validate_value_range([-1000, 1000])[0]
+        assert test_param.validate_value_range([-250000, 250000])[0]
 
         test_param.dtype = 'wrong_dtype'
         with pytest.raises(ValueError):
-            test_param.validate_new_parameter_value_range([1, 100])
+            test_param.validate_value_range([1, 100])
 
         # Float tests
         test_dict = {
@@ -718,13 +718,13 @@ class TestParameter:
 
         test_param = Parameter.load_from_dict(test_dict)
 
-        assert not test_param.validate_new_parameter_value_range([1,2.5])[0]
-        assert not test_param.validate_new_parameter_value_range([0.0, 5])[0]
-        assert not test_param.validate_new_parameter_value_range([5.0, -5.0])[0]
+        assert not test_param.validate_value_range([1,2.5])[0]
+        assert not test_param.validate_value_range([0.0, 5])[0]
+        assert not test_param.validate_value_range([5.0, -5.0])[0]
 
-        assert test_param.validate_new_parameter_value_range([-10.0, 10.0])[0]
-        assert test_param.validate_new_parameter_value_range([-1e3, 1e3])[0]
-        assert test_param.validate_new_parameter_value_range([-1e8, 1e8])[0]
+        assert test_param.validate_value_range([-10.0, 10.0])[0]
+        assert test_param.validate_value_range([-1e3, 1e3])[0]
+        assert test_param.validate_value_range([-1e8, 1e8])[0]
 
         # Str tests
         test_dict = {
@@ -738,15 +738,15 @@ class TestParameter:
 
         test_param = Parameter.load_from_dict(test_dict)
 
-        assert not test_param.validate_new_parameter_value_range([0.0, 10])[0]
-        assert not test_param.validate_new_parameter_value_range([0, 10.0])[0]
-        assert not test_param.validate_new_parameter_value_range([-5, 15])[0]
-        assert not test_param.validate_new_parameter_value_range([0, -25])[0]
+        assert not test_param.validate_value_range([0.0, 10])[0]
+        assert not test_param.validate_value_range([0, 10.0])[0]
+        assert not test_param.validate_value_range([-5, 15])[0]
+        assert not test_param.validate_value_range([0, -25])[0]
 
-        assert test_param.validate_new_parameter_value_range([0, 5])[0]
-        assert test_param.validate_new_parameter_value_range([0, 25])[0]
-        assert test_param.validate_new_parameter_value_range([0, 300])[0]
-        assert test_param.validate_new_parameter_value_range([0, 5000])[0]
+        assert test_param.validate_value_range([0, 5])[0]
+        assert test_param.validate_value_range([0, 25])[0]
+        assert test_param.validate_value_range([0, 300])[0]
+        assert test_param.validate_value_range([0, 5000])[0]
 
     
     def test_validate_parameter_default_value(self):
@@ -764,13 +764,13 @@ class TestParameter:
 
         test_param = Parameter.load_from_dict(test_dict)
 
-        assert not test_param.validate_new_parameter_default_value('wrong type')[0]
-        assert test_param.validate_new_parameter_default_value(False)[0]
-        assert test_param.validate_new_parameter_default_value(True)[0]
+        assert not test_param.validate_default_value('wrong type')[0]
+        assert test_param.validate_default_value(False)[0]
+        assert test_param.validate_default_value(True)[0]
 
         test_param.dtype = 'wrong_type'
         with pytest.raises(ValueError):
-            test_param.validate_new_parameter_default_value(False)
+            test_param.validate_default_value(False)
 
         # Int tests
         test_dict = {
@@ -784,13 +784,13 @@ class TestParameter:
 
         test_param = Parameter.load_from_dict(test_dict)
 
-        assert not test_param.validate_new_parameter_default_value('wrong type')[0]
-        assert not test_param.validate_new_parameter_default_value(51)[0]
-        assert not test_param.validate_new_parameter_default_value(-51)[0]
-        assert test_param.validate_new_parameter_default_value(0)[0]
-        assert test_param.validate_new_parameter_default_value(50)[0]
-        assert test_param.validate_new_parameter_default_value(-50)[0]
-        assert test_param.validate_new_parameter_default_value(25)[0]
+        assert not test_param.validate_default_value('wrong type')[0]
+        assert not test_param.validate_default_value(51)[0]
+        assert not test_param.validate_default_value(-51)[0]
+        assert test_param.validate_default_value(0)[0]
+        assert test_param.validate_default_value(50)[0]
+        assert test_param.validate_default_value(-50)[0]
+        assert test_param.validate_default_value(25)[0]
 
         # Float tests
         test_dict = {
@@ -804,13 +804,13 @@ class TestParameter:
 
         test_param = Parameter.load_from_dict(test_dict)
 
-        assert not test_param.validate_new_parameter_default_value('wrong type')[0]
-        assert not test_param.validate_new_parameter_default_value(-500.1)[0]
-        assert not test_param.validate_new_parameter_default_value(500.1)[0]
-        assert test_param.validate_new_parameter_default_value(0.0)[0]
-        assert test_param.validate_new_parameter_default_value(500.0)[0]
-        assert test_param.validate_new_parameter_default_value(-500.0)[0]
-        assert test_param.validate_new_parameter_default_value(25.0)[0]
+        assert not test_param.validate_default_value('wrong type')[0]
+        assert not test_param.validate_default_value(-500.1)[0]
+        assert not test_param.validate_default_value(500.1)[0]
+        assert test_param.validate_default_value(0.0)[0]
+        assert test_param.validate_default_value(500.0)[0]
+        assert test_param.validate_default_value(-500.0)[0]
+        assert test_param.validate_default_value(25.0)[0]
 
         # Str tests
         test_dict = {
@@ -824,12 +824,12 @@ class TestParameter:
 
         test_param = Parameter.load_from_dict(test_dict)
 
-        assert not test_param.validate_new_parameter_default_value(25)[0]
-        assert not test_param.validate_new_parameter_default_value('')[0]
-        assert not test_param.validate_new_parameter_default_value(51 * 'A')[0]
-        assert test_param.validate_new_parameter_default_value('A')[0]
-        assert test_param.validate_new_parameter_default_value('Wow this should work')[0]
-        assert test_param.validate_new_parameter_default_value(50 * 'A')[0]
+        assert not test_param.validate_default_value(25)[0]
+        assert not test_param.validate_default_value('')[0]
+        assert not test_param.validate_default_value(51 * 'A')[0]
+        assert test_param.validate_default_value('A')[0]
+        assert test_param.validate_default_value('Wow this should work')[0]
+        assert test_param.validate_default_value(50 * 'A')[0]
 
     
     def test_validate_parameter_value(self):
@@ -847,13 +847,13 @@ class TestParameter:
 
         test_param = Parameter.load_from_dict(test_dict)
 
-        assert not test_param.validate_new_parameter_value('wrong type')[0]
-        assert test_param.validate_new_parameter_value(False)[0]
-        assert test_param.validate_new_parameter_value(True)[0]
+        assert not test_param.validate_value('wrong type')[0]
+        assert test_param.validate_value(False)[0]
+        assert test_param.validate_value(True)[0]
 
         test_param.dtype = 'wrong_type'
         with pytest.raises(ValueError):
-            test_param.validate_new_parameter_default_value(False)
+            test_param.validate_default_value(False)
 
         # Int tests
         test_dict = {
@@ -867,13 +867,13 @@ class TestParameter:
 
         test_param = Parameter.load_from_dict(test_dict)
 
-        assert not test_param.validate_new_parameter_value('wrong type')[0]
-        assert not test_param.validate_new_parameter_value(51)[0]
-        assert not test_param.validate_new_parameter_value(-51)[0]
-        assert test_param.validate_new_parameter_value(0)[0]
-        assert test_param.validate_new_parameter_value(50)[0]
-        assert test_param.validate_new_parameter_value(-50)[0]
-        assert test_param.validate_new_parameter_value(25)[0]
+        assert not test_param.validate_value('wrong type')[0]
+        assert not test_param.validate_value(51)[0]
+        assert not test_param.validate_value(-51)[0]
+        assert test_param.validate_value(0)[0]
+        assert test_param.validate_value(50)[0]
+        assert test_param.validate_value(-50)[0]
+        assert test_param.validate_value(25)[0]
 
         # Float tests
         test_dict = {
@@ -887,13 +887,13 @@ class TestParameter:
 
         test_param = Parameter.load_from_dict(test_dict)
 
-        assert not test_param.validate_new_parameter_value('wrong type')[0]
-        assert not test_param.validate_new_parameter_value(-500.1)[0]
-        assert not test_param.validate_new_parameter_value(500.1)[0]
-        assert test_param.validate_new_parameter_value(0.0)[0]
-        assert test_param.validate_new_parameter_value(500.0)[0]
-        assert test_param.validate_new_parameter_value(-500.0)[0]
-        assert test_param.validate_new_parameter_value(25.0)[0]
+        assert not test_param.validate_value('wrong type')[0]
+        assert not test_param.validate_value(-500.1)[0]
+        assert not test_param.validate_value(500.1)[0]
+        assert test_param.validate_value(0.0)[0]
+        assert test_param.validate_value(500.0)[0]
+        assert test_param.validate_value(-500.0)[0]
+        assert test_param.validate_value(25.0)[0]
 
         # Str tests
         test_dict = {
@@ -907,9 +907,9 @@ class TestParameter:
 
         test_param = Parameter.load_from_dict(test_dict)
 
-        assert not test_param.validate_new_parameter_value(25)[0]
-        assert not test_param.validate_new_parameter_value('')[0]
-        assert not test_param.validate_new_parameter_value(51 * 'A')[0]
-        assert test_param.validate_new_parameter_value('A')[0]
-        assert test_param.validate_new_parameter_value('Wow this should work')[0]
-        assert test_param.validate_new_parameter_value(50 * 'A')[0]
+        assert not test_param.validate_value(25)[0]
+        assert not test_param.validate_value('')[0]
+        assert not test_param.validate_value(51 * 'A')[0]
+        assert test_param.validate_value('A')[0]
+        assert test_param.validate_value('Wow this should work')[0]
+        assert test_param.validate_value(50 * 'A')[0]

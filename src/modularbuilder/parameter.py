@@ -120,11 +120,11 @@ class Parameter:
             return False
 
         # Check name is valid
-        if not cls.validate_new_parameter_name(data_dict['name'])[0]:
+        if not cls.validate_name(data_dict['name'])[0]:
             return False
 
         # Check datatype is str and is a valid type
-        if (not isinstance(data_dict['dtype'], str)) or (not cls.validate_new_parameter_dtype(data_dict['dtype'])[0]):
+        if (not isinstance(data_dict['dtype'], str)) or (not cls.validate_dtype(data_dict['dtype'])[0]):
             return False
 
         # Check solvers is list
@@ -132,7 +132,7 @@ class Parameter:
             return False
 
         # Check solvers all entries are strings and all entries valid
-        if (any([not isinstance(solver, str) for solver in data_dict['solvers']])) or (not cls.validate_new_parameter_solvers(data_dict['solvers'])[0]):
+        if (any([not isinstance(solver, str) for solver in data_dict['solvers']])) or (not cls.validate_solvers(data_dict['solvers'])[0]):
             return False
 
         # Check value_range is a list and has a length of 2
@@ -293,9 +293,9 @@ class Parameter:
             raise FileExistsError('Could not save json file of Parameter: "{self.name}".')
 
 
-    def change_parameter_name(self, new_name) -> tuple[bool, str]:
+    def change_name(self, new_name) -> tuple[bool, str]:
         ''''''
-        name_valid, message = self.validate_new_parameter_name(new_name)
+        name_valid, message = self.validate_name(new_name)
 
         if name_valid:
             old_name = self.name
@@ -305,9 +305,9 @@ class Parameter:
             return False, message
     
 
-    def change_parameter_dtype(self, new_dtype) -> tuple[bool, str]:
+    def change_dtype(self, new_dtype) -> tuple[bool, str]:
         ''''''
-        parameter_dtype, message = self.validate_new_parameter_dtype(new_dtype)
+        parameter_dtype, message = self.validate_dtype(new_dtype)
 
         if parameter_dtype:
 
@@ -321,10 +321,10 @@ class Parameter:
             return False, message
 
 
-    def change_parameter_solvers(self, new_solvers: list[str]) -> tuple[bool, str]:
+    def change_solvers(self, new_solvers: list[str]) -> tuple[bool, str]:
         ''''''
 
-        valid_solvers, message = self.validate_new_parameter_solvers(new_solvers)
+        valid_solvers, message = self.validate_solvers(new_solvers)
 
         if valid_solvers:
 
@@ -335,9 +335,9 @@ class Parameter:
             return False, message
 
 
-    def change_parameter_value_range(self, new_value_range) -> tuple[bool, str]:
+    def change_value_range(self, new_value_range) -> tuple[bool, str]:
         ''''''
-        parameter_value_range, message = self.validate_new_parameter_value_range(new_value_range)
+        parameter_value_range, message = self.validate_value_range(new_value_range)
 
         if parameter_value_range:
 
@@ -350,9 +350,9 @@ class Parameter:
             return False, message
 
 
-    def change_parameter_default_value(self, new_default_value) -> tuple[bool, str]:
+    def change_default_value(self, new_default_value) -> tuple[bool, str]:
         ''''''
-        parameter_valid, message = self.validate_new_parameter_default_value(new_default_value)
+        parameter_valid, message = self.validate_default_value(new_default_value)
 
         if parameter_valid:
             self.default_value = new_default_value
@@ -361,9 +361,9 @@ class Parameter:
             return False, message
 
 
-    def change_parameter_value(self, new_value) -> tuple[bool, str]:
+    def change_value(self, new_value) -> tuple[bool, str]:
         ''''''
-        parameter_valid, message = self.validate_new_parameter_value(new_value)
+        parameter_valid, message = self.validate_value(new_value)
 
         if parameter_valid:
             self.value = new_value
@@ -373,7 +373,7 @@ class Parameter:
 
 
     @classmethod
-    def validate_new_parameter_name(cls, test_name: str) -> tuple[bool, str]:
+    def validate_name(cls, test_name: str) -> tuple[bool, str]:
         ''''''
         
         if isinstance(test_name, str):
@@ -389,7 +389,7 @@ class Parameter:
 
     
     @classmethod
-    def validate_new_parameter_dtype(cls, test_dtype: str) -> tuple[bool, str]:
+    def validate_dtype(cls, test_dtype: str) -> tuple[bool, str]:
         
         if test_dtype in cls.allowed_dtypes:
             return True, ''
@@ -398,7 +398,7 @@ class Parameter:
 
 
     @classmethod
-    def validate_new_parameter_solvers(cls, test_solvers: list[str]) -> tuple[bool, str]:
+    def validate_solvers(cls, test_solvers: list[str]) -> tuple[bool, str]:
         ''''''
 
         if len(test_solvers) != 0:
@@ -410,7 +410,7 @@ class Parameter:
             return False, 'Parameter solvers cannot be empty'
 
     
-    def validate_new_parameter_value_range(self, test_value_range: list) -> tuple[bool, str]:
+    def validate_value_range(self, test_value_range: list) -> tuple[bool, str]:
         
         if self.dtype == 'bool':
             return False, 'Bool value range cannot be altered'
@@ -453,7 +453,7 @@ class Parameter:
             raise ValueError(f'Current dtype "{self.dtype}" is invalid.')
 
 
-    def validate_new_parameter_default_value(self, test_default_value) -> tuple[bool, str]:
+    def validate_default_value(self, test_default_value) -> tuple[bool, str]:
         '''Validate that default_value provided meets the requirements.'''
 
         if self.dtype == 'bool':
@@ -497,7 +497,7 @@ class Parameter:
             raise ValueError(f'The datatype "{self.dtype}" specified in parameter "{self.name}" is not supported.')
 
 
-    def validate_new_parameter_value(self, test_value) -> tuple[bool, str]:
+    def validate_value(self, test_value) -> tuple[bool, str]:
         '''Validate that value provided meets the requirements.'''
 
         if self.dtype == 'bool':
