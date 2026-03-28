@@ -1,0 +1,13 @@
+{
+    "name"          : "Test str",
+    "dtype"         : "str",
+    "solvers"       : [
+        "fluent"
+    ],
+    "value_range"   : [
+        0,
+        15
+    ],
+    "default_value" : "test string",
+    "value"         : "test string two"
+}

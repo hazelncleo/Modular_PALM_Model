@@ -1,0 +1,14 @@
+{
+    "name"          : "Test int",
+    "dtype"         : "int",
+    "solvers"       : [
+        "abaqus",
+        "fluent"
+    ],
+    "value_range"   : [
+        0,
+        15
+    ],
+    "default_value" : 10,
+    "value"         : 12
+}

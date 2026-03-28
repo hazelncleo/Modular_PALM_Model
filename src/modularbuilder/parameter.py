@@ -2,6 +2,7 @@ from __future__ import annotations
 import os
 import json
 import re
+import warnings
 
 '''
 -------------------
@@ -55,38 +56,26 @@ class Parameter:
     '''
 
     allowed_dtypes = ['bool', 'int', 'float', 'str']
-    keys           = ['name', 'dtype', 'value_range', 'default_value', 'value']
+    keys = ['name', 'dtype', 'value_range', 'default_value', 'value']
+    supported_softwares = ['abaqus', 'fluent', 'mpcci']
 
     def __init__(
         self,
-        name:          str,
-        dtype:         str,
-        value_range:   list,
+        name: str,
+        dtype: str,
+        solvers: list[str],
+        value_range: list,
         default_value,
         value
     ) -> None:
         
         self.name              = name
         self.dtype             = dtype
+        self.solvers           = solvers
         self.value_range       = value_range
         self.default_value     = default_value
         self.value             = value
         self.attached_to_model = False
-
-
-    @classmethod
-    def clone_parameter_with_new_value(cls, old_parameter: Parameter, new_value) -> Parameter:
-        '''Create a new parameter with all attributes identical, except for a new value'''
-        
-        temp_dict = {
-            'name'          : old_parameter.name,
-            'dtype'         : old_parameter.dtype,
-            'value_range'   : old_parameter.value_range,
-            'default_value' : old_parameter.default_value,
-            'value'         : new_value
-        }
-
-        return cls.load_from_dict(temp_dict)
 
 
     @classmethod 
@@ -99,6 +88,7 @@ class Parameter:
         return cls(
             name          = data_dict['name'],
             dtype         = data_dict['dtype'],
+            solvers       = data_dict['solvers'],
             value_range   = data_dict['value_range'],
             default_value = data_dict['default_value'],
             value         = data_dict['value']
@@ -135,6 +125,14 @@ class Parameter:
 
         # Check datatype is str and is a valid type
         if (not isinstance(data_dict['dtype'], str)) or (not cls.validate_new_parameter_dtype(data_dict['dtype'])[0]):
+            return False
+
+        # Check solvers is list
+        if (not isinstance(data_dict['solvers'], list)):
+            return False
+
+        # Check solvers all entries are strings and all entries valid
+        if (any([not isinstance(solver, str) for solver in data_dict['solvers']])) or (not cls.validate_new_parameter_solvers(data_dict['solvers'])[0]):
             return False
 
         # Check value_range is a list and has a length of 2
@@ -247,16 +245,37 @@ class Parameter:
 
     def convert_to_dict(self) -> dict:
         '''Converts the parameter to a dictionary representation'''
-        return {
+
+        dict_representation = {
             'name'          : self.name,
             'dtype'         : self.dtype,
+            'solvers'       : list(self.solvers),
             'value_range'   : list(self.value_range),
             'default_value' : self.default_value,
             'value'         : self.value
         }
 
-    
-    def save_to_json_file(self, fpath: str, fname: str) -> None:
+        assert self.validate_dict(dict_representation)
+
+        return dict_representation
+
+
+    def clone_with_new_value(self, new_value) -> Parameter:
+        '''Create a new parameter with all attributes identical, except for a new value'''
+        
+        temp_dict = {
+            'name'          : self.name,
+            'dtype'         : self.dtype,
+            'solvers'       : list(self.solvers),
+            'value_range'   : list(self.value_range),
+            'default_value' : self.default_value,
+            'value'         : new_value
+        }
+
+        return self.load_from_dict(temp_dict)
+
+
+    def save_to_file(self, fpath: str, fname: str) -> None:
         '''Save the parameter to a .json file'''
 
         data_dict = self.convert_to_dict()
@@ -264,9 +283,12 @@ class Parameter:
         if not os.path.exists(fpath):
             raise FileNotFoundError(f'Directory: "{fpath}" does not exist.')
 
+        if os.path.exists(os.path.join(fpath, fname)):
+            warnings.warn(f'The file: "{os.path.join(fpath, fname)}" was overwritten when saving.')
+
         try:
             with open(os.path.join(fpath, fname), 'w') as file_to_save:
-                json.dump(data_dict, file_to_save)
+                json.dump(data_dict, file_to_save, indent = 4)
         except:
             raise FileExistsError('Could not save json file of Parameter: "{self.name}".')
 
@@ -295,6 +317,20 @@ class Parameter:
             self.default_value = None
 
             return True, f'Parameter "{self.name}" dtype changed to: "{self.dtype}"'
+        else:
+            return False, message
+
+
+    def change_parameter_solvers(self, new_solvers: list[str]) -> tuple[bool, str]:
+        ''''''
+
+        valid_solvers, message = self.validate_new_parameter_solvers(new_solvers)
+
+        if valid_solvers:
+
+            self.solvers = new_solvers
+            return True, f'Parameter "{self.name}" modified software solvers changed to: "{self.solvers}".'
+
         else:
             return False, message
 
@@ -360,6 +396,19 @@ class Parameter:
         else:
             return False, 'Supplied dtype was not valid'
 
+
+    @classmethod
+    def validate_new_parameter_solvers(cls, test_solvers: list[str]) -> tuple[bool, str]:
+        ''''''
+
+        if len(test_solvers) != 0:
+            if all([(solver in cls.supported_softwares) for solver in test_solvers]):
+                return True, ''
+            else:
+                return False, 'Unsupported software solver included'
+        else:
+            return False, 'Parameter solvers cannot be empty'
+
     
     def validate_new_parameter_value_range(self, test_value_range: list) -> tuple[bool, str]:
         
@@ -370,6 +419,7 @@ class Parameter:
         if len(test_value_range) != 2:
             return False, 'Invalid value range length'
 
+
         elif self.dtype == 'int':
             if isinstance(test_value_range[0], int) and isinstance(test_value_range[1], int):
                 if test_value_range[0] < test_value_range[1]:
@@ -378,6 +428,7 @@ class Parameter:
                     return False, 'First value in range is greater than second'
             else:
                 return False, 'Provided values do not match dtype'
+
 
         elif self.dtype == 'float':
             if isinstance(test_value_range[0], float) and isinstance(test_value_range[1], float):
@@ -388,10 +439,11 @@ class Parameter:
             else:
                 return False, 'Provided values do not match dtype'
 
+
         elif self.dtype == 'str':
             if isinstance(test_value_range[0], int) and isinstance(test_value_range[1], int):
                 if (test_value_range[0] == 0) and (test_value_range[1] > 0):
-                    return True
+                    return True, ''
                 else:
                     return False, 'Provided value range is not valid'
             else:
@@ -442,7 +494,7 @@ class Parameter:
 
 
         else:
-            raise TypeError(f'The datatype "{self.dtype}" specified in parameter "{self.name}" is not supported.')
+            raise ValueError(f'The datatype "{self.dtype}" specified in parameter "{self.name}" is not supported.')
 
 
     def validate_new_parameter_value(self, test_value) -> tuple[bool, str]:
@@ -486,4 +538,4 @@ class Parameter:
 
 
         else:
-            raise TypeError(f'The datatype "{self.dtype}" specified in parameter "{self.name}" is not supported.')
+            raise ValueError(f'The datatype "{self.dtype}" specified in parameter "{self.name}" is not supported.')

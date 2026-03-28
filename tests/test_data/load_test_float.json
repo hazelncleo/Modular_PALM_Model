@@ -1,0 +1,15 @@
+{
+    "name"          : "Test float",
+    "dtype"         : "float",
+    "solvers"       : [
+        "abaqus",
+        "fluent",
+        "mpcci"
+    ],
+    "value_range"   : [
+        0.0,
+        15.0
+    ],
+    "default_value" : 10.0,
+    "value"         : 12.0
+}

@@ -1,0 +1,13 @@
+{
+    "name"          : "Test bool",
+    "dtype"         : "bool",
+    "solvers"       : [
+        "abaqus"
+    ],
+    "value_range"   : [
+        false,
+        true
+    ],
+    "default_value" : false,
+    "value"         : true
+}
