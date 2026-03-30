@@ -1,0 +1,57 @@
+{
+    "Test bool" : {
+        "name"          : "Test bool",
+        "dtype"         : "bool",
+        "solvers"       : [
+            "abaqus"
+        ],
+        "value_range"   : [
+            false,
+            true
+        ],
+        "default_value" : false,
+        "value"         : true
+    },
+    "Test int" : {
+        "name"          : "Test int",
+        "dtype"         : "int",
+        "solvers"       : [
+            "abaqus",
+            "fluent"
+        ],
+        "value_range"   : [
+            0,
+            15
+        ],
+        "default_value" : 10,
+        "value"         : 12
+    },
+    "Test float" : {
+        "name"          : "Test float",
+        "dtype"         : "float",
+        "solvers"       : [
+            "abaqus",
+            "fluent",
+            "mpcci"
+        ],
+        "value_range"   : [
+            0.0,
+            15.0
+        ],
+        "default_value" : 10.0,
+        "value"         : 12.0
+    },
+    "Test str" : {
+        "name"          : "Test str",
+        "dtype"         : "str",
+        "solvers"       : [
+            "fluent"
+        ],
+        "value_range"   : [
+            0,
+            15
+        ],
+        "default_value" : "test string",
+        "value"         : "test string two"
+    }
+}

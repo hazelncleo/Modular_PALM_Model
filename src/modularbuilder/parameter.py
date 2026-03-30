@@ -10,9 +10,63 @@ import warnings
 -------------------
 
 - Docstrings
-- Tests
 
 '''
+
+
+def save_parameter_dict_to_file(parameter_dict: dict, fpath: str, fname: str) -> None:
+    ''''''
+    dict_to_save = {}
+
+    if not os.path.exists(fpath):
+        raise FileNotFoundError(f'Directory "{fpath}" does not exist.')
+    
+    if os.path.exists(os.path.join(fpath, fname)):
+        warnings.warn(f'The file: "{os.path.join(fpath, fname)}" was overwritten when saving.')
+
+    for name,parameter in parameter_dict.items():
+        dict_to_save[name] = parameter.convert_to_dict()
+
+    try:
+        with open(os.path.join(fpath,fname),'w') as parameter_file:
+            json.dump(dict_to_save, parameter_file)
+    except:
+        raise FileNotFoundError(f'Parameter file could not be saved.')
+
+
+def load_parameter_dict_from_file(fpath: str, fname: str) -> dict: # TODO
+    ''''''
+
+    output_dict = {}
+
+    if not os.path.exists(fpath):
+        raise FileNotFoundError(f'Directory "{fpath}" does not exist.')
+    
+    if not os.path.exists(os.path.join(fpath, fname)):
+        raise FileNotFoundError(f'File "{fname}" does not exist in directory "{fpath}".')
+
+    if not fname.endswith('.json'):
+        raise FileNotFoundError(f'File: "{fname}"is not a .json file.')
+
+    try:
+        with open(os.path.join(fpath,fname), 'r') as parameter_file:
+            loaded_dict = json.load(parameter_file)
+    except:
+        raise FileNotFoundError(f'Could not load file "{fname}".')
+
+    if not loaded_dict:
+        raise ValueError(f'Parameter: "{fname}" could not be loaded.')
+
+    for name,parameter_dict in loaded_dict.items():
+        if Parameter.validate_dict(parameter_dict) and (name == parameter_dict['name']):
+            output_dict[name] = Parameter.load_from_dict(parameter_dict)
+        else:
+            raise ValueError(f'Parameter: "{name}" could not be loaded.')
+    
+
+    return output_dict
+
+
 
 class Parameter:
     '''
@@ -232,6 +286,9 @@ class Parameter:
 
         if not os.path.exists(fpath):
             raise FileNotFoundError(f'Directory: "{fpath}" does not exist.')
+
+        if not parameter_file_name.endswith('.json'):
+            raise FileNotFoundError(f'File: "{parameter_file_name}"is not a .json file.')
 
         try:
             with open(os.path.join(fpath, parameter_file_name), 'r') as parameter_file:

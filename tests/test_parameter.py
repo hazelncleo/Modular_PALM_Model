@@ -1,4 +1,4 @@
-from src.modularbuilder.parameter import Parameter
+from src.modularbuilder.parameter import Parameter, save_parameter_dict_to_file, load_parameter_dict_from_file
 import pytest
 import json
 import os
@@ -913,3 +913,65 @@ class TestParameter:
         assert test_param.validate_value('A')[0]
         assert test_param.validate_value('Wow this should work')[0]
         assert test_param.validate_value(50 * 'A')[0]
+
+
+
+class TestParameterDict:
+    def test_save_to_file(self):
+        '''Test parameter dict can be saved to file'''
+        cwd = os.getcwd()
+        fpath = os.path.join(cwd, 'tests', 'test_data')
+        fname = 'load_test_list.json'
+
+        test_dict = load_parameter_dict_from_file(fpath, fname)
+
+        save_parameter_dict_to_file(test_dict, fpath, 'test_save.json')
+
+        saved_dict = load_parameter_dict_from_file(fpath, 'test_save.json')
+
+        for name, parameter in saved_dict.items():
+            assert name == parameter.name
+            assert name in test_dict
+            assert test_dict[name].__dict__ == saved_dict[name].__dict__
+
+        os.remove(os.path.join(fpath,'test_save.json'))
+
+
+    def test_load_from_file(self):
+        cwd = os.getcwd()
+        fpath = os.path.join(cwd, 'tests', 'test_data')
+        fname = 'load_test_list.json'
+
+        test_dict = load_parameter_dict_from_file(fpath,fname)
+
+        bool_param = Parameter.load_from_file(fpath,'load_test_bool.json')
+
+        assert bool_param.name in test_dict
+        assert bool_param.__dict__ == test_dict[bool_param.name].__dict__
+
+        int_param = Parameter.load_from_file(fpath,'load_test_int.json')
+
+        assert int_param.name in test_dict
+        assert int_param.__dict__ == test_dict[int_param.name].__dict__
+
+        float_param = Parameter.load_from_file(fpath,'load_test_float.json')
+
+        assert float_param.name in test_dict
+        assert float_param.__dict__ == test_dict[float_param.name].__dict__
+
+        str_param = Parameter.load_from_file(fpath,'load_test_str.json')
+
+        assert str_param.name in test_dict
+        assert str_param.__dict__ == test_dict[str_param.name].__dict__
+
+        with pytest.raises(ValueError):
+            test_dict = load_parameter_dict_from_file(fpath, 'load_test_bool.json')
+
+        with pytest.raises(FileNotFoundError):
+            test_dict = load_parameter_dict_from_file(fpath, 'not_json.txt')
+
+        with pytest.raises(FileNotFoundError):
+            test_dict = load_parameter_dict_from_file(fpath, 'empty.json')
+
+        with pytest.raises(ValueError):
+            test_dict = load_parameter_dict_from_file(fpath, 'empty_dict.json')

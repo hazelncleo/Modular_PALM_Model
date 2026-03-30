@@ -2,6 +2,32 @@ from __future__ import annotations
 import os
 from glob import iglob
 
+'''
+
+TODO
+- docstrings
+- tests
+
+
+# build object
+- select object type: [a, g, m]
+- select to clone or build from fpath
+
+- clone
+    - select new name
+
+- fpath
+    - select fpath
+    - contents read
+    - if valid
+    - enter name & description
+    - create new fpath
+    - move files & initialise object
+
+'''
+
+
+
 class Parent_Object:
 
     def __init__(
