@@ -6,10 +6,15 @@
     - geometry
     - material
 - model
-- parameter
 - requirements
 - interface
 - database
 - theme
 - tests
+    - objects
+    - models
+    - requirements
+    - interface
+    - database
+    - theme
 - validation

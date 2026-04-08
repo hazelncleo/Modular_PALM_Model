@@ -15,7 +15,7 @@ import warnings
 
 
 def save_parameter_dict_to_file(parameter_dict: dict, fpath: str, fname: str) -> None:
-    ''''''
+    '''Save a dictionary containing parameters to a .json file'''
     dict_to_save = {}
 
     if not os.path.exists(fpath):
@@ -34,8 +34,8 @@ def save_parameter_dict_to_file(parameter_dict: dict, fpath: str, fname: str) ->
         raise FileNotFoundError(f'Parameter file could not be saved.')
 
 
-def load_parameter_dict_from_file(fpath: str, fname: str) -> dict: # TODO
-    ''''''
+def load_parameter_dict_from_file(fpath: str, fname: str) -> dict:
+    '''Load a dictionary containing parameters from a .json file'''
 
     output_dict = {}
 
@@ -78,35 +78,42 @@ class Parameter:
         Attributes
     ------------------------------
     name : str
-        The name of the parameter, a string containing letters, numbers and underscores/hyphens.
+        The name of the parameter, a string containing upper/lowercase letters, numbers, spaces and underscores/hyphens.
         It must be less than 101 characters in length.
 
     dtype : str, [bool, int, float, str]
+        Datatype of the parameter.
 
+    solvers : list[str]
+        List of solvers the parameter modifies.
+        Currently only abaqus, fluent and mpcci are supported
 
-    value_range : list
+    value_range : list[bool, int, float, str]
+        Lower and upper bounds on the values the parameter can take.
+        bool: has no effect
+        int, float: value_range[0] = lower bound, value_range[1] = upper bound
+        str: value_range[0] = 0, value_range[1] = maximum string length
 
+    default_value : bool, int, float, str
+        The default value a parameter is assigned. When an object is defined this is the value it will be assigned. Modifying the value of the parameter at this point will modify the default value.
 
-    default_value : 
-
-
-    value : 
-
+    value : bool, int, float, str
+        The value a parameter is assigned. When an object is used to build a model either the default value will be used, or a new value will be assigned. Once the parameter is part of a model modifying its value will modify the value.
 
     attached_to_model : bool
-
-
-    ------------------------------
-        Methods
-    ------------------------------
-    
-    ------------------------------
-        Class Methods
-    ------------------------------
-    
+        True if parameter is attached to a model instead of an object, False otherwise
     ------------------------------
         Examples/Usage
     ------------------------------
+
+    >>> parameter_1 = Parameter.load_from_dict(valid_par_dict)
+
+    >>> parameter_2 = Parameter.load_from_file(fpath, fname)
+
+    >>> paramter_dict = parameter_1.convert_to_dict()
+    
+    >>> parameter_2.save_to_file(new_fpath, fname)
+
     '''
 
     allowed_dtypes = ['bool', 'int', 'float', 'str']
@@ -282,13 +289,16 @@ class Parameter:
 
     @classmethod
     def load_from_file(cls, fpath: str, parameter_file_name: str) -> Parameter:
-        '''Load a parameter instance from a json file'''
+        '''Load a parameter instance from a .json file'''
 
         if not os.path.exists(fpath):
             raise FileNotFoundError(f'Directory: "{fpath}" does not exist.')
 
         if not parameter_file_name.endswith('.json'):
             raise FileNotFoundError(f'File: "{parameter_file_name}"is not a .json file.')
+
+        if not os.path.exists(os.path.join(fpath, parameter_file_name)):
+            raise FileNotFoundError(f'File: "{parameter_file_name}" does not exist.')
 
         try:
             with open(os.path.join(fpath, parameter_file_name), 'r') as parameter_file:
@@ -351,7 +361,7 @@ class Parameter:
 
 
     def change_name(self, new_name) -> tuple[bool, str]:
-        ''''''
+        '''Change the name of the parameter'''
         name_valid, message = self.validate_name(new_name)
 
         if name_valid:
@@ -363,7 +373,11 @@ class Parameter:
     
 
     def change_dtype(self, new_dtype) -> tuple[bool, str]:
-        ''''''
+        '''
+        Change the dtype of a parameter. 
+        
+        Note: sets value_range, value and default_value to None
+        '''
         parameter_dtype, message = self.validate_dtype(new_dtype)
 
         if parameter_dtype:
@@ -379,7 +393,7 @@ class Parameter:
 
 
     def change_solvers(self, new_solvers: list[str]) -> tuple[bool, str]:
-        ''''''
+        '''Change the solvers that the parameter modifies'''
 
         valid_solvers, message = self.validate_solvers(new_solvers)
 
@@ -393,7 +407,10 @@ class Parameter:
 
 
     def change_value_range(self, new_value_range) -> tuple[bool, str]:
-        ''''''
+        '''
+        Change the value range of the parameter
+        Note: sets value and default_value to None
+        '''
         parameter_value_range, message = self.validate_value_range(new_value_range)
 
         if parameter_value_range:
@@ -408,7 +425,7 @@ class Parameter:
 
 
     def change_default_value(self, new_default_value) -> tuple[bool, str]:
-        ''''''
+        '''Change the default value of the parameter'''
         parameter_valid, message = self.validate_default_value(new_default_value)
 
         if parameter_valid:
@@ -419,7 +436,7 @@ class Parameter:
 
 
     def change_value(self, new_value) -> tuple[bool, str]:
-        ''''''
+        '''Change the value of the parameter'''
         parameter_valid, message = self.validate_value(new_value)
 
         if parameter_valid:
@@ -431,7 +448,12 @@ class Parameter:
 
     @classmethod
     def validate_name(cls, test_name: str) -> tuple[bool, str]:
-        ''''''
+        '''
+        Validate that the provided name meets the following requirements:
+            - String
+            - Length is less than 101
+            - Only contains upper/lowercase letters, numbers, spaces and hyphens/underscores
+        '''
         
         if isinstance(test_name, str):
             if len(test_name) <= 100:
@@ -447,6 +469,10 @@ class Parameter:
     
     @classmethod
     def validate_dtype(cls, test_dtype: str) -> tuple[bool, str]:
+        '''
+        Validates that provided datatype is in list of allowed dtypes.
+        Currently: bool, int, float, str
+        '''
         
         if test_dtype in cls.allowed_dtypes:
             return True, ''
@@ -456,7 +482,7 @@ class Parameter:
 
     @classmethod
     def validate_solvers(cls, test_solvers: list[str]) -> tuple[bool, str]:
-        ''''''
+        '''Validates that provided solvers are supported and that parameter modifies at least one solver'''
 
         if len(test_solvers) != 0:
             if all([(solver in cls.supported_softwares) for solver in test_solvers]):
@@ -468,6 +494,7 @@ class Parameter:
 
     
     def validate_value_range(self, test_value_range: list) -> tuple[bool, str]:
+        '''Validates that provided value range is valid for current dtype'''
         
         if self.dtype == 'bool':
             return False, 'Bool value range cannot be altered'
@@ -511,7 +538,7 @@ class Parameter:
 
 
     def validate_default_value(self, test_default_value) -> tuple[bool, str]:
-        '''Validate that default_value provided meets the requirements.'''
+        '''Validate that default_value provided meets the requirements'''
 
         if self.dtype == 'bool':
             if isinstance(test_default_value, bool):
@@ -555,7 +582,7 @@ class Parameter:
 
 
     def validate_value(self, test_value) -> tuple[bool, str]:
-        '''Validate that value provided meets the requirements.'''
+        '''Validate that value provided meets the requirements'''
 
         if self.dtype == 'bool':
             if isinstance(test_value, bool):

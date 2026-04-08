@@ -1,6 +1,7 @@
 from __future__ import annotations
 import os
 from glob import iglob
+from parameter import Parameter, save_parameter_dict_to_file, load_parameter_dict_from_file
 
 '''
 
@@ -66,7 +67,8 @@ class Parent_Object:
         name: str, 
         description: str, 
         object_type: str, 
-        fpath: str
+        fpath: str,
+        database_fpath: str
     ) -> Parent_Object: # TODO
         
         if not os.path.exists(os.abspath(fpath)):
@@ -75,9 +77,37 @@ class Parent_Object:
         if not os.path.exists(os.abspath(os.path.join(fpath, 'object_data'))): # TODO 
             raise FileNotFoundError('The object_data path does not exist')
 
-        # get parameters
+        if not os.path.exists(os.abspath(os.path.join(fpath, 'object_data', 'parameters.json'))):
+            raise FileNotFoundError('parameters.json does not exist')
 
-        # create object folder
+        if not os.path.exists(os.abspath(os.path.join(fpath, 'object_data', 'requirements.json'))):
+            raise FileNotFoundError('requirements.json does not exist')
+
+        if not os.path.exists(os.abspath(database_fpath)):
+            raise FileNotFoundError('The database path does not exist')
+
+        if not os.path.exists(os.abspath(os.path.join(database_fpath, 'objects'))):
+            raise FileNotFoundError('The database objects path does not exist')
+
+        if os.path.exists(os.abspath(os.path.join(database_fpath, 'objects', name))):
+            raise FileNotFoundError('An object with the name already exists')
+
+        parameters = load_parameter_dict_from_file(os.abspath(os.path.join(fpath, 'object_data', 'parameters.json')))
+
+        requirements = Requirements.load_from_file(os.abspath(os.path.join(fpath, 'object_data', 'requirements.json')))
+
+        # glob without object_data folder
+        # check each file size less than 10MB, total # of files less than 100 and total size less than 100MB.
+        # files_to_copy = ...
+
+        os.makedirs(os.abspath(os.path.join(database_fpath, 'objects', name)), exist_ok = False)
+
+        for copyfile in files_to_copy:
+            #os.copyfile
+
+
+
+        
 
         # move other files to object folder
         return cls(
