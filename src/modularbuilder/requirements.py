@@ -1,5 +1,7 @@
 from __future__ import annotations
 import re
+import os
+import json
 
 
 class Requirements:
@@ -43,7 +45,7 @@ class DatabaseRequirements(Requirements):
             raise FileNotFoundError(f'Directory: "{fpath}" does not exist.')
 
         if not requirements_file_name.endswith('.json'):
-            raise FileNotFoundError(f'File: "{requirements_file_name}"is not a .json file.')
+            raise FileNotFoundError(f'File: "{requirements_file_name}" is not a .json file.')
 
         if not os.path.exists(os.path.join(fpath, requirements_file_name)):
             raise FileNotFoundError(f'File: "{requirements_file_name}" does not exist.')
@@ -59,7 +61,7 @@ class DatabaseRequirements(Requirements):
 
 
     @classmethod
-    def validate_dict(cls, data_dict: dict) -> bool:
+    def validate_dict(cls, data_dict: dict, full_dict: bool = True) -> bool:
         ''''''
         
         if not isinstance(data_dict, dict):
@@ -71,19 +73,23 @@ class DatabaseRequirements(Requirements):
         if not all([isinstance(key, str) for key in data_dict]):
             return False
 
-        if any([key not in data_dict for key in cls.keys]):
-            return False
+        if full_dict:
+            if any([key not in data_dict for key in cls.keys]):
+                return False
+        else:
+            if any([key not in cls.keys for key in data_dict]):
+                return False
 
         if not all([isinstance(value, list) for value in data_dict.values()]):
             return False
 
-        if not all([len(value) > 0 for value in data_dict.values()]):
+        if full_dict and (not all([len(value) > 0 for value in data_dict.values()])):
             return False
 
         if not all([all([isinstance(requirement, str) for requirement in value]) for value in data_dict.values()]):
             return False
 
-        if not all([all([re.match("^[A-Za-z0-9 _-]+$", requirement) for requirement in value]) for value in data_dict.values()]):
+        if not all([all([re.match("^[A-Za-z0-9_-]+$", requirement) for requirement in value]) for value in data_dict.values()]):
             return False
 
         if not all([all([len(requirement) <= 100 for requirement in value]) for value in data_dict.values()]):
@@ -95,12 +101,17 @@ class DatabaseRequirements(Requirements):
     def add_requirements_from_dict(self, data_dict: dict) -> None:
         ''''''
 
-        if not self.validate_dict(data_dict):
+        if not self.validate_dict(data_dict, full_dict=False):
             raise ValueError('The provided requirements dictionary was invalid')
+        
+        if 'software' in data_dict:
+            self.software.extend([requirement for requirement in data_dict['software'] if requirement not in self.software])
 
-        self.software.extend([requirement for requirement in data_dict['software'] if requirement not in self.software])
-        self.analysis.extend([requirement for requirement in data_dict['analysis'] if requirement not in self.analysis])
-        self.geometry.extend([requirement for requirement in data_dict['geometry'] if requirement not in self.geometry])
+        if 'analysis' in data_dict:
+            self.analysis.extend([requirement for requirement in data_dict['analysis'] if requirement not in self.analysis])
+
+        if 'geometry' in data_dict:
+            self.geometry.extend([requirement for requirement in data_dict['geometry'] if requirement not in self.geometry])
 
 
 

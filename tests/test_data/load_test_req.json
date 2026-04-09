@@ -1,0 +1,15 @@
+{
+    "software" : [
+        "abaqus",
+        "fluent",
+        "mpcci"
+    ],
+    "analysis" : [
+        "model_1",
+        "model_2"
+    ],
+    "geometry" : [
+        "grid",
+        "straight"
+    ]
+}

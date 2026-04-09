@@ -5,18 +5,12 @@ import os
 
 
 class TestDatabaseRequirements:
-    def test_load_from_dict(self):
+    def test_load_from_dict(self): # TODO
         
         test_dict = {
-            'software' : [
-                'abaqus'
-            ],
-            'analysis' : [
-                'rigid_vibration'
-            ],
-            'geometry' : [
-                'submodel'
-            ]
+            'software' : ['abaqus'],
+            'analysis' : ['rigid_vibration'],
+            'geometry' : ['submodel']
         }
 
         test_reqs = DatabaseRequirements.load_from_dict(test_dict)
@@ -24,8 +18,34 @@ class TestDatabaseRequirements:
         assert test_reqs.__dict__ == test_dict
 
 
-    def test_load_from_file(self): # TODO
-        pass
+    def test_load_from_file(self):
+        ''''''
+
+        cwd = os.getcwd()
+        fpath = os.path.join(cwd, 'tests', 'test_data')
+
+        with pytest.raises(FileNotFoundError):
+            DatabaseRequirements.load_from_file('fpath_does_not_exist', 'file.json')
+        
+        with pytest.raises(FileNotFoundError):
+            DatabaseRequirements.load_from_file(fpath, 'not_json.txt')
+
+        with pytest.raises(FileNotFoundError):
+            DatabaseRequirements.load_from_file(fpath, 'nonexistent.json')
+
+        with pytest.raises(FileNotFoundError):
+            DatabaseRequirements.load_from_file(fpath, 'empty.json')
+
+        with pytest.raises(ValueError):
+            DatabaseRequirements.load_from_file(fpath, 'empty_dict.json')
+
+        with pytest.raises(ValueError):
+            DatabaseRequirements.load_from_file(fpath, 'load_test_str.json')
+
+        reqs = DatabaseRequirements.load_from_file(fpath, 'load_test_req.json')
+        assert reqs.software == ['abaqus', 'fluent', 'mpcci']
+        assert reqs.analysis == ['model_1', 'model_2']
+        assert reqs.geometry == ['grid', 'straight']
 
 
     def test_validate_dict(self):
@@ -72,5 +92,74 @@ class TestDatabaseRequirements:
         assert not DatabaseRequirements.validate_dict(test_dict)
 
 
-    def test_add_requirements_from_dict(self): # TODO
-        pass
+    def test_add_requirements_from_dict(self):
+        ''''''
+
+        test_dict = {
+            'software' : [
+                'abaqus'
+            ],
+            'analysis' : [
+                'rigid_vibration'
+            ],
+            'geometry' : [
+                'submodel'
+            ]
+        }
+
+        test_reqs = DatabaseRequirements.load_from_dict(test_dict)
+
+        add_dict = {}
+        with pytest.raises(ValueError):
+            test_reqs.add_requirements_from_dict(add_dict)
+
+        add_dict = 'wrong type'
+        with pytest.raises(ValueError):
+            test_reqs.add_requirements_from_dict(add_dict)
+
+        add_dict = {'wrong key' : 'wrong'}
+        with pytest.raises(ValueError):
+            test_reqs.add_requirements_from_dict(add_dict)
+
+        add_dict = {'software' : 25}
+        with pytest.raises(ValueError):
+            test_reqs.add_requirements_from_dict(add_dict)
+
+        add_dict = {'software' : [1], 'analysis' : ['new']}
+        with pytest.raises(ValueError):
+            test_reqs.add_requirements_from_dict(add_dict)
+
+        add_dict = {'software' : ['epic'], 'analysis' : ['']}
+        with pytest.raises(ValueError):
+            test_reqs.add_requirements_from_dict(add_dict)
+
+        add_dict = {'software' : ['epic'], 'analysis' : [' ']}
+        with pytest.raises(ValueError):
+            test_reqs.add_requirements_from_dict(add_dict)
+
+        add_dict = {'software' : ['epic'], 'analysis' : ['&']}
+        with pytest.raises(ValueError):
+            test_reqs.add_requirements_from_dict(add_dict)
+
+        add_dict = {'software' : ['epic'], 'analysis' : [101*'A']}
+        with pytest.raises(ValueError):
+            test_reqs.add_requirements_from_dict(add_dict)
+
+        add_dict = {'software' : ['epic'], 'analysis' : ['new']}
+        test_reqs.add_requirements_from_dict(add_dict)
+
+        add_dict = {'software' : ['epic'], 'analysis' : []}
+        test_reqs.add_requirements_from_dict(add_dict)
+
+        assert test_reqs.software == ['abaqus', 'epic']
+        assert test_reqs.analysis == ['rigid_vibration', 'new']
+        assert test_reqs.geometry == ['submodel']
+
+        add_dict = {'geometry' : ['woah', 'cool_beans', 'epic']}
+        test_reqs.add_requirements_from_dict(add_dict)
+        assert test_reqs.geometry == ['submodel', 'woah', 'cool_beans', 'epic']
+
+        add_dict = {'analysis' : ['correct', 'right', 1]}
+        with pytest.raises(ValueError):
+            test_reqs.add_requirements_from_dict(add_dict)
+        assert test_reqs.analysis == ['rigid_vibration', 'new']
