@@ -1,0 +1,49 @@
+Header {
+    height: 1;
+    dock: top;
+}
+
+Footer {
+    height: 1;
+    dock: bottom;
+}
+
+ListView {
+    width: 1.4fr;
+    height: 1fr;
+    margin: 1;
+    padding: 1;
+    content-align: center middle;
+    border: round green;
+}
+
+ListItem {
+    height: 3;
+    width: 1fr;
+}
+
+Button {
+    width: 1fr;
+    text-align: center;
+    content-align: center middle;
+}
+
+Label {
+    text-align: center;
+}
+
+Tabs {
+    content-align: center middle;
+    margin: 1;
+}
+
+Tab {
+    
+}
+
+Center {
+    width: 3.5fr;
+    margin: 1 1;
+    border: round green;
+    height: 1fr;
+}
