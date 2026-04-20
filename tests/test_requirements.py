@@ -260,6 +260,93 @@ class TestRequirements:
         assert test_reqs.analysis == ['rigid_vibration', 'new']
 
 
+    def test_add_requirements_from_file(self):
+        ''''''
+        
+        test_dict = {
+            'software' : [
+                'abaqus'
+            ],
+            'analysis' : [
+                'rigid_vibration'
+            ],
+            'geometry' : [
+                'submodel'
+            ]
+        }
+
+        cwd = os.getcwd()
+        fpath = os.path.join(cwd, 'tests', 'test_data')
+        fname = 'load_test_req.json'
+
+        test_reqs = Requirements.load_from_dict(test_dict)
+        test_reqs.add_requirements_from_file(fpath, fname)
+
+        final_dict = {
+            'software' : [
+                'abaqus',
+                'fluent',
+                'mpcci'
+            ],
+            'analysis' : [
+                'rigid_vibration',
+                'model_1',
+                'model_2'
+            ],
+            'geometry' : [
+                'submodel',
+                'grid',
+                'straight'
+            ]
+        }
+
+        assert final_dict == test_reqs.__dict__
+
+
+    def test_add_requirements_from_requirements(self):
+        
+        test_dict = {
+            'software' : [
+                'abaqus'
+            ],
+            'analysis' : [
+                'rigid_vibration'
+            ],
+            'geometry' : [
+                'submodel'
+            ]
+        }
+
+        cwd = os.getcwd()
+        fpath = os.path.join(cwd, 'tests', 'test_data')
+        fname = 'load_test_req.json'
+
+        test_reqs = Requirements.load_from_dict(test_dict)
+        new_reqs = Requirements.load_from_file(fpath, fname)
+
+        test_reqs.add_requirements_from_requirements(new_reqs)
+
+        final_dict = {
+            'software' : [
+                'abaqus',
+                'fluent',
+                'mpcci'
+            ],
+            'analysis' : [
+                'rigid_vibration',
+                'model_1',
+                'model_2'
+            ],
+            'geometry' : [
+                'submodel',
+                'grid',
+                'straight'
+            ]
+        }
+
+        assert final_dict == test_reqs.__dict__
+
+
     def test_remove_requirements_from_dict(self):
         ''''''
 

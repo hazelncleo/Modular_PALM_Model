@@ -196,6 +196,19 @@ class Requirements:
         if 'geometry' in data_dict:
             self.geometry.extend([requirement for requirement in data_dict['geometry'] if requirement not in self.geometry])
 
+
+    def add_requirements_from_file(self, fpath: str, fname: str) -> None:
+        ''''''
+
+        temp_reqs = self.load_from_file(fpath, fname)
+
+        self.add_requirements_from_dict(temp_reqs.convert_to_dict())
+
+
+    def add_requirements_from_requirements(self, requirements: Requirements) -> None:
+        ''''''
+        self.add_requirements_from_dict(requirements.convert_to_dict())
+
     
     def remove_requirements_from_dict(self, data_dict: dict) -> None:
         '''Remove requirements from a dictionary'''

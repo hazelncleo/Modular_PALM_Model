@@ -8,6 +8,7 @@ from copy import deepcopy
 from sys import exit
 import json
 from shutil import copyfileobj
+import sqlite3
 
 from __future__ import annotations
 

@@ -10,11 +10,11 @@ class ModularBuilderApp(App):
     def compose(self) -> ComposeResult:
         self.header = Header()
         self.commandlist = ListView(
-            ListItem(Button('Object Commands')),
-            ListItem(Button('Model Commands')),
-            ListItem(Button('Database Commands')),
-            ListItem(Button('Settings')),
-            ListItem(Button('Quit'))
+            ListItem(Label('Object Commands')),
+            ListItem(Label('Model Commands')),
+            ListItem(Label('Database Commands')),
+            ListItem(Label('Settings')),
+            ListItem(Label('Quit'))
         )
         self.tabbedinfo = Tabs(
             Tab('Database Tree'),
