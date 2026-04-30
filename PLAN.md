@@ -27,7 +27,7 @@
 
 - objects
 
-| object_name | description | analysis/geometry | files | fpath
+| object_name | description | analysis/geometry | files | fpath |
 |-|-|-|-|-|
 
 - object_files
