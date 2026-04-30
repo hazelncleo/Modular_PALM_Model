@@ -1,12 +1,21 @@
-
-
-
 	; Switch back commands because fluent is fucking stupid
+	/file/set-batch-options yes yes no
 	/mesh/adapt/set/method/hanging-node
 	/file/convert-hanging-nodes-during-read?/no
-	
+
+	; Load case & data files
+	/rc "fluent_model.cas.h5"
+	/rd "fluent_model.dat.h5"
+
+	; Redo just in case
+	/mesh/adapt/set/method/hanging-node
+	/file/convert-hanging-nodes-during-read?/no
+
+	; Hook droplet sizing
+	/define/user-defined/function-hooks execute-at-end "multithreaded_droplet_sizes_runtime::vof_droplet_sizing" ""
+
 	; Start solving
-    /solve/dual-time-iterate , , ok 
-	
-	; Exit 
+    /solve/dual-time-iterate , , ok
+
+	; Exit after completion
 	/exit yes

@@ -1,5 +1,5 @@
 import ansys.fluent.core as pyfluent
-from ansys.fluent.core.solver import ( 
+from ansys.fluent.core.solver import (
     General,
     DynamicMesh,
     Materials,
@@ -12,8 +12,8 @@ from shutil import rmtree
 
 
 def fluent_setup(
-        file_name      = 'fluent_model', 
-        mesh_file_name = 'fluent_submodel_fluid.msh', 
+        file_name      = 'fluent_model',
+        mesh_file_name = 'fluent_submodel_fluid.msh',
         fluent_wd      = '',
         parameters     = {
             'vibration_frequency' : {'default_value' : 1.63e6},
@@ -25,29 +25,29 @@ def fluent_setup(
     ):
     '''
     ----------------------------------------------------------------
-        Builds the sinusoidal rigid body fluent model for a 
+        Builds the sinusoidal rigid body fluent model for a
         given geometry and operating parameters
-        
+
         Creates a .cas.h5 and .dat.h5 file in the fluent_wd directory
     ----------------------------------------------------------------
     INPUTS
     ----------------------------------------------------------------
     file_name : str
         The file name of the output case and data files
-    
+
     mesh_file_name : str
         The name of mesh file specifying the geometry to be read in.
-        
+
     fluent_wd : str
         The path to the working directory that pyfluent will be run in
-    
+
     parameters : dict
         A dictionary specifying the operating parameters for the model to be built
     ----------------------------------------------------------------
-    
+
     ----------------------------------------------------------------
     '''
-    
+
     # Get parameter values
     vibration_amplitude = parameters['amplitude']['default_value']
     vibration_frequency = parameters['vibration_frequency']['default_value']
@@ -66,7 +66,7 @@ def fluent_setup(
 
     # Calculate Time stepping values from frequency and number of cycles
     TOTAL_TIME        = (n_cycles / vibration_frequency)
-    MINIMUM_STEP_SIZE = 1/(1000*vibration_frequency)
+    MINIMUM_STEP_SIZE = 1/(10000*vibration_frequency)
     MAXIMUM_STEP_SIZE = 1/(50*vibration_frequency)
     INITIAL_STEP_SIZE = 1/(50*vibration_frequency)
     SAVE_FREQUENCY    = 1/(10*vibration_frequency)
@@ -80,19 +80,21 @@ def fluent_setup(
     # Instantiate fluent launcher
     if fluent_wd:
         solver = pyfluent.launch_fluent(
-            mode             = 'solver', 
-            ui_mode          = 'hidden_gui', 
-            precision        = 'double',
-            cwd              = fluent_wd, 
+            mode             = 'solver',
+            ui_mode          = 'hidden_gui',
+            precision        = pyfluent.Precision.DOUBLE,
+            dimension        = pyfluent.Dimension.THREE,
+            cwd              = fluent_wd,
             start_transcript = False,
             cleanup_on_exit  = True
         )
     else:
         print('WARNING: No fluent working directory specified')
         solver = pyfluent.launch_fluent(
-            mode             = 'solver', 
-            ui_mode          = 'hidden_gui', 
-            precision        = 'double',
+            mode             = 'solver',
+            ui_mode          = 'hidden_gui',
+            precision        = pyfluent.Precision.DOUBLE,
+            dimension        = pyfluent.Dimension.THREE,
             start_transcript = False,
             cleanup_on_exit  = True
         )
@@ -100,7 +102,7 @@ def fluent_setup(
     print('-'*60)
     print('Fluent session instantiated')
 
-    solver.settings.file.read(file_type='case', file_name=mesh_file_name)
+    solver.settings.file.read_mesh(file_name = mesh_file_name)
     print('Imported mesh file: "{}"'.format(mesh_file_name))
 
     print('Beginning model setup')
@@ -129,7 +131,14 @@ def fluent_setup(
 
     solver.scheme.eval("(make-new-rpvar 'user/noise_frequency {} 'real)".format(noise_frequency))
     print('Defined rpvar: "user/noise_frequency" with value: "{}".'.format(noise_frequency))
-    
+
+    solver.scheme.eval("(make-new-rpvar 'user/n_cycles {} 'int)".format(int(n_cycles)))
+    print('Defined rpvar: "user/n_cycles" with value: "{}".'.format(int(n_cycles)))
+
+    # Sim_id = 2 for simple vibration with noise
+    solver.scheme.eval("(make-new-rpvar 'user/sim_id 2 'int)")
+    print('Defined rpvar: "user/sim_id" with value: "2".')
+
     model_setup = Models(solver)
 
     model_setup.viscous.model = 'laminar'
@@ -145,30 +154,52 @@ def fluent_setup(
     solver.tui.define.phases.set_domain_properties.change_phases_names('water', 'air') # phase_1 = air, phase_2 = water
     solver.tui.define.phases.set_domain_properties.phase_domains.air.material('yes', 'air')
     solver.tui.define.phases.set_domain_properties.phase_domains.water.material('yes', 'water-liquid')
-    
+
     solver.tui.define.phases.set_domain_properties.interaction_domain.forces.surface_tension.sfc_tension_coeff(
-        'yes', 
-        'constant', 
+        'yes',
+        'constant',
         '0.072' # Surface tension of 0.072 N/m (water/air)
     )
-    
-    if os.path.isdir(os.path.join(fluent_wd,'libudf')):
-        print('WARNING: Deleting old libudf folder.')
-        rmtree(os.path.join(fluent_wd,'libudf'))
+
+    if os.path.isdir(os.path.join(fluent_wd,'rigid_vibrations')):
+        print('WARNING: Deleting old rigid_vibrations udf folder.')
+        rmtree(os.path.join(fluent_wd,'rigid_vibrations'))
+
+    if os.path.isdir(os.path.join(fluent_wd,'vof_droplet_sizing')):
+        print('WARNING: Deleting old vof_droplet_sizing udf folder.')
+        rmtree(os.path.join(fluent_wd,'vof_droplet_sizing'))
 
 
     solver.tui.define.user_defined.compiled_functions(
         'compile',
-        'libudf',
+        'rigid_vibrations',
         'yes',
-        os.path.join(fluent_wd, 'noisy_vibration.c'),
+        'rigid_vibrations.c',
         '""',
         '""'
     )
 
     solver.tui.define.user_defined.compiled_functions(
+        'compile',
+        'vof_droplet_sizing',
+        'yes',
+        'y',
+        'vof_droplet_sizing.c',
+        '""',
+        'vof_droplet_sizing.h',
+        '""'
+    )
+
+    solver.tui.define.user_defined.user_defined_memory('1')
+
+    solver.tui.define.user_defined.compiled_functions(
         'load',
-        'libudf'
+        'rigid_vibrations'
+    )
+
+    solver.tui.define.user_defined.compiled_functions(
+        'load',
+        'vof_droplet_sizing'
     )
 
     dynamic_mesh = DynamicMesh(solver)
@@ -178,52 +209,52 @@ def fluent_setup(
     dynamic_mesh.methods.remeshing.enabled = False
     dynamic_mesh.methods.smoothing.enabled = True
     dynamic_mesh.methods.smoothing.method  = 'diffusion'
-    
+
     solver.tui.define.dynamic_mesh.zones.create(
-        'symmetry', 
-        'deforming', 
-        'faceted', 
-        'no', 
-        'yes', 
-        'yes', 
-        'yes', 
-        'yes', 
-        'yes', 
-        'no', 
+        'symmetry',
+        'deforming',
+        'faceted',
+        'no',
+        'yes',
+        'yes',
+        'yes',
+        'yes',
+        'yes',
+        'no',
         'yes'
     )
 
     solver.tui.define.dynamic_mesh.zones.create(
-        'outlet', 
-        'deforming', 
-        'faceted', 
-        'no', 
-        'yes', 
-        'yes', 
-        'yes', 
-        'yes', 
-        'yes', 
-        'no', 
+        'outlet',
+        'deforming',
+        'faceted',
+        'no',
+        'yes',
+        'yes',
+        'yes',
+        'yes',
+        'yes',
+        'no',
         'yes'
-    ) 
+    )
 
     solver.tui.define.dynamic_mesh.zones.create(
-        'solid_coupling', 
-        'rigid-body', 
-        'noisy_vibration::libudf', 
-        'no', 
-        'no', 
-        '0', 
-        '0', 
-        '0', 
-        '0', 
-        '0', 
-        '0', 
-        '0', 
-        'fluid', 
-        'constant', 
-        '0', 
-        'no', 
+        'solid_coupling',
+        'rigid-body',
+        'noisy_vibration::rigid_vibrations',
+        'no',
+        'no',
+        '0',
+        '0',
+        '0',
+        '0',
+        '0',
+        '0',
+        '0',
+        'fluid',
+        'constant',
+        '0',
+        'no',
         'no'
     )
 
@@ -234,9 +265,17 @@ def fluent_setup(
         'yes',
         'yes'
     )
-    
-    # Boundary Conditions 
-    solver.settings.setup.boundary_conditions.wall['solid_coupling'] = {"phase" : {"mixture" : {"multiphase" : {"contact_angles" : {"water-air" : {"value" : 1.5707961}}}}}}
+
+    # Boundary Conditions
+    solver.settings.setup.boundary_conditions.wall['solid_coupling'] = {
+        "phase" : {
+            "mixture" : {
+                "multiphase" : {
+                    "contact_angles" : {"water-air" : {"value" : 1.5707961}}
+                }
+            }
+        }
+    }
 
     # Adaptive Meshing
     solver.tui.mesh.adapt.predefined_criteria.multiphase.vof('1e-08')
@@ -261,9 +300,6 @@ def fluent_setup(
     solver.settings.solution.monitor.residual.equations['y-velocity'].absolute_criteria = 1e-05
     solver.settings.solution.monitor.residual.equations['z-velocity'].absolute_criteria = 1e-05
 
-    solver.settings.solution.controls.under_relaxation['mom'] = 0.95
-    solver.settings.solution.controls.under_relaxation['pressure'] = 0.95
-
     # Time stepping controls
     solver.settings.solution.run_calculation.transient_controls.mp_specific_time_stepping = {
         'enabled'                : True,
@@ -282,7 +318,7 @@ def fluent_setup(
     solver.settings.solution.run_calculation.transient_controls.max_iter_per_time_step        = 65
 
     solver.settings.solution.run_calculation.transient_controls.multiphase_specific_time_constraints.moving_mesh_cfl_constraint = {
-        "moving_mesh_constraint" : True, 
+        "moving_mesh_constraint" : True,
         "mesh_courant_number"    : 1
     }
 
@@ -319,7 +355,7 @@ def fluent_setup(
         reference_frame           = "Relative to Cell Zone",
         use_custom_field_function = False,
         value                     = 'IF(Position.z<480[micron],1,0)',
-    )    
+    )
 
     print('Initial conditions defined successfully')
 
@@ -329,9 +365,9 @@ def fluent_setup(
 
     solver.settings.file.write_data(file_name = file_name + '.dat.h5')
     print('Data file saved as: "{}"'.format(file_name + '.dat.h5'))
-    
 
-    
+
+
 if __name__ == '__main__':
     fluent_setup(
         fluent_wd  = os.path.abspath(os.getcwd()),

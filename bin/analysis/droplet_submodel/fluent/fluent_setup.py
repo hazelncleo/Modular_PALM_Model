@@ -9,21 +9,21 @@ from ansys.fluent.core.solver import (
 import os
 from shutil import rmtree
 
-
-
 def fluent_setup(
-        file_name      = 'fluent_model',
+        file_name = 'fluent_model',
         mesh_file_name = 'fluent_submodel_fluid.msh',
-        fluent_wd      = '',
-        parameters     = {
+        fluent_wd = '',
+        parameters = {
+            'x_grid_position'     : {'default_value' : 3},
+            'y_grid_position'     : {'default_value' : 3},
             'vibration_frequency' : {'default_value' : 1.63e6},
-            'n_cycles'            : {'default_value' : 50},
-            'amplitude'           : {'default_value' : 1e-6}
+            'amplitude'           : {'default_value' : 1e-6},
+            'n_cycles'            : {'default_value' : 50}
         }
     ):
     '''
     ----------------------------------------------------------------
-        Builds the sinusoidal rigid body fluent model for a
+        Builds the solid coupled fluent model for a
         given geometry and operating parameters
 
         Creates a .cas.h5 and .dat.h5 file in the fluent_wd directory
@@ -47,19 +47,30 @@ def fluent_setup(
     '''
 
     # Get parameter values
+    x_grid_position     = parameters['x_grid_position']['default_value']
+    y_grid_position     = parameters['y_grid_position']['default_value']
     vibration_amplitude = parameters['amplitude']['default_value']
     vibration_frequency = parameters['vibration_frequency']['default_value']
-    n_cycles = parameters['n_cycles']['default_value']
+    n_cycles            = parameters['n_cycles']['default_value']
 
     print('-'*60)
     print('Parameter Values: ')
-    print('Vibration Amplitude                 = {:.1e} micron'.format(vibration_amplitude))
-    print('Vibration Frequency                 = {:.2e} Hz'.format(vibration_frequency))
-    print('Number of complete Vibration Cycles = {}'.format(n_cycles))
+    print('X grid position            = "{}"'.format(x_grid_position))
+    print('Y grid position            = "{}"'.format(y_grid_position))
+    print('Vibration Amplitude        = {:.1e} micron'.format(vibration_amplitude))
+    print('Vibration Frequency        = {:.2e} Hz'.format(vibration_frequency))
+    print('Number of vibration cycles = "{}"'.format(n_cycles))
     print('-'*60)
 
+    # Grid spacing between each section
+    GRID_SPACING = 0.5e-3
+
+    # Calculate translation coordinates of Fluid Mesh
+    X_TRANSLATION = GRID_SPACING*(x_grid_position-3)
+    Y_TRANSLATION = GRID_SPACING*(y_grid_position-3)
+
     # Calculate Time stepping values from frequency and number of cycles
-    TOTAL_TIME = (n_cycles / vibration_frequency)
+    TOTAL_TIME = (n_cycles / vibration_frequency) - (0.2/vibration_frequency)
     MINIMUM_STEP_SIZE = 1/(10000*vibration_frequency)
     MAXIMUM_STEP_SIZE = 1/(50*vibration_frequency)
     INITIAL_STEP_SIZE = 1/(50*vibration_frequency)
@@ -96,6 +107,7 @@ def fluent_setup(
     print('-'*60)
     print('Fluent session instantiated')
 
+    # Import mesh
     solver.settings.file.read_mesh(file_name = mesh_file_name)
     print('Imported mesh file: "{}"'.format(mesh_file_name))
 
@@ -114,6 +126,12 @@ def fluent_setup(
         name = "water-liquid"
     )
 
+    solver.scheme.eval("(make-new-rpvar 'user/x_grid_position {} 'int)".format(int(x_grid_position)))
+    print('Defined rpvar: "user/x_grid_position" with value: "{}".'.format(int(x_grid_position)))
+
+    solver.scheme.eval("(make-new-rpvar 'user/y_grid_position {} 'int)".format(int(y_grid_position)))
+    print('Defined rpvar: "user/y_grid_position" with value: "{}".'.format(int(y_grid_position)))
+
     solver.scheme.eval("(make-new-rpvar 'user/vibration_amplitude {} 'real)".format(vibration_amplitude))
     print('Defined rpvar: "user/vibration_amplitude" with value: "{}".'.format(vibration_amplitude))
 
@@ -123,9 +141,9 @@ def fluent_setup(
     solver.scheme.eval("(make-new-rpvar 'user/n_cycles {} 'int)".format(int(n_cycles)))
     print('Defined rpvar: "user/n_cycles" with value: "{}".'.format(int(n_cycles)))
 
-    # Sim_id = 1 for simple vibration
-    solver.scheme.eval("(make-new-rpvar 'user/sim_id 1 'int)")
-    print('Defined rpvar: "user/sim_id" with value: "1".')
+    # Sim_id = 3 for solid coupled
+    solver.scheme.eval("(make-new-rpvar 'user/sim_id 3 'int)")
+    print('Defined rpvar: "user/sim_id" with value: "3".')
 
     model_setup = Models(solver)
 
@@ -139,33 +157,9 @@ def fluent_setup(
     model_setup.multiphase.phase_interaction.forces.surface_tension_model_type = 'Continuum Surface Force'
     model_setup.multiphase.phase_interaction.forces.wall_adhesion              = True
 
-    solver.tui.define.phases.set_domain_properties.change_phases_names('water', 'air') # phase_1 = air, phase_2 = water
-    solver.tui.define.phases.set_domain_properties.phase_domains.air.material('yes', 'air')
-    solver.tui.define.phases.set_domain_properties.phase_domains.water.material('yes', 'water-liquid')
-
-    solver.tui.define.phases.set_domain_properties.interaction_domain.forces.surface_tension.sfc_tension_coeff(
-        'yes',
-        'constant',
-        '0.072'
-    )
-
-    if os.path.isdir(os.path.join(fluent_wd,'rigid_vibrations')):
-        print('WARNING: Deleting old rigid_vibrations udf folder.')
-        rmtree(os.path.join(fluent_wd,'rigid_vibrations'))
-
     if os.path.isdir(os.path.join(fluent_wd,'vof_droplet_sizing')):
         print('WARNING: Deleting old vof_droplet_sizing udf folder.')
         rmtree(os.path.join(fluent_wd,'vof_droplet_sizing'))
-
-
-    solver.tui.define.user_defined.compiled_functions(
-        'compile',
-        'rigid_vibrations',
-        'yes',
-        'rigid_vibrations.c',
-        '""',
-        '""'
-    )
 
     solver.tui.define.user_defined.compiled_functions(
         'compile',
@@ -179,11 +173,6 @@ def fluent_setup(
     )
 
     solver.tui.define.user_defined.user_defined_memory('1')
-
-    solver.tui.define.user_defined.compiled_functions(
-        'load',
-        'rigid_vibrations'
-    )
 
     solver.tui.define.user_defined.compiled_functions(
         'load',
@@ -227,26 +216,6 @@ def fluent_setup(
     )
 
     solver.tui.define.dynamic_mesh.zones.create(
-        'solid_coupling',
-        'rigid-body',
-        'simple_vibration::rigid_vibrations',
-        'no',
-        'no',
-        '0',
-        '0',
-        '0',
-        '0',
-        '0',
-        '0',
-        '0',
-        'fluid',
-        'constant',
-        '0',
-        'no',
-        'no'
-    )
-
-    solver.tui.define.dynamic_mesh.zones.create(
         'fluid',
         'deforming',
         'yes',
@@ -287,6 +256,10 @@ def fluent_setup(
     solver.settings.solution.monitor.residual.equations['x-velocity'].absolute_criteria = 1e-05
     solver.settings.solution.monitor.residual.equations['y-velocity'].absolute_criteria = 1e-05
     solver.settings.solution.monitor.residual.equations['z-velocity'].absolute_criteria = 1e-05
+
+    # Translate to position
+    print('Translating Mesh by: [x = {}, y = {}, z = 0.0]'.format(X_TRANSLATION,Y_TRANSLATION))
+    solver.mesh.translate(offset = [X_TRANSLATION, Y_TRANSLATION, 0])
 
     # Time stepping controls
     solver.settings.solution.run_calculation.transient_controls.mp_specific_time_stepping = {
@@ -355,14 +328,3 @@ def fluent_setup(
 
     solver.settings.file.write_data(file_name = file_name + '.dat.h5')
     print('Data file saved as: "{}"'.format(file_name + '.dat.h5'))
-
-
-if __name__ == '__main__':
-    fluent_setup(
-        fluent_wd  = os.path.abspath(os.getcwd()),
-        parameters = {
-            'vibration_frequency' : {'default_value' : 1.63e6},
-            'n_cycles'            : {'default_value' : 60},
-            'amplitude'           : {'default_value' : 1e-6}
-        }
-    )

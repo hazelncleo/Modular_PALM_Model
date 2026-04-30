@@ -20,5 +20,16 @@
             "fluent",
             "mpcci"
         ]
+    },
+    "amplitude": {
+        "name": "amplitude",
+        "description": "Amplitude of Vibration",
+        "dtype": "float",
+        "default_value": 1e-6,
+        "solvers": [
+            "abaqus",
+            "fluent",
+            "mpcci"
+        ]
     }
 }
